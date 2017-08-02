@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>keba_rmi_driver</name>
+  <version>1.0.0</version>
+  <description>Keba generic Robot Movement Interface driver</description>
+  <maintainer email="dougkeba@gmail.com">Doug Smith</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  
+  <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf</depend>
+  <depend>control_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>robot_movement_interface</depend>
+  <depend>iiwa_driver</depend>
+  <depend>industrial_utils</depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>  
+  
+
+</package>
