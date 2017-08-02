@@ -36,6 +36,12 @@ Driver::Driver()
 {
 }
 
+
+void Driver::start()
+{
+  this->addConnection("192.168.100.100", 30000);
+}
+
 void Driver::addConnection(std::string host, int port)
 {
   conn_num_++;

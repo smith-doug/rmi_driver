@@ -12,7 +12,8 @@ int main(int argc, char **argv)
     keba_rmi_driver::Driver driver;
 
 
-    driver.addConnection("192.168.100.100", 30000);
+    driver.start();
+
     ros::spin();
 
     return 0;

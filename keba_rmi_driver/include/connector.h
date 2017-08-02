@@ -86,9 +86,13 @@ public:
 
   std::string sendCommand(const Command &command);
 
+  void addCommand(const Command &command);
+
 protected:
 
   void commandThread();
+
+  void cmdThread();
 
   void getThread();
 
@@ -99,14 +103,14 @@ protected:
   boost::asio::ip::tcp::socket socket_get_;
 
   std::mutex socket_cmd_mutex_;
-  //std::mutex socket_get_mutex_;
+  std::mutex socket_get_mutex_;
 
   std::string host_;
   int port_;
 
   boost::asio::io_service& io_service_;
 
-  std::queue<iiwa_driver::StringCommand> command_list_;
+  std::queue<Command> command_list_;
 
   std::thread get_thread_;
   std::thread cmd_thread_;

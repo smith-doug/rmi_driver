@@ -63,30 +63,58 @@ bool Connector::connect(std::string host, int port)
 
 
   get_thread_ = std::thread(&Connector::getThread, this);
+  cmd_thread_ = std::thread(&Connector::cmdThread, this);
 
+
+  Command cmd(Command::CommandType::Cmd, "joint move", "0.1 0.2 0.3 0.4 0.5 0.6 0.7");
+
+  addCommand(cmd);
+  cmd = Command(Command::CommandType::Cmd, "joint move", "0.5 0.2 0.3 0.4 0.5 0.6 0.7");
+  addCommand(cmd);
 }
 
 std::string Connector::sendCommand(const Command &command)
 {
+
+  tcp::socket *socket = 0;
   if(command.type_ == Command::CommandType::Get)
   {
-    std::string sendStr = command.toString();
-    boost::asio::write(socket_get_, boost::asio::buffer(sendStr));
+    socket = &socket_get_;
+  }
+  else if(command.type_ == Command::CommandType::Cmd)
+  {
+    socket = &socket_cmd_;
+  }
 
-    boost::asio::streambuf buff;
+  if(socket == NULL)
+  {
+    return "Error: null socket";
+  }
+
+  std::string sendStr = command.toString();
+  boost::asio::write(*socket, boost::asio::buffer(sendStr));
+
+  boost::asio::streambuf buff;
 
 
-    boost::asio::read_until(socket_get_, buff, '\n');
+  boost::asio::read_until(*socket, buff, '\n');
 
-    std::string line;
-    std::istream is(&buff);
-    std::getline(is, line);
-    //std::istream is(&buff);
-    //std::string ret;
-    //is >> ret;
-    return line;
+  std::string line;
+  std::istream is(&buff);
+  std::getline(is, line);
+  //std::istream is(&buff);
+  //std::string ret;
+  //is >> ret;
+  return line;
+}
 
-
+void Connector::addCommand(const Command &command)
+{
+  if(command.type_ == Command::CommandType::Cmd)
+  {
+    socket_cmd_mutex_.lock();
+    command_list_.push(command);
+    socket_cmd_mutex_.unlock();
   }
 }
 
@@ -108,6 +136,33 @@ void Connector::getThread()
 
 
     rate.sleep();
+  }
+}
+
+void Connector::cmdThread()
+{
+  ros::Rate rate(10);
+  std::cout << "Cmd starting" << std::endl;
+
+  while (!ros::isShuttingDown())
+  {
+    if(command_list_.size() > 0)
+    {
+
+      socket_cmd_mutex_.lock();
+      Command cmd = command_list_.front();
+      command_list_.pop();
+      std::cout << "Cmd : " << cmd.toString() << std::endl;
+      socket_cmd_mutex_.unlock();
+
+      std::string response = sendCommand(cmd);
+
+      std::cout << "Cmd response: " << response << std::endl;
+    }
+    else
+    {
+      rate.sleep();
+    }
   }
 }
 

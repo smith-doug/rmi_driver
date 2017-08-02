@@ -44,6 +44,8 @@ namespace keba_rmi_driver
   public:
     Driver();
 
+    void start();
+
     void addConnection(std::string host, int port);
 
   protected:
@@ -56,6 +58,8 @@ namespace keba_rmi_driver
     int conn_num_ = 0;
 
     boost::asio::io_service io_service_;
+
+    ros::Subscriber command_list_sub_;
 
   };
 }
