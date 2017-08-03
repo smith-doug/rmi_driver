@@ -28,16 +28,51 @@
  */
 
 #include "connector.h"
+#include <boost/algorithm/string.hpp>
 
 namespace keba_rmi_driver
 {
 
 using namespace boost::asio::ip;
 
-Connector::Connector(boost::asio::io_service& io_service, std::string host, int port) :
+template<typename Out>
+void split(const std::string &s, char delim, Out result)
+{
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+  while (std::getline(ss, item, delim))
+  {
+    std::stringstream temp_ss(item);
+    *(result++) = item;
+  }
+}
+
+std::vector<std::string> split(const std::string &s, char delim)
+{
+  std::vector<std::string> elems;
+  split(s, delim, std::back_inserter(elems));
+  return elems;
+}
+
+std::vector<double> stringToDoubleVec(const std::string &s)
+{
+  std::vector<std::string> strVec = split(s, ' ');
+  std::vector<double> doubleVec(strVec.size());
+
+  std::transform(strVec.begin(), strVec.end(), doubleVec.begin(), [](const std::string& val)
+  {
+    return boost::lexical_cast<double>(val);
+  });
+
+  return doubleVec;
+
+}
+
+Connector::Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names) :
     io_service_(io_service), socket_cmd_(io_service), socket_get_(io_service), host_(host), port_(port)
 {
-
+  joint_names_ = joint_names;
 }
 
 bool Connector::connect()
@@ -61,42 +96,43 @@ bool Connector::connect(std::string host, int port)
   socket_get_.connect(*endpointIterator);
   ROS_INFO_NAMED("connector", "get connection established to %s:%i", host.c_str(), port);
 
-
   get_thread_ = std::thread(&Connector::getThread, this);
   cmd_thread_ = std::thread(&Connector::cmdThread, this);
 
-
+  /*
   Command cmd(Command::CommandType::Cmd, "joint move", "0.1 0.2 0.3 0.4 0.5 0.6 0.7");
 
   addCommand(cmd);
   cmd = Command(Command::CommandType::Cmd, "joint move", "0.5 0.2 0.3 0.4 0.5 0.6 0.7");
-  addCommand(cmd);
+  addCommand(cmd); */
 }
 
 std::string Connector::sendCommand(const Command &command)
 {
 
-  tcp::socket *socket = 0;
-  if(command.type_ == Command::CommandType::Get)
+  tcp::socket *socket = NULL;
+  std::mutex *mutex = NULL;
+  if (command.type_ == Command::CommandType::Get)
   {
     socket = &socket_get_;
+    mutex = &socket_get_mutex_;
   }
-  else if(command.type_ == Command::CommandType::Cmd)
+  else if (command.type_ == Command::CommandType::Cmd)
   {
     socket = &socket_cmd_;
+    mutex = &socket_cmd_mutex_;
   }
 
-  if(socket == NULL)
+  if (socket == NULL || mutex == NULL)
   {
     return "Error: null socket";
   }
 
   std::string sendStr = command.toString();
+
+  std::lock_guard<std::mutex> lock(*mutex);
   boost::asio::write(*socket, boost::asio::buffer(sendStr));
-
   boost::asio::streambuf buff;
-
-
   boost::asio::read_until(*socket, buff, '\n');
 
   std::string line;
@@ -110,7 +146,7 @@ std::string Connector::sendCommand(const Command &command)
 
 void Connector::addCommand(const Command &command)
 {
-  if(command.type_ == Command::CommandType::Cmd)
+  if (command.type_ == Command::CommandType::Cmd)
   {
     socket_cmd_mutex_.lock();
     command_list_.push(command);
@@ -120,20 +156,35 @@ void Connector::addCommand(const Command &command)
 
 void Connector::getThread()
 {
-  ros::Rate rate(1);
+  ros::Rate rate(50);
 
-  while (!ros::isShuttingDown())
+  while (ros::ok())
   {
     Command cmd(Command::CommandType::Get, "get joint position", "");
     std::string response = sendCommand(cmd);
-    std::cout << "Response: " << response << std::endl;
+    //std::cout << "Response: " << response << std::endl;
+
+    std::vector<double> pos_real;
+    try
+    {
+      pos_real = stringToDoubleVec(response);
+    }
+    catch (const boost::bad_lexical_cast &)
+    {
+      ROS_ERROR_STREAM("Unable to parse joint positions");
+      continue;
+    }
+
 
 
     cmd = Command(Command::CommandType::Get, "get tool frame");
 
     response = sendCommand(cmd);
-    std::cout << "Response: " << response << std::endl;
+    //std::cout << "Response: " << response << std::endl;
 
+    last_joint_state_.header.stamp = ros::Time::now();
+    last_joint_state_.name = joint_names_;
+    last_joint_state_.position = pos_real;
 
     rate.sleep();
   }
@@ -141,23 +192,23 @@ void Connector::getThread()
 
 void Connector::cmdThread()
 {
-  ros::Rate rate(10);
+  ros::Rate rate(30);
   std::cout << "Cmd starting" << std::endl;
 
   while (!ros::isShuttingDown())
   {
-    if(command_list_.size() > 0)
+    if (command_list_.size() > 0)
     {
 
       socket_cmd_mutex_.lock();
       Command cmd = command_list_.front();
       command_list_.pop();
-      std::cout << "Cmd : " << cmd.toString() << std::endl;
+      std::cout << "Cmd : " << cmd.toString();
       socket_cmd_mutex_.unlock();
 
       std::string response = sendCommand(cmd);
 
-      std::cout << "Cmd response: " << response << std::endl;
+      std::cout << "Cmd response: " << response << std::endl << std::endl;
     }
     else
     {

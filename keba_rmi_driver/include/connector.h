@@ -35,6 +35,8 @@
 #include <industrial_utils/utils.h>
 #include <industrial_utils/param_utils.h>
 
+#include <sensor_msgs/JointState.h>
+
 #include <boost/asio.hpp>
 #include <string>
 #include <queue>
@@ -42,44 +44,19 @@
 #include <thread>
 #include <memory>
 
+#include "commands.h"
+
 namespace keba_rmi_driver
 {
 
-class Command
-{
-public:
-  enum CommandType
-    {
-      Get,
-      Cmd
-    };
 
-
-  Command(CommandType type, std::string command, std::string params = "") :
-      type_(type), command_(command), params_(params)
-  {
-
-  }
-  std::string command_;
-  std::string params_;
-
-
-
-
-  CommandType type_;
-
-  std::string toString() const
-  {
-
-    std::string ret = command_ + " : " + params_ + "\n";
-    return ret;
-  }
-};
 
 class Connector
 {
+  typedef std::vector<std::string> StringVec;
 public:
-  Connector(boost::asio::io_service& io_service, std::string host, int port);
+
+  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names);
 
   bool connect();
   bool connect(std::string host, int port);
@@ -87,6 +64,11 @@ public:
   std::string sendCommand(const Command &command);
 
   void addCommand(const Command &command);
+
+  sensor_msgs::JointState getLastJointState()
+  {
+    return last_joint_state_;
+  }
 
 protected:
 
@@ -114,6 +96,10 @@ protected:
 
   std::thread get_thread_;
   std::thread cmd_thread_;
+
+  sensor_msgs::JointState last_joint_state_;
+
+  std::vector<std::string> joint_names_;
 
 };
 

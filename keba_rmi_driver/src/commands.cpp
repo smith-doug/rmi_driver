@@ -23,67 +23,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- *  Created on: Aug 1, 2017
+ *  Created on: Aug 3, 2017
  *      Author: Doug Smith
  */
 
-
-
-#ifndef INCLUDE_DRIVER_H_
-#define INCLUDE_DRIVER_H_
-
-#include <ros/ros.h>
-
-#include "connector.h"
-
-#include <sensor_msgs/JointState.h>
-#include <robot_movement_interface/CommandList.h>
-
-#include <boost/asio.hpp>
-#include <unordered_map>
-
-namespace keba_rmi_driver
-{
-  class Driver
-  {
-  public:
-    Driver();
-
-    void start();
-
-    void addConnection(std::string host, int port);
-
-    void publishJointState();
-
-    void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
-    {
-      commandListCb(*msg);
-    }
-
-    bool commandListCb(const robot_movement_interface::CommandList &msg);
-
-  protected:
-
-    ros::NodeHandle nh;
-
-    std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
-
-    //Connector connector_;
-
-    int conn_num_ = 0;
-
-    boost::asio::io_service io_service_;
-
-    ros::Subscriber command_list_sub_;
-
-
-    ros::Publisher joint_state_publisher_;
-
-    std::thread pub_thread_;
-
-  };
-}
+#include "commands.h"
 
 
 
-#endif /* INCLUDE_DRIVER_H_ */
