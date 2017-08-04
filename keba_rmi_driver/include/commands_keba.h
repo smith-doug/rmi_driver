@@ -23,72 +23,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- *  Created on: Aug 1, 2017
+ *  Created on: Aug 4, 2017
  *      Author: Doug Smith
  */
 
+//Register command handlers for Keba controls
 
 
-#ifndef INCLUDE_DRIVER_H_
-#define INCLUDE_DRIVER_H_
 
-#include <ros/ros.h>
+#ifndef INCLUDE_COMMANDS_KEBA_H_
+#define INCLUDE_COMMANDS_KEBA_H_
 
-#include "connector.h"
 #include "commands.h"
 
-#include <sensor_msgs/JointState.h>
-#include <robot_movement_interface/CommandList.h>
-
-#include <boost/asio.hpp>
-#include <unordered_map>
-
+#include <vector>
 namespace keba_rmi_driver
 {
+class KebaCommands : CommandRegister
+{
+public:
+  void registerCommands();
 
+  std::vector<CommandHandler> command_handlers_;
+};
 
-  class Driver
-  {
-  public:
-    Driver();
-
-    void start();
-
-    void addConnection(std::string host, int port);
-
-    void publishJointState();
-
-    void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
-    {
-      commandListCb(*msg);
-    }
-
-    bool commandListCb(const robot_movement_interface::CommandList &msg);
-
-  protected:
-
-    ros::NodeHandle nh;
-
-    std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
-
-    //Connector connector_;
-
-    int conn_num_ = 0;
-
-    boost::asio::io_service io_service_;
-
-    ros::Subscriber command_list_sub_;
-
-
-    ros::Publisher joint_state_publisher_;
-
-    std::thread pub_thread_;
-
-    std::vector<CommandHandler> cmd_handlers_;  //###testing
-
-  };
-}
+} // namespace keba_rmi_driver
 
 
 
-#endif /* INCLUDE_DRIVER_H_ */
+
+
+
+#endif /* INCLUDE_COMMANDS_KEBA_H_ */

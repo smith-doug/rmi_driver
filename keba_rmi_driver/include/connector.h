@@ -31,6 +31,7 @@
 #define INCLUDE_CONNECTOR_H_
 
 #include <ros/ros.h>
+#include "commands.h"
 #include <iiwa_driver/StringCommand.h>
 #include <industrial_utils/utils.h>
 #include <industrial_utils/param_utils.h>
@@ -44,7 +45,7 @@
 #include <thread>
 #include <memory>
 
-#include "commands.h"
+
 
 namespace keba_rmi_driver
 {

@@ -47,6 +47,101 @@ void Driver::start()
 
   pub_thread_ = std::thread(&Driver::publishJointState, this);
 
+  /*CommandHandler cmh("LIN", "QUATERNION");
+   cmd_handlers_.push_back(cmh);
+
+   cmd_handlers_.push_back(CommandHandler("LIN", "EULER_INTRINSIC_ZYX"));
+
+   cmd_handlers_.push_back(CommandHandler("PTP", "JOINTS"));
+   */
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "PTP";
+  cmd.pose_type = "JOINTS";
+  cmd.pose =
+  { 0,1,2,3,4,5,6};
+  cmd.velocity_type = "%";
+  cmd.velocity =
+  { 0,1,2,3,4,5,6};
+
+  CommandHandler cmh(cmd);
+
+  //std::function<
+
+  std::function<Command(const robot_movement_interface::Command&)> proc_joint_move =
+      [](const robot_movement_interface::Command& msg_cmd)
+      {
+        std::string command_str = "joint move";
+        std::string command_params = "";
+        std::ostringstream oss;
+
+        std::copy(msg_cmd.pose.begin(), msg_cmd.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
+        oss << msg_cmd.pose.back();
+
+        command_params = oss.str();
+
+        return Command(Command::CommandType::Cmd, command_str, command_params);
+      };
+
+  cmh.setProcFunc(proc_joint_move);
+
+  cmd_handlers_.push_back(cmh);
+
+  std::function<Command(const robot_movement_interface::Command&)> proc_linq_move =
+      [](const robot_movement_interface::Command& msg_cmd)
+      {
+        std::string command_str = "linq move";
+        std::string command_params = "";
+        std::ostringstream oss;
+
+        auto pose_temp = msg_cmd.pose;
+
+        pose_temp[0] *= 1000.0;
+        pose_temp[1] *= 1000.0;
+        pose_temp[2] *= 1000.0;
+
+        return Command(Command::CommandType::Cmd, command_str, pose_temp);
+
+        //return Command(Command::CommandType::Cmd, command_str, command_params);
+      };
+
+  cmd.command_type = "LIN";
+  cmd.pose_type = "QUATERNION";
+  cmd.velocity =
+  { 0};
+
+  cmh = CommandHandler(cmd);
+  cmh.setProcFunc(proc_linq_move);
+  cmd_handlers_.push_back(cmh);
+
+  std::function<Command(const robot_movement_interface::Command&)> proc_lin_move =
+      [](const robot_movement_interface::Command& msg_cmd)
+      {
+        std::string command_str = "lin move";
+        std::string command_params = "";
+        std::ostringstream oss;
+
+        auto pose_temp = msg_cmd.pose;
+
+        pose_temp[0] *= 1000.0;
+        pose_temp[1] *= 1000.0;
+        pose_temp[2] *= 1000.0;
+
+        return Command(Command::CommandType::Cmd, command_str, pose_temp);
+
+        //return Command(Command::CommandType::Cmd, command_str, command_params);
+      };
+
+  cmd.pose_type = "EULER_INTRINSIC_ZYX";
+  cmd.pose =
+  { 0,1,2,3,4,5};
+
+  cmh = CommandHandler(cmd);
+
+  cmh.setProcFunc(proc_lin_move);
+
+  cmd_handlers_.push_back(cmh);
+
 }
 
 std::string paramsToString(const std::vector<float> &floatVec)
@@ -78,23 +173,39 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     std::ostringstream oss;
 
-    if (msg_cmd.command_type.compare("PTP") == 0)
+    auto foundItem = std::find(cmd_handlers_.begin(), cmd_handlers_.end(), msg_cmd);
+
+    if (foundItem != cmd_handlers_.end())
     {
-      if (msg_cmd.pose_type.compare("JOINTS") == 0)
-      {
-        command_str = "joint move";
-
-        if (msg_cmd.pose.size() != 7)
-          return false;
-
-        std::copy(msg_cmd.pose.begin(), msg_cmd.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
-        oss << msg_cmd.pose.back();
-
-        command_params = oss.str();
-      }
+      std::cout << "Found cmd handler\n";
+      Command telnet_command;
+      foundItem->processMsg(msg_cmd, telnet_command);
+      conn->addCommand(telnet_command);
+      continue;
+    }
+    else
+    {
+      std::cout << "Failed to find cmd handler\n";
     }
 
-    else if (msg_cmd.command_type.compare("LIN") == 0)
+    /*if (msg_cmd.command_type.compare("PTP") == 0)
+     {
+     if (msg_cmd.pose_type.compare("JOINTS") == 0)
+     {
+     command_str = "joint move";
+
+     if (msg_cmd.pose.size() != 7)
+     return false;
+
+     std::copy(msg_cmd.pose.begin(), msg_cmd.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
+     oss << msg_cmd.pose.back();
+
+     command_params = oss.str();
+     }
+     }
+
+     else */
+    if (msg_cmd.command_type.compare("LIN") == 0)
     {
       auto pose_temp = msg_cmd.pose;
 

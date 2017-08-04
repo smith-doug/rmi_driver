@@ -35,6 +35,18 @@
 namespace keba_rmi_driver
 {
 
+std::string Command::paramsToString(const std::vector<float>& floatVec)
+{
+  if (floatVec.empty())
+    return "";
+
+  std::ostringstream oss;
+  std::copy(floatVec.begin(), floatVec.end() - 1, std::ostream_iterator<double>(oss, " "));
+  oss << floatVec.back();
+
+  return oss.str();
+}
+
 CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg) :
     sample_command_(cmd_msg)
 {

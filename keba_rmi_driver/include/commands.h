@@ -45,11 +45,20 @@ public:
     Get, Cmd
   };
 
-  Command(CommandType type, std::string command, std::string params = "") :
+  Command(): command_(""), params_(""), type_(CommandType::Cmd)
+  {}
+
+  Command(CommandType type, const std::string &command, std::string params = "") :
       type_(type), command_(command), params_(params)
   {
 
   }
+
+  Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) : type_(type), command_(command)
+  {
+    params_ = Command::paramsToString(floatVec);
+  }
+
   std::string command_;
   std::string params_;
 
@@ -61,6 +70,17 @@ public:
     std::string ret = command_ + " : " + params_ + "\n";
     return ret;
   }
+
+
+  static std::string paramsToString(const std::vector<float> &floatVec);
+};
+
+class CommandRegister
+{
+  public:
+  CommandRegister() {}
+
+  virtual void registerCommands();
 };
 
 /**
@@ -80,7 +100,26 @@ public:
   robot_movement_interface::Command sample_command_;
 
 
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+  {
+    if(!process_func_)
+      return false;
+
+    telnet_cmd = process_func_(cmd_msg);
+    return telnet_cmd.command_.compare("error") != 0;
+
+  }
+
+  void setProcFunc(std::function<Command(const robot_movement_interface::Command&)> &f)
+  {
+    process_func_ = f;
+  }
+
+  std::function<Command(const robot_movement_interface::Command&)> process_func_ = nullptr;
+
 };
+
+
 
 } //namespace keba_rmi_driver
 
