@@ -28,6 +28,52 @@
  */
 
 #include "commands.h"
+#include <ros/ros.h>
+#include <robot_movement_interface/Command.h>
+#include <vector>
 
+namespace keba_rmi_driver
+{
 
+CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg) :
+    sample_command_(cmd_msg)
+{
+}
+
+//Returns True if the sample length is > 0 and it doesn't match msg.
+//If sample is "" it will return false as this param isn't used in the match.
+bool usedAndNotEqual(const std::string &sample, const std::string &msg)
+{
+  return sample.length() > 0 && sample.compare(msg) != 0;
+}
+
+bool usedAndNotEqual(const std::vector<float> &sample, const std::vector<float> &msg)
+{
+  return sample.size() != msg.size();
+}
+
+bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_msg)
+{
+  //Check strings for usage and equality
+  //Check vectors for usage and length
+  if (usedAndNotEqual(sample_command_.command_type, cmd_msg.command_type))
+    return false;
+
+  if (usedAndNotEqual(sample_command_.pose_reference, cmd_msg.pose_reference))
+    return false;
+
+  if (usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type))
+    return false;
+
+  if (usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
+    return false;
+
+  if (usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type))
+    return false;
+
+  return true; //If it got this far it's a match
+
+}
+
+} //namespace keba_rmi_driver
 

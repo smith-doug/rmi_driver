@@ -27,22 +27,23 @@
  *      Author: Doug Smith
  */
 
-
-
 #ifndef INCLUDE_COMMANDS_H_
 #define INCLUDE_COMMANDS_H_
 
+#include <robot_movement_interface/Command.h>
+
 #include <string>
+
+namespace keba_rmi_driver
+{
 
 class Command
 {
 public:
   enum CommandType
-    {
-      Get,
-      Cmd
-    };
-
+  {
+    Get, Cmd
+  };
 
   Command(CommandType type, std::string command, std::string params = "") :
       type_(type), command_(command), params_(params)
@@ -51,9 +52,6 @@ public:
   }
   std::string command_;
   std::string params_;
-
-
-
 
   CommandType type_;
 
@@ -65,6 +63,25 @@ public:
   }
 };
 
+/**
+ * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
+ * Fill out any fields you want checked.  Vectors will be checked for length, strings for equality.
+ * Fields that have a length of 0 will be ignored.
+ */
+class CommandHandler
+{
 
+public:
+
+  CommandHandler(const robot_movement_interface::Command &cmd_msg);
+
+  bool operator==(const robot_movement_interface::Command &cmd_msg);
+
+  robot_movement_interface::Command sample_command_;
+
+
+};
+
+} //namespace keba_rmi_driver
 
 #endif /* INCLUDE_COMMANDS_H_ */
