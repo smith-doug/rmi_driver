@@ -112,12 +112,12 @@ std::string Connector::sendCommand(const Command &command)
 
   tcp::socket *socket = NULL;
   std::mutex *mutex = NULL;
-  if (command.type_ == Command::CommandType::Get)
+  if (command.getType() == Command::CommandType::Get)
   {
     socket = &socket_get_;
     mutex = &socket_get_mutex_;
   }
-  else if (command.type_ == Command::CommandType::Cmd)
+  else if (command.getType() == Command::CommandType::Cmd)
   {
     socket = &socket_cmd_;
     mutex = &socket_cmd_mutex_;
@@ -146,7 +146,7 @@ std::string Connector::sendCommand(const Command &command)
 
 void Connector::addCommand(const Command &command)
 {
-  if (command.type_ == Command::CommandType::Cmd)
+  if (command.getType() == Command::CommandType::Cmd)
   {
     socket_cmd_mutex_.lock();
     command_list_.push(command);

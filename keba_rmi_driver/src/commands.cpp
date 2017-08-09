@@ -52,6 +52,11 @@ CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg)
 {
 }
 
+CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg, CommandHandlerFunc f) :
+    sample_command_(cmd_msg), process_func_(std::move(f))
+{
+}
+
 //Returns True if the sample length is > 0 and it doesn't match msg.
 //If sample is "" it will return false as this param isn't used in the match.
 bool usedAndNotEqual(const std::string &sample, const std::string &msg)
@@ -85,6 +90,36 @@ bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_ms
 
   return true; //If it got this far it's a match
 
+}
+
+const std::string& Command::getCommand() const
+{
+  return command_;
+}
+
+void Command::setCommand(const std::string& command)
+{
+  command_ = command;
+}
+
+const std::string& Command::getParams() const
+{
+  return params_;
+}
+
+void Command::setParams(const std::string& params)
+{
+  params_ = params;
+}
+
+Command::CommandType Command::getType() const
+{
+  return type_;
+}
+
+void Command::setType(CommandType type)
+{
+  type_ = type;
 }
 
 } //namespace keba_rmi_driver

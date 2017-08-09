@@ -45,8 +45,10 @@ public:
     Get, Cmd
   };
 
-  Command(): command_(""), params_(""), type_(CommandType::Cmd)
-  {}
+  Command() :
+      command_(""), params_(""), type_(CommandType::Cmd)
+  {
+  }
 
   Command(CommandType type, const std::string &command, std::string params = "") :
       type_(type), command_(command), params_(params)
@@ -54,15 +56,11 @@ public:
 
   }
 
-  Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) : type_(type), command_(command)
+  Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) :
+      type_(type), command_(command)
   {
     params_ = Command::paramsToString(floatVec);
   }
-
-  std::string command_;
-  std::string params_;
-
-  CommandType type_;
 
   std::string toString() const
   {
@@ -71,17 +69,26 @@ public:
     return ret;
   }
 
-
   static std::string paramsToString(const std::vector<float> &floatVec);
+
+
+
+
+  const std::string& getParams() const;
+  void setParams(const std::string& params);
+  CommandType getType() const;
+  void setType(CommandType type);
+  const std::string& getCommand() const;
+  void setCommand(const std::string& command);
+
+protected:
+  std::string command_;
+  std::string params_;
+
+  CommandType type_;
 };
 
-class CommandRegister
-{
-  public:
-  CommandRegister() {}
 
-  virtual void registerCommands();
-};
 
 /**
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
@@ -91,35 +98,51 @@ class CommandRegister
 class CommandHandler
 {
 
+
+
 public:
 
+  typedef std::function<Command(const robot_movement_interface::Command&)> CommandHandlerFunc;
+
   CommandHandler(const robot_movement_interface::Command &cmd_msg);
+
+  CommandHandler(const robot_movement_interface::Command &cmd_msg, CommandHandlerFunc f);
 
   bool operator==(const robot_movement_interface::Command &cmd_msg);
 
   robot_movement_interface::Command sample_command_;
 
-
   bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
   {
-    if(!process_func_)
+    if (!process_func_)
       return false;
 
     telnet_cmd = process_func_(cmd_msg);
-    return telnet_cmd.command_.compare("error") != 0;
+    return telnet_cmd.getCommand().compare("error") != 0;
 
   }
 
-  void setProcFunc(std::function<Command(const robot_movement_interface::Command&)> &f)
+  void setProcFunc(CommandHandlerFunc &f)
   {
     process_func_ = f;
   }
 
-  std::function<Command(const robot_movement_interface::Command&)> process_func_ = nullptr;
+  CommandHandlerFunc process_func_ = nullptr;
 
 };
 
 
+class CommandRegister
+{
+public:
+  CommandRegister()
+  {
+  }
+
+  virtual void registerCommands() = 0;
+
+  std::vector<CommandHandler> command_handlers_;
+};
 
 } //namespace keba_rmi_driver
 
