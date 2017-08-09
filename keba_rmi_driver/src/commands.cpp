@@ -66,7 +66,7 @@ bool usedAndNotEqual(const std::string &sample, const std::string &msg)
 
 bool usedAndNotEqual(const std::vector<float> &sample, const std::vector<float> &msg)
 {
-  return sample.size() != msg.size();
+  return sample.size() > 0 && sample.size() != msg.size();
 }
 
 bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_msg)
