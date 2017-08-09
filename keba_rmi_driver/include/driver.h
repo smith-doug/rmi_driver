@@ -37,6 +37,8 @@
 #include "connector.h"
 #include "commands.h"
 
+#include "commands_keba.h"
+
 #include <sensor_msgs/JointState.h>
 #include <robot_movement_interface/CommandList.h>
 
@@ -54,7 +56,7 @@ namespace keba_rmi_driver
 
     void start();
 
-    void addConnection(std::string host, int port);
+    void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
 
     void publishJointState();
 
@@ -64,6 +66,8 @@ namespace keba_rmi_driver
     }
 
     bool commandListCb(const robot_movement_interface::CommandList &msg);
+
+
 
   protected:
 
@@ -84,7 +88,10 @@ namespace keba_rmi_driver
 
     std::thread pub_thread_;
 
-    std::vector<CommandHandler> cmd_handlers_;  //###testing
+    //std::vector<CommandHandler> cmd_handlers_;  //###testing
+
+
+    std::shared_ptr<CommandRegister> cmd_register_;
 
   };
 }

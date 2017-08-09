@@ -97,12 +97,17 @@ protected:
  */
 class CommandHandler
 {
-
-
-
 public:
 
   typedef std::function<Command(const robot_movement_interface::Command&)> CommandHandlerFunc;
+
+  CommandHandler()
+  {
+
+
+  }
+
+  virtual ~CommandHandler() {}
 
   CommandHandler(const robot_movement_interface::Command &cmd_msg);
 
@@ -110,17 +115,26 @@ public:
 
   bool operator==(const robot_movement_interface::Command &cmd_msg);
 
+
+
+
+
+
+
   robot_movement_interface::Command sample_command_;
 
-  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
-  {
-    if (!process_func_)
-      return false;
+//  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+//  {
+//    if (!process_func_)
+//      return false;
+//
+//    telnet_cmd = process_func_(cmd_msg);
+//    return telnet_cmd.getCommand().compare("error") != 0;
+//
+//  }
 
-    telnet_cmd = process_func_(cmd_msg);
-    return telnet_cmd.getCommand().compare("error") != 0;
+  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) = 0;
 
-  }
 
   void setProcFunc(CommandHandlerFunc &f)
   {
@@ -128,6 +142,10 @@ public:
   }
 
   CommandHandlerFunc process_func_ = nullptr;
+
+  //virtual Command operator()(const robot_movement_interface::Command &msg_cmd) = 0;
+
+
 
 };
 
@@ -139,9 +157,11 @@ public:
   {
   }
 
+  virtual ~CommandRegister() {}
+
   virtual void registerCommands() = 0;
 
-  std::vector<CommandHandler> command_handlers_;
+  std::vector<std::unique_ptr<CommandHandler>> command_handlers_;
 };
 
 } //namespace keba_rmi_driver

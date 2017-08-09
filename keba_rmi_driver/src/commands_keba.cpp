@@ -27,14 +27,117 @@
  *      Author: Doug Smith
  */
 
-
 #include "commands_keba.h"
 
 namespace keba_rmi_driver
 {
 
+KebaCommands::KebaCommands()
+{
+  std::cout << "KebaCommands() regiseting commands\n";
+  registerCommands();
+}
 
-} //namespace keba_rmi_driver
+void KebaCommands::registerCommands()
+{
+
+  command_handlers_.emplace_back(new KebaCommandPtpJoints());
+  command_handlers_.emplace_back(new KebaCommandLinQuat());
+  command_handlers_.emplace_back(new KebaCommandLinEuler());
+
+}
+
+KebaCommandPtpJoints::KebaCommandPtpJoints()
+{
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "PTP";
+  cmd.pose_type = "JOINTS";
+  cmd.pose =
+  { 0,1,2,3,4,5,6};
+  cmd.velocity_type = "%";
+  cmd.velocity =
+  { 0,1,2,3,4,5,6};
+
+  sample_command_ = cmd;
+}
+
+bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+{
+  std::string command_str = "joint move";
+  std::string command_params = "";
+  std::ostringstream oss;
+
+  std::copy(cmd_msg.pose.begin(), cmd_msg.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
+  oss << cmd_msg.pose.back();
+
+  command_params = oss.str();
+
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  return true;
+}
 
 
+
+KebaCommandLinQuat::KebaCommandLinQuat()
+{
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "LIN";
+  cmd.pose_type = "QUATERNION";
+  cmd.pose =
+  { 0,1,2,3,4,5,6};
+  cmd.velocity =
+  { 0};
+
+  sample_command_ = cmd;
+}
+
+bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+{
+  std::string command_str = "joint move";
+  std::string command_params = "";
+  std::ostringstream oss;
+
+  std::copy(cmd_msg.pose.begin(), cmd_msg.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
+  oss << cmd_msg.pose.back();
+
+  command_params = oss.str();
+
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  return true;
+
+}
+
+
+KebaCommandLinEuler::KebaCommandLinEuler()
+{
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "LIN";
+  cmd.pose_type = "EULER_INTRINSIC_ZYX";
+  cmd.pose =
+  { 0,1,2,3,4,5};
+  cmd.velocity =
+  { 0};
+
+  sample_command_ = cmd;
+}
+
+bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+{
+    std::string command_str = "lin move";
+    std::string command_params = "";
+    std::ostringstream oss;
+
+    auto pose_temp = cmd_msg.pose;
+
+    pose_temp[0] *= 1000.0;
+    pose_temp[1] *= 1000.0;
+    pose_temp[2] *= 1000.0;
+
+    telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
+    return true;
+}
+
+}//namespace keba_rmi_driver
 

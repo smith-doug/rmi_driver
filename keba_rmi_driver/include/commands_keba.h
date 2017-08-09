@@ -29,29 +29,61 @@
 
 //Register command handlers for Keba controls
 
-
-
 #ifndef INCLUDE_COMMANDS_KEBA_H_
 #define INCLUDE_COMMANDS_KEBA_H_
 
 #include "commands.h"
 
 #include <vector>
+#include <functional>
+
 namespace keba_rmi_driver
 {
-class KebaCommands : CommandRegister
+class KebaCommands : public CommandRegister
 {
 public:
+
+  KebaCommands();
+
   void registerCommands();
 
-  std::vector<CommandHandler> command_handlers_;
+
+
+};
+
+class KebaCommandPtpJoints : public CommandHandler
+{
+public:
+  KebaCommandPtpJoints();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+  //Command operator()(const robot_movement_interface::Command &msg_cmd);
+};
+
+class KebaCommandLinQuat : public CommandHandler
+{
+public:
+
+  KebaCommandLinQuat();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+  //Command operator()(const robot_movement_interface::Command &msg_cmd);
+};
+
+class KebaCommandLinEuler : public CommandHandler
+{
+public:
+
+  KebaCommandLinEuler();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+  //Command operator()(const robot_movement_interface::Command &msg_cmd);
+
 };
 
 } // namespace keba_rmi_driver
-
-
-
-
-
 
 #endif /* INCLUDE_COMMANDS_KEBA_H_ */
