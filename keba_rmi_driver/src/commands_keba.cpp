@@ -34,7 +34,6 @@ namespace keba_rmi_driver
 
 KebaCommands::KebaCommands()
 {
-  std::cout << "KebaCommands() regiseting commands\n";
   registerCommands();
 }
 
@@ -44,6 +43,18 @@ void KebaCommands::registerCommands()
   command_handlers_.emplace_back(new KebaCommandPtpJoints());
   command_handlers_.emplace_back(new KebaCommandLinQuat());
   command_handlers_.emplace_back(new KebaCommandLinEuler());
+
+
+  //Sample command for lambda usage
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "TEST";
+
+  CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
+  {
+    return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+  });
+
+  command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
 
 }
 

@@ -48,6 +48,14 @@ public:
 
 };
 
+/*
+ * Handler for PTP to joint positions
+ * command_type: PTP
+ * pose_type: JOINTS
+ * pose len: 7
+ * velocity_type: % not currently used
+ * velocity len: 7 not currently used
+ */
 class KebaCommandPtpJoints : public CommandHandler
 {
 public:

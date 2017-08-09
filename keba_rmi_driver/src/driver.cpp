@@ -50,11 +50,12 @@ void Driver::start()
 
   //cmd_register_.reset(new KebaCommands());
 
-  std::cout << "cmd_register_ size: " << cmd_register_->command_handlers_.size() << std::endl;
 
-  for (auto &cmh : cmd_register_->command_handlers_)
+  std::cout << "cmd_register_ size: " << cmd_register_->handlers().size() << std::endl;
+
+  for (auto &cmh : cmd_register_->handlers())
   {
-    std::cout << cmh->sample_command_.command_type << std::endl;
+    std::cout << cmh->getSampleCommand().command_type << std::endl;
   }
 
   return;
@@ -90,22 +91,20 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     std::ostringstream oss;
 
-    auto &handlers = cmd_register_->command_handlers_;
 
-    auto foundItem = std::find_if(cmd_register_->command_handlers_.begin(), cmd_register_->command_handlers_.end(),
+
+    auto foundItem = std::find_if(cmd_register_->handlers().begin(), cmd_register_->handlers().end(),
                                   [&](const std::unique_ptr<CommandHandler> &p)
                                   {
                                     return *p.get() == msg_cmd;
                                   });
 
-    //auto foundItem = std::find(cmd_register_->command_handlers_.begin(), cmd_register_->command_handlers_.end(), msg_cmd);
 
-    if (foundItem != cmd_register_->command_handlers_.end())
+    if (foundItem != cmd_register_->handlers().end())
     {
       std::cout << "Found cmd handler\n";
       Command telnet_command;
       foundItem->get()->processMsg(msg_cmd, telnet_command);
-      //foundItem->processMsg(msg_cmd, telnet_command);
       conn->addCommand(telnet_command);
       continue;
     }
@@ -113,13 +112,6 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
     {
       std::cout << "Failed to find cmd handler\n";
     }
-
-    /*if (command_str != "")
-     {
-     Command telnet_command(Command::CommandType::Cmd, command_str, command_params);
-     conn->addCommand(telnet_command);
-     }*/
-
   }
 
   return true;

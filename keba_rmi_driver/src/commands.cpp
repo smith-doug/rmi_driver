@@ -47,13 +47,13 @@ std::string Command::paramsToString(const std::vector<float>& floatVec)
   return oss.str();
 }
 
-CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg) :
-    sample_command_(cmd_msg)
-{
-}
+//CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg) :
+//    sample_command_(cmd_msg)
+//{
+//}
 
-CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg, CommandHandlerFunc f) :
-    sample_command_(cmd_msg), process_func_(std::move(f))
+CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f) :
+    sample_command_(sample_command), process_func_(std::move(f))
 {
 }
 
@@ -67,6 +67,11 @@ bool usedAndNotEqual(const std::string &sample, const std::string &msg)
 bool usedAndNotEqual(const std::vector<float> &sample, const std::vector<float> &msg)
 {
   return sample.size() > 0 && sample.size() != msg.size();
+}
+
+const robot_movement_interface::Command& CommandHandler::getSampleCommand() const
+{
+  return sample_command_;
 }
 
 bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_msg)
