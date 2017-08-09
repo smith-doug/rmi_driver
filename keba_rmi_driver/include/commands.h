@@ -30,6 +30,8 @@
 #ifndef INCLUDE_COMMANDS_H_
 #define INCLUDE_COMMANDS_H_
 
+#include <ros/ros.h>
+
 #include <robot_movement_interface/Command.h>
 
 #include <string>
@@ -37,9 +39,15 @@
 namespace keba_rmi_driver
 {
 
+/**
+ * Commands that will be sent to the robot controller.  They are represented by a string with a command, a :, then parameters
+ * <command> : <params>
+ */
 class Command
 {
 public:
+
+  //Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
   enum CommandType
   {
     Get, Cmd
@@ -63,12 +71,19 @@ public:
 
   std::string toString() const
   {
-
     std::string ret = command_ + " : " + params_ + "\n";
     return ret;
   }
 
+  /**
+   * Converts a float vector into a string of values separated by spaces
+   *
+   * @param floatVec vector of floats
+   * @return string of values
+   */
   static std::string paramsToString(const std::vector<float> &floatVec);
+
+  //Getters/setters
 
   const std::string& getParams() const;
   void setParams(const std::string& params);
@@ -88,6 +103,10 @@ protected:
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
  * Fill out any fields you want checked.  Vectors will be checked for length, strings for equality.
  * Fields that have a length of 0 will be ignored.
+ *
+ * Extend this class, set up the sample_command_ in the constructor, and override processMsg.
+ *
+ * You can also create a base CommandHandler with a sample message and a std::function/lambda to process it.
  */
 class CommandHandler
 {
@@ -103,40 +122,82 @@ public:
   {
   }
 
-  CommandHandler(const robot_movement_interface::Command &cmd_msg);
+  /**
+   * Construct a new CommandHandler.  Not used
+   *
+   * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
+   */
+  //CommandHandler(const robot_movement_interface::Command &cmd_msg);
 
-  CommandHandler(const robot_movement_interface::Command &cmd_msg, CommandHandlerFunc f);
+  /**
+   * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
+   * create a new class.
+   *
+   * Example:
+   *  CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
+      {
+        return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+      });
+   *
+   * @param sample_command The sample command to match
+   * @param f a std::function/lambda that takes an rmi::Command returns a telnet Command
+   */
+  CommandHandler(const robot_movement_interface::Command &sample_command, CommandHandlerFunc f);
 
+  /**
+   * Checks if the values specified in the sample_command match those in cmd_msg.
+   * Strings are checked for equality.
+   * Vectors are checked for length.
+   *
+   * @param cmd_msg The message received from the command_list topic
+   * @return True if it's a match
+   */
   bool operator==(const robot_movement_interface::Command &cmd_msg);
 
-  robot_movement_interface::Command sample_command_;
+  /**
+   * Processes a robot_movement_interface::Command.  Override this method in extended classes.
+   * The message should have already been checked for relevance.
+   * This base version will call the stored std::function.
+   *
+   * @param cmd_msg The message received from the command_list topic
+   * @param telnet_cmd The command to send to the robot
+   * @return True if OK
+   */
+  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+  {
+    if (!process_func_)
+    {
+      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
+      return false;
+    }
 
-//  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
-//  {
-//    if (!process_func_)
-//      return false;
-//
-//    telnet_cmd = process_func_(cmd_msg);
-//    return telnet_cmd.getCommand().compare("error") != 0;
-//
-//  }
+    telnet_cmd = process_func_(cmd_msg);
+    return telnet_cmd.getCommand().compare("error") != 0;
 
-  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) = 0;
+  }
 
   void setProcFunc(CommandHandlerFunc &f)
   {
     process_func_ = f;
   }
 
-  CommandHandlerFunc process_func_ = nullptr;
+  const robot_movement_interface::Command& getSampleCommand() const;
 
-  //virtual Command operator()(const robot_movement_interface::Command &msg_cmd) = 0;
+protected:
+  robot_movement_interface::Command sample_command_;
+
+  CommandHandlerFunc process_func_ = nullptr;
 
 };
 
+/**
+ * This class contains all the registered command handlers.
+ */
 class CommandRegister
 {
 public:
+
+  typedef std::vector<std::unique_ptr<CommandHandler>> CommandHandlerPtrVec;
   CommandRegister()
   {
   }
@@ -145,9 +206,22 @@ public:
   {
   }
 
+  /**
+   * Create commands and put them in the command_handlers_ vector.
+   */
   virtual void registerCommands() = 0;
 
-  std::vector<std::unique_ptr<CommandHandler>> command_handlers_;
+  /**
+   *
+   * @return a reference to the vector of handlers
+   */
+  std::vector<std::unique_ptr<CommandHandler>>& handlers()
+  {
+    return command_handlers_;
+  }
+
+protected:
+  CommandHandlerPtrVec command_handlers_;
 };
 
 } //namespace keba_rmi_driver
