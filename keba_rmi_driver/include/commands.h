@@ -53,7 +53,6 @@ public:
   Command(CommandType type, const std::string &command, std::string params = "") :
       type_(type), command_(command), params_(params)
   {
-
   }
 
   Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) :
@@ -71,9 +70,6 @@ public:
 
   static std::string paramsToString(const std::vector<float> &floatVec);
 
-
-
-
   const std::string& getParams() const;
   void setParams(const std::string& params);
   CommandType getType() const;
@@ -88,8 +84,6 @@ protected:
   CommandType type_;
 };
 
-
-
 /**
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
  * Fill out any fields you want checked.  Vectors will be checked for length, strings for equality.
@@ -103,23 +97,17 @@ public:
 
   CommandHandler()
   {
-
-
   }
 
-  virtual ~CommandHandler() {}
+  virtual ~CommandHandler()
+  {
+  }
 
   CommandHandler(const robot_movement_interface::Command &cmd_msg);
 
   CommandHandler(const robot_movement_interface::Command &cmd_msg, CommandHandlerFunc f);
 
   bool operator==(const robot_movement_interface::Command &cmd_msg);
-
-
-
-
-
-
 
   robot_movement_interface::Command sample_command_;
 
@@ -135,7 +123,6 @@ public:
 
   virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) = 0;
 
-
   void setProcFunc(CommandHandlerFunc &f)
   {
     process_func_ = f;
@@ -145,10 +132,7 @@ public:
 
   //virtual Command operator()(const robot_movement_interface::Command &msg_cmd) = 0;
 
-
-
 };
-
 
 class CommandRegister
 {
@@ -157,7 +141,9 @@ public:
   {
   }
 
-  virtual ~CommandRegister() {}
+  virtual ~CommandRegister()
+  {
+  }
 
   virtual void registerCommands() = 0;
 

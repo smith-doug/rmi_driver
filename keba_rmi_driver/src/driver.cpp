@@ -50,8 +50,6 @@ void Driver::start()
 
   //cmd_register_.reset(new KebaCommands());
 
-
-
   std::cout << "cmd_register_ size: " << cmd_register_->command_handlers_.size() << std::endl;
 
   for (auto &cmh : cmd_register_->command_handlers_)
@@ -60,8 +58,6 @@ void Driver::start()
   }
 
   return;
-
-
 
 }
 
@@ -76,8 +72,6 @@ std::string paramsToString(const std::vector<float> &floatVec)
 
   return oss.str();
 }
-
-
 
 bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 {
@@ -104,7 +98,6 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
                                     return *p.get() == msg_cmd;
                                   });
 
-
     //auto foundItem = std::find(cmd_register_->command_handlers_.begin(), cmd_register_->command_handlers_.end(), msg_cmd);
 
     if (foundItem != cmd_register_->command_handlers_.end())
@@ -121,13 +114,11 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       std::cout << "Failed to find cmd handler\n";
     }
 
-
-
     /*if (command_str != "")
-    {
-      Command telnet_command(Command::CommandType::Cmd, command_str, command_params);
-      conn->addCommand(telnet_command);
-    }*/
+     {
+     Command telnet_command(Command::CommandType::Cmd, command_str, command_params);
+     conn->addCommand(telnet_command);
+     }*/
 
   }
 

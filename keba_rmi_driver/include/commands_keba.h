@@ -28,7 +28,6 @@
  */
 
 //Register command handlers for Keba controls
-
 #ifndef INCLUDE_COMMANDS_KEBA_H_
 #define INCLUDE_COMMANDS_KEBA_H_
 
@@ -47,8 +46,6 @@ public:
 
   void registerCommands();
 
-
-
 };
 
 class KebaCommandPtpJoints : public CommandHandler
@@ -58,7 +55,6 @@ public:
 
   bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
 
-  //Command operator()(const robot_movement_interface::Command &msg_cmd);
 };
 
 class KebaCommandLinQuat : public CommandHandler
@@ -69,7 +65,6 @@ public:
 
   bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
 
-  //Command operator()(const robot_movement_interface::Command &msg_cmd);
 };
 
 class KebaCommandLinEuler : public CommandHandler
@@ -79,8 +74,6 @@ public:
   KebaCommandLinEuler();
 
   bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
-
-  //Command operator()(const robot_movement_interface::Command &msg_cmd);
 
 };
 

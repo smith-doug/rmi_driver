@@ -27,8 +27,6 @@
  *      Author: Doug Smith
  */
 
-
-
 #ifndef INCLUDE_DRIVER_H_
 #define INCLUDE_DRIVER_H_
 
@@ -48,54 +46,47 @@
 namespace keba_rmi_driver
 {
 
+class Driver
+{
+public:
+  Driver();
 
-  class Driver
+  void start();
+
+  void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
+
+  void publishJointState();
+
+  void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
   {
-  public:
-    Driver();
+    commandListCb(*msg);
+  }
 
-    void start();
+  bool commandListCb(const robot_movement_interface::CommandList &msg);
 
-    void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
+protected:
 
-    void publishJointState();
+  ros::NodeHandle nh;
 
-    void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
-    {
-      commandListCb(*msg);
-    }
+  std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 
-    bool commandListCb(const robot_movement_interface::CommandList &msg);
+  //Connector connector_;
 
+  int conn_num_ = 0;
 
+  boost::asio::io_service io_service_;
 
-  protected:
+  ros::Subscriber command_list_sub_;
 
-    ros::NodeHandle nh;
+  ros::Publisher joint_state_publisher_;
 
-    std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
+  std::thread pub_thread_;
 
-    //Connector connector_;
+  //std::vector<CommandHandler> cmd_handlers_;  //###testing
 
-    int conn_num_ = 0;
+  std::shared_ptr<CommandRegister> cmd_register_;
 
-    boost::asio::io_service io_service_;
-
-    ros::Subscriber command_list_sub_;
-
-
-    ros::Publisher joint_state_publisher_;
-
-    std::thread pub_thread_;
-
-    //std::vector<CommandHandler> cmd_handlers_;  //###testing
-
-
-    std::shared_ptr<CommandRegister> cmd_register_;
-
-  };
+};
 }
-
-
 
 #endif /* INCLUDE_DRIVER_H_ */
