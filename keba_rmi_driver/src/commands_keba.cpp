@@ -76,8 +76,6 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   return true;
 }
 
-
-
 KebaCommandLinQuat::KebaCommandLinQuat()
 {
   robot_movement_interface::Command cmd;
@@ -94,20 +92,20 @@ KebaCommandLinQuat::KebaCommandLinQuat()
 
 bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
 {
-  std::string command_str = "joint move";
+  std::string command_str = "linq move";
   std::string command_params = "";
   std::ostringstream oss;
 
-  std::copy(cmd_msg.pose.begin(), cmd_msg.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
-  oss << cmd_msg.pose.back();
+  auto pose_temp = cmd_msg.pose;
 
-  command_params = oss.str();
+  pose_temp[0] *= 1000.0;
+  pose_temp[1] *= 1000.0;
+  pose_temp[2] *= 1000.0;
 
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
   return true;
 
 }
-
 
 KebaCommandLinEuler::KebaCommandLinEuler()
 {
@@ -125,19 +123,19 @@ KebaCommandLinEuler::KebaCommandLinEuler()
 
 bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
 {
-    std::string command_str = "lin move";
-    std::string command_params = "";
-    std::ostringstream oss;
+  std::string command_str = "lin move";
+  std::string command_params = "";
+  std::ostringstream oss;
 
-    auto pose_temp = cmd_msg.pose;
+  auto pose_temp = cmd_msg.pose;
 
-    pose_temp[0] *= 1000.0;
-    pose_temp[1] *= 1000.0;
-    pose_temp[2] *= 1000.0;
+  pose_temp[0] *= 1000.0;
+  pose_temp[1] *= 1000.0;
+  pose_temp[2] *= 1000.0;
 
-    telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
-    return true;
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
+  return true;
 }
 
-}//namespace keba_rmi_driver
+} //namespace keba_rmi_driver
 
