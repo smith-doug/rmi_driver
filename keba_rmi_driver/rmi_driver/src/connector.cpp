@@ -99,6 +99,7 @@ bool Connector::connect(std::string host, int port)
   get_thread_ = std::thread(&Connector::getThread, this);
   cmd_thread_ = std::thread(&Connector::cmdThread, this);
 
+  return true;
   /*
   Command cmd(Command::CommandType::Cmd, "joint move", "0.1 0.2 0.3 0.4 0.5 0.6 0.7");
 
@@ -148,10 +149,17 @@ void Connector::addCommand(const Command &command)
 {
   if (command.getType() == Command::CommandType::Cmd)
   {
-    socket_cmd_mutex_.lock();
+    command_list_mutex_.lock();
     command_list_.push(command);
-    socket_cmd_mutex_.unlock();
+    command_list_mutex_.unlock();
   }
+}
+
+void Connector::clearCommands()
+{
+  command_list_mutex_.lock();
+  command_list_ = std::queue<Command>();
+  command_list_mutex_.unlock();
 }
 
 void Connector::getThread()
@@ -195,19 +203,26 @@ void Connector::cmdThread()
   ros::Rate rate(30);
   std::cout << "Cmd starting" << std::endl;
 
+  Command cmd;
+
   while (!ros::isShuttingDown())
   {
+
+    bool should_send = false;
+    command_list_mutex_.lock();
     if (command_list_.size() > 0)
     {
+      should_send = true;
 
-      socket_cmd_mutex_.lock();
-      Command cmd = command_list_.front();
+      cmd = command_list_.front();
       command_list_.pop();
       std::cout << "Cmd : " << cmd.toString();
-      socket_cmd_mutex_.unlock();
+    }
+    command_list_mutex_.unlock();
 
+    if(should_send)
+    {
       std::string response = sendCommand(cmd);
-
       std::cout << "Cmd response: " << response << std::endl << std::endl;
     }
     else

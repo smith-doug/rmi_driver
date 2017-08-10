@@ -36,15 +36,19 @@ namespace keba_rmi_driver
 {
 Driver::Driver()
 {
+  ros::NodeHandle nh;
+  config_.loadConfig(nh);
 }
 
 void Driver::start()
 {
 
-  cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>("keba_rmi_plugin", "keba_rmi_driver::CommandRegister"));
+  auto &con_cfg = config_.connections_[0];
+  //cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>("keba_rmi_plugin", "keba_rmi_driver::CommandRegister"));
+  cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "keba_rmi_driver::CommandRegister"));
   try
   {
-    cmd_register_ = cmh_loader->createUniqueInstance("keba_rmi_driver::KebaCommands");
+    cmd_register_ = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
 
 
 
@@ -56,7 +60,7 @@ void Driver::start()
   }
   //cmd_register_ = std::make_shared<KebaCommands>();
 
-  this->addConnection("192.168.100.100", 30000, cmd_register_);
+  this->addConnection(con_cfg.ip_address_, 30000, cmd_register_);
 
   joint_state_publisher_ = nh.advertise<sensor_msgs::JointState>("joint_states", 1);
 
@@ -99,6 +103,10 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
   if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
     return false;
+
+
+  if(msg.replace_previous_commands)
+    conn->clearCommands();
 
   for (auto &msg_cmd : msg.commands)
   {
@@ -163,6 +171,12 @@ void Driver::publishJointState()
     }
     pub_rate.sleep();
   }
+}
+
+void Driver::loadConfig()
+{
+  ros::NodeHandle nh("~");
+
 }
 
 } // namespace keba_rmi_driver

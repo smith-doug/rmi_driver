@@ -1,0 +1,10 @@
+rmi_driver:
+  connection:
+      ip_address: "192.168.100.100"
+      rmi_plugin_package: "keba_rmi_plugin"
+      rmi_plugin_lookup_name: "keba_rmi_driver::KebaCommands"
+      joints: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint, rail_to_base]
+ 
+
+
+

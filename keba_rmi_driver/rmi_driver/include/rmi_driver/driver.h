@@ -44,8 +44,81 @@
 #include <boost/asio.hpp>
 #include <unordered_map>
 
+//#include <industrial_utils/param_utils.h>
+
 namespace keba_rmi_driver
 {
+
+class DriverConfig
+{
+public:
+
+  class ConnectionConfig
+  {
+  public:
+    ConnectionConfig(){}
+
+    std::string ip_address_;
+    std::string rmi_plugin_package_;
+    std::string rmi_plugin_lookup_name_;
+    std::vector<std::string> joints_;
+
+  };
+
+
+  DriverConfig() {}
+
+
+  template <typename T>
+  struct identity { typedef T type; };
+
+  template <typename T>
+  void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
+  {
+    bool loadOk = nh.param<T>(key, val, def);
+    if(loadOk)
+      std::cout << "Param loaded. ";
+    else
+      std::cout << "Failed to load, using default. ";
+
+    std::cout << key << " = " << val << std::endl;
+
+  }
+
+  /**
+   * This is terrible but I can't get it to load structured data like controller_joint_map right now.
+   * @param nh
+   */
+  void loadConfig(ros::NodeHandle &nh)
+  {
+    std::cout << "loading config\n";
+
+    std::vector<std::string> sadsad;
+
+
+
+
+    ConnectionConfig cfg;
+
+
+    loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
+
+    loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
+
+    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_, "keba_rmi_driver::KebaCommands");
+
+
+
+
+
+    connections_.push_back(cfg);
+
+
+  }
+
+  std::vector<ConnectionConfig> connections_;
+
+};
 
 class Driver
 {
@@ -64,6 +137,10 @@ public:
   }
 
   bool commandListCb(const robot_movement_interface::CommandList &msg);
+
+  void loadConfig();
+
+  DriverConfig config_;
 
 protected:
 

@@ -66,6 +66,8 @@ public:
 
   void addCommand(const Command &command);
 
+  void clearCommands();
+
   sensor_msgs::JointState getLastJointState()
   {
     return last_joint_state_;
@@ -84,6 +86,8 @@ protected:
 
   //Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
   boost::asio::ip::tcp::socket socket_get_;
+
+  std::mutex command_list_mutex_;
 
   std::mutex socket_cmd_mutex_;
   std::mutex socket_get_mutex_;
