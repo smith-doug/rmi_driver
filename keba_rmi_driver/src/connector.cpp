@@ -27,7 +27,7 @@
  *      Author: Doug Smith
  */
 
-#include "connector.h"
+#include "keba_rmi_driver/connector.h"
 #include <boost/algorithm/string.hpp>
 
 namespace keba_rmi_driver

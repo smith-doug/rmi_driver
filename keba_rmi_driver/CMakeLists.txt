@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   iiwa_driver
 	robot_movement_interface
   industrial_utils
+  pluginlib 
 )
 
 find_package(Boost REQUIRED COMPONENTS
@@ -50,7 +51,9 @@ catkin_package(
         iiwa_driver
 		    robot_movement_interface
         industrial_utils
+        pluginlib 
     DEPENDS Boost
+    LIBRARIES keba_rmi_driver
 )
 
 
@@ -60,10 +63,18 @@ include_directories(
 )
 
 
-file(GLOB_RECURSE keba_rmi_driver_src RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS src/*.cpp)
+#file(GLOB_RECURSE keba_rmi_driver_src RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS src/*.cpp)
+set(SRC_FILES src/commands.cpp
+              src/connector.cpp
+              src/driver.cpp
+  )
 
-add_executable(keba_rmi_driver
-  ${keba_rmi_driver_src}
+add_library(keba_rmi_driver ${SRC_FILES})
+target_link_libraries(keba_rmi_driver ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES})
+
+add_executable(keba_rmi_driver_node
+  src/main.cpp
 )
 
 add_dependencies(keba_rmi_driver 
@@ -72,7 +83,30 @@ add_dependencies(keba_rmi_driver
   ${PROJECT_NAME}_gencpp
 )
 
-target_link_libraries(keba_rmi_driver
+target_link_libraries(keba_rmi_driver_node
+  keba_rmi_driver
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+)
+
+add_library(keba_rmi_driver_lib src/commands.cpp)
+target_link_libraries(keba_rmi_driver_lib ${catkin_LIBRARIES})
+
+
+
+install(DIRECTORY include/keba_rmi_driver/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+        FILES_MATCHING PATTERN "*.h")
+
+## Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
+
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

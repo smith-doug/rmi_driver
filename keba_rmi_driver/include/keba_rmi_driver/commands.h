@@ -144,6 +144,8 @@ public:
    */
   CommandHandler(const robot_movement_interface::Command &sample_command, CommandHandlerFunc f);
 
+  virtual void initialize() {}
+
   /**
    * Checks if the values specified in the sample_command match those in cmd_msg.
    * Strings are checked for equality.
@@ -205,6 +207,8 @@ public:
   virtual ~CommandRegister()
   {
   }
+
+  virtual void initialize() {}
 
   /**
    * Create commands and put them in the command_handlers_ vector.

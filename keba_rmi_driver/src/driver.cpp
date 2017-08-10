@@ -27,8 +27,10 @@
  *      Author: Doug Smith
  */
 
-#include "driver.h"
+#include "keba_rmi_driver/driver.h"
 #include <iostream>
+
+
 
 namespace keba_rmi_driver
 {
@@ -38,7 +40,21 @@ Driver::Driver()
 
 void Driver::start()
 {
-  cmd_register_ = std::make_shared<KebaCommands>();
+
+  cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>("keba_rmi_plugin", "keba_rmi_driver::CommandRegister"));
+  try
+  {
+    cmd_register_ = cmh_loader->createUniqueInstance("keba_rmi_driver::KebaCommands");
+
+
+
+    std::cout << "Was able to load the plugin\n";
+  }
+  catch(pluginlib::PluginlibException& ex)
+  {
+    ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
+  }
+  //cmd_register_ = std::make_shared<KebaCommands>();
 
   this->addConnection("192.168.100.100", 30000, cmd_register_);
 

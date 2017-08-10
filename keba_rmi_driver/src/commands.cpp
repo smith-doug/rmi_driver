@@ -27,7 +27,7 @@
  *      Author: Doug Smith
  */
 
-#include "commands.h"
+#include "keba_rmi_driver/commands.h"
 #include <ros/ros.h>
 #include <robot_movement_interface/Command.h>
 #include <vector>

@@ -21,6 +21,7 @@
   <depend>robot_movement_interface</depend>
   <depend>iiwa_driver</depend>
   <depend>industrial_utils</depend>
+  <depend>pluginlib</depend>
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>  

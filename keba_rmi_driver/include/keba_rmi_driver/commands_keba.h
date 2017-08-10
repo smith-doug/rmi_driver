@@ -23,70 +23,68 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- *  Created on: Aug 1, 2017
+ *  Created on: Aug 4, 2017
  *      Author: Doug Smith
  */
 
-#ifndef INCLUDE_DRIVER_H_
-#define INCLUDE_DRIVER_H_
+//Register command handlers for Keba controls
+#ifndef INCLUDE_COMMANDS_KEBA_H_
+#define INCLUDE_COMMANDS_KEBA_H_
 
-#include <ros/ros.h>
+#include "keba_rmi_driver/commands.h"
 
-#include "connector.h"
-#include "commands.h"
-
-#include "commands_keba.h"
-
-#include <sensor_msgs/JointState.h>
-#include <robot_movement_interface/CommandList.h>
-
-#include <boost/asio.hpp>
-#include <unordered_map>
+#include <vector>
+#include <functional>
 
 namespace keba_rmi_driver
 {
-
-class Driver
+class KebaCommands : public CommandRegister
 {
 public:
-  Driver();
 
-  void start();
+  KebaCommands();
 
-  void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
-
-  void publishJointState();
-
-  void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
-  {
-    commandListCb(*msg);
-  }
-
-  bool commandListCb(const robot_movement_interface::CommandList &msg);
-
-protected:
-
-  ros::NodeHandle nh;
-
-  std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
-
-  //Connector connector_;
-
-  int conn_num_ = 0;
-
-  boost::asio::io_service io_service_;
-
-  ros::Subscriber command_list_sub_;
-
-  ros::Publisher joint_state_publisher_;
-
-  std::thread pub_thread_;
-
-  //std::vector<CommandHandler> cmd_handlers_;  //###testing
-
-  std::shared_ptr<CommandRegister> cmd_register_;
+  void registerCommands();
 
 };
-}
 
-#endif /* INCLUDE_DRIVER_H_ */
+/*
+ * Handler for PTP to joint positions
+ * command_type: PTP
+ * pose_type: JOINTS
+ * pose len: 7
+ * velocity_type: % not currently used
+ * velocity len: 7 not currently used
+ */
+class KebaCommandPtpJoints : public CommandHandler
+{
+public:
+  KebaCommandPtpJoints();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+};
+
+class KebaCommandLinQuat : public CommandHandler
+{
+public:
+
+  KebaCommandLinQuat();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+};
+
+class KebaCommandLinEuler : public CommandHandler
+{
+public:
+
+  KebaCommandLinEuler();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) override;
+
+};
+
+} // namespace keba_rmi_driver
+
+#endif /* INCLUDE_COMMANDS_KEBA_H_ */

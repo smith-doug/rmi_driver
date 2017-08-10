@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include "driver.h"
+#include "keba_rmi_driver/driver.h"
 
 using namespace keba_rmi_driver;
 int main(int argc, char **argv)

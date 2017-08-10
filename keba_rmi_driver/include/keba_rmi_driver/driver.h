@@ -27,83 +27,69 @@
  *      Author: Doug Smith
  */
 
-#ifndef INCLUDE_CONNECTOR_H_
-#define INCLUDE_CONNECTOR_H_
+#ifndef INCLUDE_DRIVER_H_
+#define INCLUDE_DRIVER_H_
 
 #include <ros/ros.h>
-#include "commands.h"
-#include <iiwa_driver/StringCommand.h>
-#include <industrial_utils/utils.h>
-#include <industrial_utils/param_utils.h>
+#include <pluginlib/class_loader.h>
+
+#include "keba_rmi_driver/connector.h"
+#include "keba_rmi_driver/commands.h"
+
+#include "keba_rmi_driver/commands_keba.h"
 
 #include <sensor_msgs/JointState.h>
+#include <robot_movement_interface/CommandList.h>
 
 #include <boost/asio.hpp>
-#include <string>
-#include <queue>
-#include <mutex>
-#include <thread>
-#include <memory>
-
-
+#include <unordered_map>
 
 namespace keba_rmi_driver
 {
 
-
-
-class Connector
+class Driver
 {
-  typedef std::vector<std::string> StringVec;
 public:
+  Driver();
 
-  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names);
+  void start();
 
-  bool connect();
-  bool connect(std::string host, int port);
+  void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
 
-  std::string sendCommand(const Command &command);
+  void publishJointState();
 
-  void addCommand(const Command &command);
-
-  sensor_msgs::JointState getLastJointState()
+  void subCB_CommandList(const robot_movement_interface::CommandListConstPtr &msg)
   {
-    return last_joint_state_;
+    commandListCb(*msg);
   }
+
+  bool commandListCb(const robot_movement_interface::CommandList &msg);
 
 protected:
 
-  void commandThread();
+  std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader;
 
-  void cmdThread();
+  ros::NodeHandle nh;
 
-  void getThread();
+  std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 
-  //Socket used for motion commands that may block.  Default port 30000
-  boost::asio::ip::tcp::socket socket_cmd_;
+  //Connector connector_;
 
-  //Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
-  boost::asio::ip::tcp::socket socket_get_;
+  int conn_num_ = 0;
 
-  std::mutex socket_cmd_mutex_;
-  std::mutex socket_get_mutex_;
+  boost::asio::io_service io_service_;
 
-  std::string host_;
-  int port_;
+  ros::Subscriber command_list_sub_;
 
-  boost::asio::io_service& io_service_;
+  ros::Publisher joint_state_publisher_;
 
-  std::queue<Command> command_list_;
+  std::thread pub_thread_;
 
-  std::thread get_thread_;
-  std::thread cmd_thread_;
+  //std::vector<CommandHandler> cmd_handlers_;  //###testing
 
-  sensor_msgs::JointState last_joint_state_;
-
-  std::vector<std::string> joint_names_;
+  std::shared_ptr<CommandRegister> cmd_register_;
 
 };
-
 }
 
-#endif /* INCLUDE_CONNECTOR_H_ */
+#endif /* INCLUDE_DRIVER_H_ */
