@@ -27,7 +27,7 @@
  *      Author: Doug Smith
  */
 
-#include "keba_rmi_driver/commands_keba.h"
+#include "rmi_driver/commands_keba.h"
 
 namespace keba_rmi_driver
 {

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(keba_rmi_driver)
+project(rmi_driver)
 
 add_definitions(-std=c++11)
 
@@ -53,7 +53,7 @@ catkin_package(
         industrial_utils
         pluginlib 
     DEPENDS Boost
-    LIBRARIES keba_rmi_driver
+    LIBRARIES rmi_driver
 )
 
 
@@ -63,38 +63,38 @@ include_directories(
 )
 
 
-#file(GLOB_RECURSE keba_rmi_driver_src RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS src/*.cpp)
+#file(GLOB_RECURSE rmi_driver_src RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS src/*.cpp)
 set(SRC_FILES src/commands.cpp
               src/connector.cpp
               src/driver.cpp
   )
 
-add_library(keba_rmi_driver ${SRC_FILES})
-target_link_libraries(keba_rmi_driver ${catkin_LIBRARIES}
+add_library(rmi_driver ${SRC_FILES})
+target_link_libraries(rmi_driver ${catkin_LIBRARIES}
   ${Boost_LIBRARIES})
 
-add_executable(keba_rmi_driver_node
+add_executable(rmi_driver_node
   src/main.cpp
 )
 
-add_dependencies(keba_rmi_driver 
+add_dependencies(rmi_driver 
   sensor_msgs_gencpp
   ${PROJECT_NAME}_gencfg
   ${PROJECT_NAME}_gencpp
 )
 
-target_link_libraries(keba_rmi_driver_node
-  keba_rmi_driver
+target_link_libraries(rmi_driver_node
+  rmi_driver
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
 )
 
-add_library(keba_rmi_driver_lib src/commands.cpp)
-target_link_libraries(keba_rmi_driver_lib ${catkin_LIBRARIES})
+add_library(rmi_driver_lib src/commands.cpp)
+target_link_libraries(rmi_driver_lib ${catkin_LIBRARIES})
 
 
 
-install(DIRECTORY include/keba_rmi_driver/
+install(DIRECTORY include/rmi_driver/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         FILES_MATCHING PATTERN "*.h")
 

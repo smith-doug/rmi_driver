@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>keba_rmi_driver</name>
+  <name>rmi_driver</name>
   <version>1.0.0</version>
   <description>Keba generic Robot Movement Interface driver</description>
   <maintainer email="dougkeba@gmail.com">Doug Smith</maintainer>

@@ -27,7 +27,7 @@
  *      Author: Doug Smith
  */
 
-#include "keba_rmi_driver/driver.h"
+#include "rmi_driver/driver.h"
 #include <iostream>
 
 

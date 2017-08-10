@@ -33,10 +33,10 @@
 #include <ros/ros.h>
 #include <pluginlib/class_loader.h>
 
-#include "keba_rmi_driver/connector.h"
-#include "keba_rmi_driver/commands.h"
+#include "rmi_driver/connector.h"
+#include "rmi_driver/commands.h"
 
-#include "keba_rmi_driver/commands_keba.h"
+//#include "rmi_driver/commands_keba.h"
 
 #include <sensor_msgs/JointState.h>
 #include <robot_movement_interface/CommandList.h>
