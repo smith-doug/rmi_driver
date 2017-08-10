@@ -54,6 +54,7 @@ catkin_package(
         pluginlib 
     DEPENDS Boost
     LIBRARIES rmi_driver
+    INCLUDE_DIRS include
 )
 
 
@@ -89,14 +90,11 @@ target_link_libraries(rmi_driver_node
   ${Boost_LIBRARIES}
 )
 
-add_library(rmi_driver_lib src/commands.cpp)
-target_link_libraries(rmi_driver_lib ${catkin_LIBRARIES})
+#add_library(rmi_driver_lib src/commands.cpp)
+#target_link_libraries(rmi_driver_lib ${catkin_LIBRARIES})
 
 
 
-install(DIRECTORY include/rmi_driver/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-        FILES_MATCHING PATTERN "*.h")
 
 ## Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}/
@@ -110,3 +108,4 @@ install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
