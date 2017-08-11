@@ -58,9 +58,9 @@ std::vector<std::string> split(const std::string &s, char delim)
 std::vector<double> stringToDoubleVec(const std::string &s)
 {
   std::vector<std::string> strVec = split(s, ' ');
-  std::vector<double> doubleVec(strVec.size());
+  std::vector<double> doubleVec;
 
-  std::transform(strVec.begin(), strVec.end(), doubleVec.begin(), [](const std::string& val)
+  std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec), [](const std::string& val)
   {
     return boost::lexical_cast<double>(val);
   });
@@ -101,11 +101,11 @@ bool Connector::connect(std::string host, int port)
 
   return true;
   /*
-  Command cmd(Command::CommandType::Cmd, "joint move", "0.1 0.2 0.3 0.4 0.5 0.6 0.7");
+   Command cmd(Command::CommandType::Cmd, "joint move", "0.1 0.2 0.3 0.4 0.5 0.6 0.7");
 
-  addCommand(cmd);
-  cmd = Command(Command::CommandType::Cmd, "joint move", "0.5 0.2 0.3 0.4 0.5 0.6 0.7");
-  addCommand(cmd); */
+   addCommand(cmd);
+   cmd = Command(Command::CommandType::Cmd, "joint move", "0.5 0.2 0.3 0.4 0.5 0.6 0.7");
+   addCommand(cmd); */
 }
 
 std::string Connector::sendCommand(const Command &command)
@@ -183,8 +183,6 @@ void Connector::getThread()
       continue;
     }
 
-
-
     cmd = Command(Command::CommandType::Get, "get tool frame");
 
     response = sendCommand(cmd);
@@ -207,6 +205,8 @@ void Connector::cmdThread()
 
   while (!ros::isShuttingDown())
   {
+    //Separate the command list mutex and the socket mutex.  This makes it possible to add/remove commands even if it's
+    //waiting for a response.
 
     bool should_send = false;
     command_list_mutex_.lock();
@@ -216,14 +216,14 @@ void Connector::cmdThread()
 
       cmd = command_list_.front();
       command_list_.pop();
-      std::cout << "Cmd : " << cmd.toString();
+      ROS_INFO_STREAM("Cmd: " << cmd);
     }
     command_list_mutex_.unlock();
 
-    if(should_send)
+    if (should_send)
     {
       std::string response = sendCommand(cmd);
-      std::cout << "Cmd response: " << response << std::endl << std::endl;
+      ROS_INFO_STREAM("Cmd response: " << response << std::endl);
     }
     else
     {

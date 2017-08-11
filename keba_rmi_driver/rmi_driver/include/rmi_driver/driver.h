@@ -56,7 +56,9 @@ public:
   class ConnectionConfig
   {
   public:
-    ConnectionConfig(){}
+    ConnectionConfig()
+    {
+    }
 
     std::string ip_address_;
     std::string rmi_plugin_package_;
@@ -65,18 +67,23 @@ public:
 
   };
 
+  DriverConfig()
+  {
+  }
 
-  DriverConfig() {}
 
+  //Force template deduction to be a string and not a char[] when passed a "" string
+  template<typename T>
+  struct identity
+  {
+    typedef T type;
+  };
 
-  template <typename T>
-  struct identity { typedef T type; };
-
-  template <typename T>
+  template<typename T>
   void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
   {
     bool loadOk = nh.param<T>(key, val, def);
-    if(loadOk)
+    if (loadOk)
       std::cout << "Param loaded. ";
     else
       std::cout << "Failed to load, using default. ";
@@ -95,24 +102,16 @@ public:
 
     std::vector<std::string> sadsad;
 
-
-
-
     ConnectionConfig cfg;
-
 
     loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
 
     loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
 
-    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_, "keba_rmi_driver::KebaCommands");
-
-
-
-
+    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_,
+              "keba_rmi_driver::KebaCommands");
 
     connections_.push_back(cfg);
-
 
   }
 

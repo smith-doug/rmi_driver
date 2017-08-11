@@ -47,11 +47,6 @@ std::string Command::paramsToString(const std::vector<float>& floatVec)
   return oss.str();
 }
 
-//CommandHandler::CommandHandler(const robot_movement_interface::Command& cmd_msg) :
-//    sample_command_(cmd_msg)
-//{
-//}
-
 CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f) :
     sample_command_(sample_command), process_func_(std::move(f))
 {

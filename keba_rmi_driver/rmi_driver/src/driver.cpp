@@ -30,8 +30,6 @@
 #include "rmi_driver/driver.h"
 #include <iostream>
 
-
-
 namespace keba_rmi_driver
 {
 Driver::Driver()
@@ -42,56 +40,46 @@ Driver::Driver()
 
 void Driver::start()
 {
+  //Hardcoded to 1 connection for now
 
+  //Get the config for the connection.  Should be a loop in the future.
   auto &con_cfg = config_.connections_[0];
-  //cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>("keba_rmi_plugin", "keba_rmi_driver::CommandRegister"));
-  cmh_loader.reset(new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "keba_rmi_driver::CommandRegister"));
+
+  //Load the specified plugin.  This should be done in the individual connection in the future.
+  ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
+  cmh_loader.reset(
+      new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "keba_rmi_driver::CommandRegister"));
   try
   {
     cmd_register_ = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+    cmd_register_->registerCommands();
 
-
-
-    std::cout << "Was able to load the plugin\n";
+    ROS_INFO_STREAM("Loaded the plugin successfully");
   }
-  catch(pluginlib::PluginlibException& ex)
+  catch (pluginlib::PluginlibException& ex)
   {
     ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
   }
-  //cmd_register_ = std::make_shared<KebaCommands>();
 
-  this->addConnection(con_cfg.ip_address_, 30000, cmd_register_);
-
-  joint_state_publisher_ = nh.advertise<sensor_msgs::JointState>("joint_states", 1);
-
-  command_list_sub_ = nh.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
-
-  pub_thread_ = std::thread(&Driver::publishJointState, this);
-
-  //cmd_register_.reset(new KebaCommands());
-
-
-  std::cout << "cmd_register_ size: " << cmd_register_->handlers().size() << std::endl;
-
+  //Display some info about the loaded plugin
+  ROS_INFO_STREAM("There are " << cmd_register_->handlers().size() << " handlers registered");
   for (auto &cmh : cmd_register_->handlers())
   {
-    std::cout << cmh->getSampleCommand().command_type << std::endl;
+    ROS_INFO_STREAM(*cmh);
   }
+
+  //Add the connection from the current config
+  this->addConnection(con_cfg.ip_address_, 30000, cmd_register_);
+
+  //Create ros publishers and subscribers
+  joint_state_publisher_ = nh.advertise<sensor_msgs::JointState>("joint_states", 1);
+  command_list_sub_ = nh.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
+
+  //Publish joint states.  @todo aggregate multiple robots
+  pub_thread_ = std::thread(&Driver::publishJointState, this);
 
   return;
 
-}
-
-std::string paramsToString(const std::vector<float> &floatVec)
-{
-  if (floatVec.empty())
-    return "";
-
-  std::ostringstream oss;
-  std::copy(floatVec.begin(), floatVec.end() - 1, std::ostream_iterator<double>(oss, " "));
-  oss << floatVec.back();
-
-  return oss.str();
 }
 
 bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
@@ -104,8 +92,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
   if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
     return false;
 
-
-  if(msg.replace_previous_commands)
+  if (msg.replace_previous_commands)
     conn->clearCommands();
 
   for (auto &msg_cmd : msg.commands)
@@ -115,14 +102,11 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     std::ostringstream oss;
 
-
-
     auto foundItem = std::find_if(cmd_register_->handlers().begin(), cmd_register_->handlers().end(),
                                   [&](const std::unique_ptr<CommandHandler> &p)
                                   {
                                     return *p.get() == msg_cmd;
                                   });
-
 
     if (foundItem != cmd_register_->handlers().end())
     {
