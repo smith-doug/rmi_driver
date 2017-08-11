@@ -92,7 +92,6 @@ public:
     o << command_ + " : " + params_;
     return o;
   }
-  ;
 
   //Getters/setters
 
