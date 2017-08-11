@@ -231,7 +231,16 @@ public:
   {
   }
 
-  virtual void initialize() {}
+  virtual void initialize()
+  {
+  }
+
+  /**
+   * @todo this should be used like the v2 industrial client's joint map to support multiple robots
+   *
+   * @param joints
+   */
+  virtual void initialize(const std::vector<std::string> &joints) = 0;
 
   /**
    * Create commands and put them in the command_handlers_ vector.

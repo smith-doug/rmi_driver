@@ -44,7 +44,17 @@ public:
 
   KebaCommands();
 
+  void initialize();
+
+  void initialize(const std::vector<std::string> &joints);
+
   void registerCommands();
+
+protected:
+  int num_main_joints_;
+  int num_aux_joints_;
+
+  bool commands_registered_;
 
 };
 
