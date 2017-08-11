@@ -94,6 +94,31 @@ bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_ms
     return false;
 
   return true; //If it got this far it's a match
+}
+
+std::ostream& CommandHandler::dump(std::ostream& o) const
+{
+
+  o << "CommandHandler criteria: " << std::endl;
+
+  if (sample_command_.command_type.length() > 0)
+    o << "command_type:" << sample_command_.command_type << std::endl;
+
+  if (sample_command_.pose_reference.length() > 0)
+    o << "pose_reference:" << sample_command_.pose_reference << std::endl;
+  if (sample_command_.pose_type.length() > 0)
+    o << "pose_type:" << sample_command_.pose_type << std::endl;
+
+  if (sample_command_.velocity_type.length() > 0)
+    o << "velocity_type:" << sample_command_.velocity_type << std::endl;
+
+  if (sample_command_.velocity.size() > 0)
+    o << "velocity (size):" << sample_command_.velocity.size() << std::endl;
+
+  if (sample_command_.pose.size() > 0)
+    o << "pose (size):" << sample_command_.pose.size() << std::endl;
+
+  return o;
 
 }
 

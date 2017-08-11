@@ -69,6 +69,10 @@ public:
     params_ = Command::paramsToString(floatVec);
   }
 
+  ~Command()
+  {
+  }
+
   std::string toString() const
   {
     std::string ret = command_ + " : " + params_ + "\n";
@@ -82,6 +86,13 @@ public:
    * @return string of values
    */
   static std::string paramsToString(const std::vector<float> &floatVec);
+
+  virtual std::ostream& dump(std::ostream& o) const
+  {
+    o << command_ + " : " + params_;
+    return o;
+  }
+  ;
 
   //Getters/setters
 
@@ -98,6 +109,11 @@ protected:
 
   CommandType type_;
 };
+
+inline std::ostream& operator<<(std::ostream& o, const Command& cmd)
+{
+  return cmd.dump(o);
+}
 
 /**
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
@@ -128,23 +144,24 @@ public:
    * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
    */
   //CommandHandler(const robot_movement_interface::Command &cmd_msg);
-
   /**
    * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
    * create a new class.
    *
    * Example:
    *  CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
-      {
-        return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
-      });
+   {
+   return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+   });
    *
    * @param sample_command The sample command to match
    * @param f a std::function/lambda that takes an rmi::Command returns a telnet Command
    */
   CommandHandler(const robot_movement_interface::Command &sample_command, CommandHandlerFunc f);
 
-  virtual void initialize() {}
+  virtual void initialize()
+  {
+  }
 
   /**
    * Checks if the values specified in the sample_command match those in cmd_msg.
@@ -185,12 +202,18 @@ public:
 
   const robot_movement_interface::Command& getSampleCommand() const;
 
+  virtual std::ostream& dump(std::ostream& o) const;
+
 protected:
   robot_movement_interface::Command sample_command_;
 
   CommandHandlerFunc process_func_ = nullptr;
-
 };
+
+inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
+{
+  return cmdh.dump(o);
+}
 
 /**
  * This class contains all the registered command handlers.
