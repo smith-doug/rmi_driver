@@ -36,6 +36,15 @@
 #include <vector>
 #include <functional>
 
+
+
+/*
+ * Current format for commands:
+ * <command name> : <params> [<dyn/eventually ovl> : <params>]
+ * Right now there is just a space between the required/optional params.
+ * Maybe a ; would be good after each command segment?
+ */
+
 namespace keba_rmi_driver
 {
 class KebaCommands : public CommandRegister
@@ -75,6 +84,22 @@ public:
 
 };
 
+/**
+ * Linear move with a quaternion orientation.
+ *
+ * Required:
+ *   command_type: LIN
+ *   pose_type: QUATERNION
+ *   pose len: 7
+ * Optional: *
+ *   if(velocity_type == dyn)  (a full Keba dynamic)
+ *     velocity: [velAxis, accAxis, decAxis, jerkAxis, vel, acc, dec, jerk, velOri, accOri, decOri, jerkOri]
+ *
+ *   if(velocity_type == %)
+ *     @todo
+ *
+ *
+ */
 class KebaCommandLinQuat : public CommandHandler
 {
 public:

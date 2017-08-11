@@ -34,6 +34,22 @@
 namespace keba_rmi_driver
 {
 
+/**
+ * Creates a dynamic parameter string from a float vector
+ * @param velocity vector of a full Keba dynamic
+ * @return string containing "dyn : velAxis accAxis decAxis jerkAxis vel acc dec jerk velOri accOri decOri jerkOri"
+ */
+std::string processKebaDyn(const std::vector<float> &velocity)
+{
+  //Do additional error checking.  Maybe return a bool?
+
+  std::stringstream oss;
+  oss << "dyn : ";
+  oss << Command::paramsToString(velocity);
+
+  return oss.str();
+}
+
 KebaCommands::KebaCommands() :
     commands_registered_(0)
 {
@@ -84,9 +100,9 @@ KebaCommandPtpJoints::KebaCommandPtpJoints()
   cmd.pose_type = "JOINTS";
   cmd.pose =
   { 0,1,2,3,4,5,6};
-  cmd.velocity_type = "%";
-  cmd.velocity =
-  { 0,1,2,3,4,5,6};
+//  cmd.velocity_type = "%";
+//  cmd.velocity =
+//  { 0,1,2,3,4,5,6};
 
   sample_command_ = cmd;
 }
@@ -98,6 +114,12 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   std::ostringstream oss;
 
   oss << Command::paramsToString(cmd_msg.pose);
+
+  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  {
+    oss << " ";
+    oss << processKebaDyn(cmd_msg.velocity);
+  }
 
   command_params = oss.str();
 
@@ -113,8 +135,8 @@ KebaCommandLinQuat::KebaCommandLinQuat()
   cmd.pose_type = "QUATERNION";
   cmd.pose =
   { 0,1,2,3,4,5,6};
-  cmd.velocity =
-  { 0};
+  //cmd.velocity =
+  //{ 0};
 
   sample_command_ = cmd;
 }
@@ -131,7 +153,17 @@ bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
+  oss << Command::paramsToString(pose_temp);
+
+  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  {
+    oss << " ";
+    oss << processKebaDyn(cmd_msg.velocity);
+  }
+
+  command_params = oss.str();
+
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
   return true;
 
 }
@@ -144,8 +176,6 @@ KebaCommandLinEuler::KebaCommandLinEuler()
   cmd.pose_type = "EULER_INTRINSIC_ZYX";
   cmd.pose =
   { 0,1,2,3,4,5};
-  cmd.velocity =
-  { 0};
 
   sample_command_ = cmd;
 }
@@ -162,7 +192,17 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, pose_temp);
+  oss << Command::paramsToString(pose_temp);
+
+  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  {
+    oss << " ";
+    oss << processKebaDyn(cmd_msg.velocity);
+  }
+
+  command_params = oss.str();
+
+  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
   return true;
 }
 
