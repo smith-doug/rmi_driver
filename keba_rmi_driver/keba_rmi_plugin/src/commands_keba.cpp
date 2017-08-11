@@ -34,18 +34,33 @@
 namespace keba_rmi_driver
 {
 
-KebaCommands::KebaCommands()
+KebaCommands::KebaCommands() :
+    commands_registered_(0)
 {
   registerCommands();
 }
 
+void KebaCommands::initialize()
+{
+  num_main_joints_ = 6;
+  num_aux_joints_ = 1;
+
+  registerCommands();
+}
+
+void KebaCommands::initialize(const std::vector<std::string> &joints)
+{
+  initialize();
+}
+
 void KebaCommands::registerCommands()
 {
+  if (commands_registered_)
+    return;
 
   command_handlers_.emplace_back(new KebaCommandPtpJoints());
   command_handlers_.emplace_back(new KebaCommandLinQuat());
   command_handlers_.emplace_back(new KebaCommandLinEuler());
-
 
   //Sample command for lambda usage
   robot_movement_interface::Command cmd;
@@ -57,6 +72,8 @@ void KebaCommands::registerCommands()
   });
 
   command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
+
+  commands_registered_ = true;
 
 }
 
@@ -80,8 +97,7 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   std::string command_params = "";
   std::ostringstream oss;
 
-  std::copy(cmd_msg.pose.begin(), cmd_msg.pose.end() - 1, std::ostream_iterator<double>(oss, " "));
-  oss << cmd_msg.pose.back();
+  oss << Command::paramsToString(cmd_msg.pose);
 
   command_params = oss.str();
 
