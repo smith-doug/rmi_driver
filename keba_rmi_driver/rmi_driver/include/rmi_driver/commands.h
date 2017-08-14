@@ -85,7 +85,7 @@ public:
    * @param floatVec vector of floats
    * @return string of values
    */
-  static std::string paramsToString(const std::vector<float> &floatVec);
+  static std::string paramsToString(const std::vector<float> &floatVec, int precision = 4);
 
   virtual std::ostream& dump(std::ostream& o) const
   {

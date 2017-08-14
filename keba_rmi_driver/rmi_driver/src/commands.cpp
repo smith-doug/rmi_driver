@@ -31,20 +31,54 @@
 #include <ros/ros.h>
 #include <robot_movement_interface/Command.h>
 #include <vector>
+#include <boost/algorithm/string.hpp>
 
 namespace keba_rmi_driver
 {
 
-std::string Command::paramsToString(const std::vector<float>& floatVec)
+std::string removeTrailingZero(float fval, int precision)
+{
+  std::ostringstream oss;
+  oss << std::setprecision(precision) << std::fixed;
+  oss << fval;
+  auto str = oss.str();
+  boost::trim_right_if(str, boost::is_any_of("0"));
+  boost::trim_right_if(str, boost::is_any_of("."));
+
+  return str;
+}
+
+std::string Command::paramsToString(const std::vector<float>& floatVec, int precision)
 {
   if (floatVec.empty())
     return "";
 
   std::ostringstream oss;
-  std::copy(floatVec.begin(), floatVec.end() - 1, std::ostream_iterator<double>(oss, " "));
-  oss << floatVec.back();
+  //oss << std::setprecision(precision) << std::fixed;
 
-  return oss.str();
+//  for(auto fval : floatVec)
+//  {
+//    std::ostringstream oss_temp;
+//    oss_temp << std::setprecision(precision) << std::fixed;
+//    oss_temp << fval;
+//    auto str_temp = oss_temp.str();
+//    removeTrailingZero(str_temp);
+//    oss << str_temp;
+//  }
+
+  std::for_each(floatVec.begin(), floatVec.end() - 1, [&](const float & fval)
+  {
+    auto str_val = removeTrailingZero(fval, precision);
+    oss << str_val << " ";
+
+  });
+  //std::copy(floatVec.begin(), floatVec.end() - 1, std::ostream_iterator<double>(oss, " "));
+
+  oss << removeTrailingZero(floatVec.back(), precision);
+
+  auto out_str = oss.str();
+
+  return out_str;
 }
 
 CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f) :
