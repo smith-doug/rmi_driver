@@ -75,7 +75,13 @@ public:
 
   std::string toString() const
   {
-    std::string ret = command_ + " : " + params_ + "\n";
+    std::string ret;
+
+    if(params_.length() > 0)
+      ret = command_ + " : " + params_ + "\n";
+    else
+     ret = command_ + ";\n";
+
     return ret;
   }
 

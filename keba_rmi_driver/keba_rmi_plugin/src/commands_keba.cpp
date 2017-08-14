@@ -114,6 +114,7 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   std::ostringstream oss;
 
   oss << Command::paramsToString(cmd_msg.pose);
+  oss << ";";
 
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
@@ -154,11 +155,13 @@ bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd
   pose_temp[2] *= 1000.0;
 
   oss << Command::paramsToString(pose_temp);
+  oss << ";";
 
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
     oss << " ";
     oss << processKebaDyn(cmd_msg.velocity);
+    oss << ";";
   }
 
   command_params = oss.str();
@@ -193,11 +196,13 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
   pose_temp[2] *= 1000.0;
 
   oss << Command::paramsToString(pose_temp);
+  oss << ";";
 
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
     oss << " ";
     oss << processKebaDyn(cmd_msg.velocity);
+    oss << ";";
   }
 
   command_params = oss.str();
