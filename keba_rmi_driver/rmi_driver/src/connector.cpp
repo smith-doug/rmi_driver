@@ -168,7 +168,7 @@ void Connector::getThread()
 
   while (ros::ok())
   {
-    Command cmd(Command::CommandType::Get, "get joint position", "");
+    Command cmd(Command::CommandType::Get, "get joint position");
     std::string response = sendCommand(cmd);
     //std::cout << "Response: " << response << std::endl;
 
@@ -216,7 +216,11 @@ void Connector::cmdThread()
 
       cmd = command_list_.front();
       command_list_.pop();
-      ROS_INFO_STREAM("Cmd: " << cmd);
+
+      std::ostringstream oss;
+      oss << cmd;
+
+      ROS_INFO_STREAM("Cmd (" << oss.str().length() << "): " << cmd);
     }
     command_list_mutex_.unlock();
 
