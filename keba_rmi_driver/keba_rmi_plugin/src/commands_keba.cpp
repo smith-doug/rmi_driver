@@ -120,6 +120,23 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   {
     oss << " ";
     oss << processKebaDyn(cmd_msg.velocity);
+    oss << ";";
+  }
+
+  else
+  {
+    if (cmd_msg.velocity_type.compare("ROS") == 0)
+    {
+      oss << " velros : ";
+      oss << Command::paramsToString(cmd_msg.velocity);
+      oss << ";";
+    }
+    if (cmd_msg.acceleration_type.compare("ROS") == 0)
+    {
+      oss << " accros : ";
+      oss << Command::paramsToString(cmd_msg.velocity);
+      oss << ";";
+    }
   }
 
   command_params = oss.str();

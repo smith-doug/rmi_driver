@@ -114,12 +114,16 @@ class MoveItAction(object):
 			command.pose = point.positions
 			command.blending_type = ''
 			#command.blending = [10
-			command.velocity_type = '%'
+			command.velocity_type = 'ROS'
 			command.velocity = point.velocities
 			if goal.trajectory.points.index(point) == len(goal.trajectory.points) - 1:
 				command.blending = [0.0]
 			else:
 				command.blending = [conf_blending]
+				
+			command.acceleration_type = 'ROS'
+			command.acceleration = point.accelerations
+			
 			command.additional_values = [point.time_from_start.to_sec() - last_point.time_from_start.to_sec()]
 
 			trajectory.commands.append(command)	
