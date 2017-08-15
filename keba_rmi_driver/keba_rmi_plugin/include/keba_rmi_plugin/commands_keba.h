@@ -40,9 +40,8 @@
 
 /*
  * Current format for commands:
- * <command name> : <params> [<dyn/eventually ovl> : <params>]
- * Right now there is just a space between the required/optional params.
- * Maybe a ; would be good after each command segment?
+ * <command name> : <params>;[<dyn/eventually ovl> : <params>;]
+ * There is a ; after each command and parameter group.
  */
 
 namespace keba_rmi_driver
@@ -98,6 +97,8 @@ public:
  *   if(velocity_type == %)
  *     @todo
  *
+ * Examples
+ * linq move : 500 -600 365 0 0 1 0; dyn : 100 100 100 100 100 1000 1000 10000 1000 10000 10000 100000;
  *
  */
 class KebaCommandLinQuat : public CommandHandler

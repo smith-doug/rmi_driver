@@ -36,7 +36,7 @@
 namespace keba_rmi_driver
 {
 
-std::string removeTrailingZero(float fval, int precision)
+std::string floatToStringNoTrailing(float fval, int precision)
 {
   std::ostringstream oss;
   oss << std::setprecision(precision) << std::fixed;
@@ -54,27 +54,15 @@ std::string Command::paramsToString(const std::vector<float>& floatVec, int prec
     return "";
 
   std::ostringstream oss;
-  //oss << std::setprecision(precision) << std::fixed;
-
-//  for(auto fval : floatVec)
-//  {
-//    std::ostringstream oss_temp;
-//    oss_temp << std::setprecision(precision) << std::fixed;
-//    oss_temp << fval;
-//    auto str_temp = oss_temp.str();
-//    removeTrailingZero(str_temp);
-//    oss << str_temp;
-//  }
 
   std::for_each(floatVec.begin(), floatVec.end() - 1, [&](const float & fval)
   {
-    auto str_val = removeTrailingZero(fval, precision);
+    auto str_val = floatToStringNoTrailing(fval, precision);
     oss << str_val << " ";
 
   });
-  //std::copy(floatVec.begin(), floatVec.end() - 1, std::ostream_iterator<double>(oss, " "));
 
-  oss << removeTrailingZero(floatVec.back(), precision);
+  oss << floatToStringNoTrailing(floatVec.back(), precision);
 
   auto out_str = oss.str();
 

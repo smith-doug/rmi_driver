@@ -69,10 +69,14 @@ public:
     params_ = Command::paramsToString(floatVec);
   }
 
-  ~Command()
+  virtual ~Command()
   {
   }
 
+  /**
+   * @todo rethink this now that option params can be entered
+   * @return
+   */
   std::string toString() const
   {
     std::string ret;
@@ -89,7 +93,7 @@ public:
    * Converts a float vector into a string of values separated by spaces
    *
    * @param floatVec vector of floats
-   * @return string of values
+   * @return string of values separated by spaces
    */
   static std::string paramsToString(const std::vector<float> &floatVec, int precision = 4);
 
