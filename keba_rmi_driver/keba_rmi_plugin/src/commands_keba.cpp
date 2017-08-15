@@ -39,15 +39,22 @@ namespace keba_rmi_driver
  * @param velocity vector of a full Keba dynamic
  * @return string containing "dyn : velAxis accAxis decAxis jerkAxis vel acc dec jerk velOri accOri decOri jerkOri"
  */
-std::string processKebaDyn(const std::vector<float> &velocity)
+
+/**
+ * Checks for velocity type DYN and adds the param entry if found
+ * @param cmd_msg [in] the whole message
+ * @param telnet_cmd [in,out] the telnet command to add the dyn entry to
+ * @return true if a keba DYN entry was found
+ */
+bool processKebaDyn(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
 {
-  //Do additional error checking.  Maybe return a bool?
-
-  std::stringstream oss;
-  oss << "dyn : ";
-  oss << Command::paramsToString(velocity);
-
-  return oss.str();
+  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  {
+    telnet_cmd.addParam("dyn", Command::paramsToString(cmd_msg.velocity));
+    return true;
+  }
+  else
+    return false;
 }
 
 KebaCommands::KebaCommands() :
@@ -111,37 +118,28 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
 {
   std::string command_str = "joint move";
   std::string command_params = "";
-  std::ostringstream oss;
 
-  oss << Command::paramsToString(cmd_msg.pose);
-  oss << ";";
 
-  if (cmd_msg.velocity_type.compare("DYN") == 0)
-  {
-    oss << " ";
-    oss << processKebaDyn(cmd_msg.velocity);
-    oss << ";";
-  }
+  Command cmd(Command::Command::CommandType::Cmd);
+  cmd.setCommand("joint move", Command::paramsToString(cmd_msg.pose));
 
-  else
+
+  bool had_a_keba_dyn = processKebaDyn(cmd_msg, cmd);
+
+  if (!had_a_keba_dyn)
   {
     if (cmd_msg.velocity_type.compare("ROS") == 0)
     {
-      oss << " velros : ";
-      oss << Command::paramsToString(cmd_msg.velocity);
-      oss << ";";
+      cmd.addParam("velros", Command::paramsToString(cmd_msg.velocity));
+
     }
     if (cmd_msg.acceleration_type.compare("ROS") == 0)
     {
-      oss << " accros : ";
-      oss << Command::paramsToString(cmd_msg.acceleration);
-      oss << ";";
+      cmd.addParam("accros", Command::paramsToString(cmd_msg.acceleration));
     }
   }
 
-  command_params = oss.str();
-
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  telnet_cmd = cmd;
   return true;
 }
 
@@ -161,9 +159,7 @@ KebaCommandLinQuat::KebaCommandLinQuat()
 
 bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
-  std::string command_str = "linq move";
-  std::string command_params = "";
-  std::ostringstream oss;
+  Command cmd(Command::CommandType::Cmd);
 
   auto pose_temp = cmd_msg.pose;
 
@@ -171,19 +167,16 @@ bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  oss << Command::paramsToString(pose_temp);
-  oss << ";";
+
+  cmd.setCommand("linq move", Command::paramsToString(pose_temp));
+
 
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
-    oss << " ";
-    oss << processKebaDyn(cmd_msg.velocity);
-    oss << ";";
+    cmd.addParam("dyn", Command::paramsToString(cmd_msg.velocity));
   }
 
-  command_params = oss.str();
-
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  telnet_cmd = cmd;
   return true;
 
 }
@@ -202,9 +195,8 @@ KebaCommandLinEuler::KebaCommandLinEuler()
 
 bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
-  std::string command_str = "lin move";
-  std::string command_params = "";
-  std::ostringstream oss;
+
+  Command cmd(Command::CommandType::Cmd);
 
   auto pose_temp = cmd_msg.pose;
 
@@ -212,19 +204,11 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  oss << Command::paramsToString(pose_temp);
-  oss << ";";
+  cmd.setCommand("lin move", Command::paramsToString(pose_temp));
 
-  if (cmd_msg.velocity_type.compare("DYN") == 0)
-  {
-    oss << " ";
-    oss << processKebaDyn(cmd_msg.velocity);
-    oss << ";";
-  }
+  processKebaDyn(cmd_msg, cmd);
 
-  command_params = oss.str();
-
-  telnet_cmd = Command(Command::CommandType::Cmd, command_str, command_params);
+  telnet_cmd = cmd;
   return true;
 }
 

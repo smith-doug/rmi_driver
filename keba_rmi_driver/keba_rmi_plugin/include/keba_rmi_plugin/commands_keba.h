@@ -36,8 +36,6 @@
 #include <vector>
 #include <functional>
 
-
-
 /*
  * Current format for commands:
  * <command name> : <params>;[<dyn/eventually ovl> : <params>;]
@@ -73,6 +71,29 @@ protected:
  * pose len: 7
  * velocity_type: % not currently used
  * velocity len: 7 not currently used
+ */
+
+/**
+ * PTP moves to joint positions
+ *
+ * Required:
+ *  command_type: PTP
+ *  pose_type   : JOINTS
+ *  pose len    : 7
+ *
+ * Optional:
+ *  -Keba dynamic:
+ *    velocity_type: DYN
+ *    velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->), acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
+ *      outputs:  dyn : <values>
+ *  -Ros velocities:
+ *    velocity_type: ROS
+ *    velocity: same as JointTrajectoryPoint velocities
+ *      outputs: velros : <values>
+ *  -Ros accelerations:
+ *    acceleration_type: ROS
+ *    acceleration: Same as ointTrajectoryPoint accelerations
+ *
  */
 class KebaCommandPtpJoints : public CommandHandler
 {
