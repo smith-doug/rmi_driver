@@ -139,24 +139,19 @@ std::ostream& CommandHandler::dump(std::ostream& o) const
 
 }
 
-const std::string& Command::getCommand() const
+//Eclipse has a fit every time I try to call resize(int) or construct the vector with a size,
+//even though it compiles fine, so I have no way to guarantee that the vector isn't empty.
+//So, I need to check at() and return a string, not a reference to one.
+std::string Command::getCommand() const
 {
-  return command_;
-}
-
-void Command::setCommand(const std::string& command)
-{
-  command_ = command;
-}
-
-const std::string& Command::getParams() const
-{
-  return params_;
-}
-
-void Command::setParams(const std::string& params)
-{
-  params_ = params;
+  try
+  {
+    return full_command_.at(0).first;
+  }
+  catch(const std::out_of_range& oor)
+  {
+    return "";
+  }
 }
 
 Command::CommandType Command::getType() const

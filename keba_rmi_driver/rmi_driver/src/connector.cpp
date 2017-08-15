@@ -166,11 +166,12 @@ void Connector::getThread()
 {
   ros::Rate rate(50);
 
+  Command get_joint_position(Command::CommandType::Get, "get joint position");
+  Command get_tool_frame(Command::CommandType::Get, "get tool frame");
+
   while (ros::ok())
   {
-    Command cmd(Command::CommandType::Get, "get joint position");
-    std::string response = sendCommand(cmd);
-    //std::cout << "Response: " << response << std::endl;
+    std::string response = sendCommand(get_joint_position);
 
     std::vector<double> pos_real;
     try
@@ -183,10 +184,7 @@ void Connector::getThread()
       continue;
     }
 
-    cmd = Command(Command::CommandType::Get, "get tool frame");
-
-    response = sendCommand(cmd);
-    //std::cout << "Response: " << response << std::endl;
+    response = sendCommand(get_tool_frame);
 
     last_joint_state_.header.stamp = ros::Time::now();
     last_joint_state_.name = joint_names_;

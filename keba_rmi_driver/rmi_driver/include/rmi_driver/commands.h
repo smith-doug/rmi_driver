@@ -47,74 +47,110 @@ class Command
 {
 public:
 
+  using CommandEntry = std::pair<std::string, std::string>;
+
+  using FullCommand = std::vector<CommandEntry>;
+
   //Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
   enum CommandType
   {
     Get, Cmd
   };
 
-  Command() :
-      command_(""), params_(""), type_(CommandType::Cmd)
+  Command(CommandType type = CommandType::Cmd) :
+      type_(type)
   {
+    makeCommand(CommandType::Cmd, "", "");
   }
 
   Command(CommandType type, const std::string &command, std::string params = "") :
-      type_(type), command_(command), params_(params)
+      type_(type)
   {
+    makeCommand(type, command, params);
   }
 
   Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) :
-      type_(type), command_(command)
+      type_(type)
   {
-    params_ = Command::paramsToString(floatVec);
+    makeCommand(type, command, Command::paramsToString(floatVec));
+  }
+
+  void makeCommand(CommandType type, std::string command, std::string params)
+  {
+    type_ = type;
+    full_command_.clear();
+    full_command_.emplace_back(command, params);
   }
 
   virtual ~Command()
   {
   }
 
+  void setCommand(std::string command, std::string param_vals)
+  {
+    makeCommand(type_, command, param_vals);
+  }
+
+  void addParam(std::string param, std::string param_vals)
+  {
+    full_command_.push_back(std::make_pair(param, param_vals));
+  }
+
   /**
    * @todo rethink this now that option params can be entered
    * @return
    */
-  std::string toString() const
+  std::string toString(bool append_newline = true) const
   {
-    std::string ret;
+    std::ostringstream oss;
 
-    if (params_.length() > 0)
-      ret = command_ + " : " + params_ + "\n";
-    else
-      ret = command_ + ";\n";
+    for (auto &&cmd : full_command_)
+    {
+      oss << cmd.first;
+      if (cmd.second.length() > 0)
+        oss << " : " << cmd.second;
+      oss << ";";
+    }
+    if(append_newline)
+      oss << "\n";
 
+    std::string ret = oss.str();
     return ret;
   }
 
   /**
-   * Converts a float vector into a string of values separated by spaces
+   * Converts a float vector into a string of values separated by spaces.  Removes trailing zeroes
    *
    * @param floatVec vector of floats
+   * @param precision default 4
    * @return string of values separated by spaces
    */
   static std::string paramsToString(const std::vector<float> &floatVec, int precision = 4);
 
+  /**
+   * Used to have an inheritance based << override.
+   * @param o operator<<(std::ostream& o, T t)
+   * @return ostream
+   */
   virtual std::ostream& dump(std::ostream& o) const
   {
-    o << command_ + " : " + params_;
+    std::string str = toString(false);
+    o << str;
     return o;
   }
 
   //Getters/setters
 
-  const std::string& getParams() const;
-  void setParams(const std::string& params);
+  //const std::string& getParams() const;
+  //void setParams(const std::string& params);
   CommandType getType() const;
   void setType(CommandType type);
-  const std::string& getCommand() const;
-  void setCommand(const std::string& command);
+  std::string getCommand() const;
+  //void setCommand(const std::string& command);
 
 protected:
-  std::string command_;
-  std::string params_;
+
+  FullCommand full_command_;
 
   CommandType type_;
 };
@@ -153,6 +189,7 @@ public:
    * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
    */
   //CommandHandler(const robot_movement_interface::Command &cmd_msg);
+
   /**
    * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
    * create a new class.
