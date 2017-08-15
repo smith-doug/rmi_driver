@@ -134,7 +134,7 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
     if (cmd_msg.acceleration_type.compare("ROS") == 0)
     {
       oss << " accros : ";
-      oss << Command::paramsToString(cmd_msg.velocity);
+      oss << Command::paramsToString(cmd_msg.acceleration);
       oss << ";";
     }
   }
