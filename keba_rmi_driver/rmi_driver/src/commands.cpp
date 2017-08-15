@@ -181,5 +181,24 @@ void Command::setType(CommandType type)
   type_ = type;
 }
 
+const CommandHandler* CommandRegister::findHandler(const robot_movement_interface::Command &msg_cmd)
+{
+
+  auto foundItem = std::find_if(this->handlers().begin(), this->handlers().end(),
+                                [&](const std::unique_ptr<CommandHandler> &p)
+                                {
+                                  return *p.get() == msg_cmd;
+                                });
+
+  if (foundItem != std::end(this->handlers()))
+  {
+    return foundItem->get();
+  }
+  else
+  {
+    return nullptr;
+  }
+}
+
 } //namespace keba_rmi_driver
 

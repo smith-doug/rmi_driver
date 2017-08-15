@@ -107,7 +107,7 @@ KebaCommandPtpJoints::KebaCommandPtpJoints()
   sample_command_ = cmd;
 }
 
-bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
   std::string command_str = "joint move";
   std::string command_params = "";
@@ -159,7 +159,7 @@ KebaCommandLinQuat::KebaCommandLinQuat()
   sample_command_ = cmd;
 }
 
-bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
   std::string command_str = "linq move";
   std::string command_params = "";
@@ -200,7 +200,7 @@ KebaCommandLinEuler::KebaCommandLinEuler()
   sample_command_ = cmd;
 }
 
-bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
   std::string command_str = "lin move";
   std::string command_params = "";

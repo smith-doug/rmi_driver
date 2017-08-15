@@ -77,10 +77,10 @@ public:
   {
     std::string ret;
 
-    if(params_.length() > 0)
+    if (params_.length() > 0)
       ret = command_ + " : " + params_ + "\n";
     else
-     ret = command_ + ";\n";
+      ret = command_ + ";\n";
 
     return ret;
   }
@@ -187,7 +187,7 @@ public:
    * @param telnet_cmd The command to send to the robot
    * @return True if OK
    */
-  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
   {
     if (!process_func_)
     {
@@ -260,6 +260,14 @@ public:
   {
     return command_handlers_;
   }
+
+  /**
+   * Search through the registered command handlers to find one that matches this message
+   *
+   * @param msg_cmd robot_movement_interface::Command that was received
+   * @return const CommandHandler* that matched the msg_cmd.  nullptr if no match found
+   */
+  const CommandHandler* findHandler(const robot_movement_interface::Command &msg_cmd);
 
 protected:
   CommandHandlerPtrVec command_handlers_;

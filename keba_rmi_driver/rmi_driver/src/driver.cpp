@@ -102,17 +102,13 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     std::ostringstream oss;
 
-    auto foundItem = std::find_if(cmd_register_->handlers().begin(), cmd_register_->handlers().end(),
-                                  [&](const std::unique_ptr<CommandHandler> &p)
-                                  {
-                                    return *p.get() == msg_cmd;
-                                  });
+    auto handler = cmd_register_->findHandler(msg_cmd);
 
-    if (foundItem != cmd_register_->handlers().end())
+    if (handler)
     {
       std::cout << "Found cmd handler\n";
       Command telnet_command;
-      foundItem->get()->processMsg(msg_cmd, telnet_command);
+      handler->processMsg(msg_cmd, telnet_command);
       conn->addCommand(telnet_command);
       continue;
     }
