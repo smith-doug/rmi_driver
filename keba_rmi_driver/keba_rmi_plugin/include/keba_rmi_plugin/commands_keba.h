@@ -42,13 +42,14 @@
  * There is a ; after each command and parameter group.
  */
 
-namespace keba_rmi_driver
+using namespace rmi_driver;
+namespace keba_rmi_plugin
 {
-class KebaCommands : public CommandRegister
+class KebaCommandRegister : public CommandRegister
 {
 public:
 
-  KebaCommands();
+  KebaCommandRegister();
 
   void initialize();
 
@@ -142,6 +143,6 @@ public:
 
 };
 
-} // namespace keba_rmi_driver
+} // namespace keba_rmi_plugin
 
 #endif /* INCLUDE_COMMANDS_KEBA_H_ */

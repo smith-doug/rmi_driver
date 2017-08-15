@@ -36,7 +36,7 @@
 
 #include <string>
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 
 /**
@@ -314,6 +314,6 @@ protected:
   CommandHandlerPtrVec command_handlers_;
 };
 
-} //namespace keba_rmi_driver
+} //namespace rmi_driver
 
 #endif /* INCLUDE_COMMANDS_H_ */

@@ -46,7 +46,7 @@
 
 //#include <industrial_utils/param_utils.h>
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 
 class DriverConfig
@@ -109,7 +109,7 @@ public:
     loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
 
     loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_,
-              "keba_rmi_driver::KebaCommands");
+              "keba_rmi_plugin::KebaCommandRegister");
 
     connections_.push_back(cfg);
 
@@ -166,6 +166,6 @@ protected:
   std::shared_ptr<CommandRegister> cmd_register_;
 
 };
-}
+} //namespace rmi_driver
 
 #endif /* INCLUDE_DRIVER_H_ */

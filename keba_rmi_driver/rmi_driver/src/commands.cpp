@@ -33,9 +33,17 @@
 #include <vector>
 #include <boost/algorithm/string.hpp>
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 
+/**
+ * Convert a float into a string with no trailing zeroes
+ * @todo move it to a util file
+ *
+ * @param fval float to convert
+ * @param precision max number of decimals
+ * @return string representation of fval
+ */
 std::string floatToStringNoTrailing(float fval, int precision)
 {
   std::ostringstream oss;
@@ -183,5 +191,5 @@ const CommandHandler* CommandRegister::findHandler(const robot_movement_interfac
   }
 }
 
-} //namespace keba_rmi_driver
+} //namespace rmi_driver
 

@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-namespace keba_rmi_driver
+namespace keba_rmi_plugin
 {
 
 /**
@@ -57,13 +57,13 @@ bool processKebaDyn(const robot_movement_interface::Command& cmd_msg, Command& t
     return false;
 }
 
-KebaCommands::KebaCommands() :
+KebaCommandRegister::KebaCommandRegister() :
     commands_registered_(0)
 {
   registerCommands();
 }
 
-void KebaCommands::initialize()
+void KebaCommandRegister::initialize()
 {
   num_main_joints_ = 6;
   num_aux_joints_ = 1;
@@ -71,12 +71,12 @@ void KebaCommands::initialize()
   registerCommands();
 }
 
-void KebaCommands::initialize(const std::vector<std::string> &joints)
+void KebaCommandRegister::initialize(const std::vector<std::string> &joints)
 {
   initialize();
 }
 
-void KebaCommands::registerCommands()
+void KebaCommandRegister::registerCommands()
 {
   if (commands_registered_)
     return;
@@ -212,5 +212,5 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
   return true;
 }
 
-} //namespace keba_rmi_driver
+} //namespace keba_rmi_plugin
 

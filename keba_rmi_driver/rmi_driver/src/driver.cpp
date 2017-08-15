@@ -30,7 +30,7 @@
 #include "rmi_driver/driver.h"
 #include <iostream>
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 Driver::Driver()
 {
@@ -48,7 +48,7 @@ void Driver::start()
   //Load the specified plugin.  This should be done in the individual connection in the future.
   ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
   cmh_loader.reset(
-      new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "keba_rmi_driver::CommandRegister"));
+      new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "rmi_driver::CommandRegister"));
   try
   {
     cmd_register_ = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
@@ -159,5 +159,5 @@ void Driver::loadConfig()
 
 }
 
-} // namespace keba_rmi_driver
+} // namespace rmi_driver
 

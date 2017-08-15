@@ -30,7 +30,7 @@
 #include "rmi_driver/connector.h"
 #include <boost/algorithm/string.hpp>
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 
 using namespace boost::asio::ip;
@@ -234,5 +234,5 @@ void Connector::cmdThread()
   }
 }
 
-} //namespace keba_rmi_driver
+} //namespace rmi_driver
 

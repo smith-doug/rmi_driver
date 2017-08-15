@@ -1,5 +1,5 @@
 <library path="lib/libkeba_rmi_plugin">
-  <class type="keba_rmi_driver::KebaCommands" base_class_type="keba_rmi_driver::CommandRegister">
+  <class type="keba_rmi_plugin::KebaCommandRegister" base_class_type="rmi_driver::CommandRegister">
     <description>Keba Command register.</description>
   </class>  
 </library>

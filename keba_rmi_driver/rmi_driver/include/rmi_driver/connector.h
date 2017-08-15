@@ -47,7 +47,7 @@
 
 
 
-namespace keba_rmi_driver
+namespace rmi_driver
 {
 
 
@@ -108,6 +108,6 @@ protected:
 
 };
 
-}
+} //namespace rmi_driver
 
 #endif /* INCLUDE_CONNECTOR_H_ */
