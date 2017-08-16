@@ -69,8 +69,8 @@ std::vector<double> stringToDoubleVec(const std::string &s)
 
 }
 
-Connector::Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names) :
-    io_service_(io_service), socket_cmd_(io_service), socket_get_(io_service), host_(host), port_(port)
+Connector::Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names, CommandRegisterPtr cmd_register) :
+    io_service_(io_service), socket_cmd_(io_service), socket_get_(io_service), host_(host), port_(port), cmd_register_(cmd_register)
 {
   joint_names_ = joint_names;
 }

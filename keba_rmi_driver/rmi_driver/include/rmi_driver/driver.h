@@ -177,7 +177,7 @@ protected:
 
   //std::vector<CommandHandler> cmd_handlers_;  //###testing
 
-  std::shared_ptr<CommandRegister> cmd_register_;
+  //std::shared_ptr<CommandRegister> cmd_register_;
 
 };
 } //namespace rmi_driver

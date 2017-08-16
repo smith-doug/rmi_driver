@@ -53,7 +53,7 @@ class Connector
   typedef std::vector<std::string> StringVec;
 public:
 
-  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names);
+  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names, CommandRegisterPtr cmd_register);
 
   bool connect();
   bool connect(std::string host, int port);
@@ -81,6 +81,11 @@ public:
   void cancelSocketGet()
   {
     socket_get_.cancel();
+  }
+
+  CommandRegisterPtr getCommandRegister()
+  {
+    return cmd_register_;
   }
 
 protected:
@@ -115,6 +120,8 @@ protected:
   sensor_msgs::JointState last_joint_state_;
 
   std::vector<std::string> joint_names_;
+
+  CommandRegisterPtr cmd_register_;
 
 };
 

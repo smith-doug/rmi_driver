@@ -47,12 +47,22 @@ void Driver::start()
 
   //Load the specified plugin.  This should be done in the individual connection in the future.
   ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
-  cmh_loader.reset(
+  cmh_loader_.reset(
       new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "rmi_driver::CommandRegister"));
   try
   {
-    cmd_register_ = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-    cmd_register_->registerCommands();
+    //cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
+    CommandRegisterPtr cmd_register = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+    cmd_register->registerCommands();
+
+    //Display some info about the loaded plugin
+    ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
+    for (auto &cmh : cmd_register->handlers())
+    {
+      ROS_INFO_STREAM(*cmh);
+    }
+
+    this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register);
 
     ROS_INFO_STREAM("Loaded the plugin successfully");
   }
@@ -61,19 +71,11 @@ void Driver::start()
     ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
   }
 
-  //Display some info about the loaded plugin
-  ROS_INFO_STREAM("There are " << cmd_register_->handlers().size() << " handlers registered");
-  for (auto &cmh : cmd_register_->handlers())
-  {
-    ROS_INFO_STREAM(*cmh);
-  }
-
   //Add the connection from the current config
-  this->addConnection(con_cfg.ip_address_, 30000, cmd_register_);
 
   //Create ros publishers and subscribers
-  joint_state_publisher_ = nh.advertise<sensor_msgs::JointState>("joint_states", 1);
-  command_list_sub_ = nh.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
+  joint_state_publisher_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
+  command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
   //Publish joint states.  @todo aggregate multiple robots
   pub_thread_ = std::thread(&Driver::publishJointState, this);
@@ -85,12 +87,14 @@ void Driver::start()
 bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 {
 
-  std::cout << "Got a command" << std::endl;
+  ROS_INFO_STREAM("Driver::commandListCb Got a command with " << msg.commands.size() << " commands");
 
   auto &conn = conn_map_.begin()->second;
 
   if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
     return false;
+
+  auto cmd_register = conn->getCommandRegister();
 
   if (msg.replace_previous_commands)
     conn->clearCommands();
@@ -102,16 +106,16 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     std::ostringstream oss;
 
-    auto handler = cmd_register_->findHandler(msg_cmd);
+    auto handler = cmd_register->findHandler(msg_cmd);
 
     if (handler)
     {
-      std::cout << "Found cmd handler\n";
+      ROS_INFO_STREAM("Found cmd handler");
       Command telnet_command;
       handler->processMsg(msg_cmd, telnet_command);
 
       //Standard Cmds get added to the queue
-      if(telnet_command.getType() == Command::CommandType::Cmd)
+      if (telnet_command.getType() == Command::CommandType::Cmd)
       {
         conn->addCommand(telnet_command);
       }
@@ -119,7 +123,9 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       {
         ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command.getCommand());
         conn->cancelSocketGet();
-        conn->sendCommand(telnet_command);
+        std::string send_response = conn->sendCommand(telnet_command);
+        boost::trim_right(send_response);
+        ROS_INFO_STREAM("High priority response: " << send_response);
 
       }
       continue;
@@ -134,14 +140,14 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
 }
 
-void Driver::addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands)
+void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands)
 {
   conn_num_++;
 
   std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
                                         "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
 
-  auto shared = std::make_shared<Connector>(io_service_, host, port, joint_names);
+  auto shared = std::make_shared<Connector>(io_service_, host, port, joint_names, commands);
   conn_map_.emplace(conn_num_, shared);
 
   auto &conn = conn_map_.at(conn_num_);
