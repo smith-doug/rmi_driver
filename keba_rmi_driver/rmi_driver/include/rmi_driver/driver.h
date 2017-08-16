@@ -61,6 +61,7 @@ public:
     }
 
     std::string ip_address_;
+    int port_ = 0;
     std::string rmi_plugin_package_;
     std::string rmi_plugin_lookup_name_;
     std::vector<std::string> joints_;
@@ -70,7 +71,6 @@ public:
   DriverConfig()
   {
   }
-
 
   //Force template deduction to be a string and not a char[] when passed a "" string
   template<typename T>
@@ -82,14 +82,14 @@ public:
   template<typename T>
   void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
   {
+    std::ostringstream oss;
     bool loadOk = nh.param<T>(key, val, def);
     if (loadOk)
-      std::cout << "Param loaded. ";
+      oss << "Loaded param: " << key << ".  Value: " << val;
     else
-      std::cout << "Failed to load, using default. ";
+      oss << "Failed to load: " << key << ". Using default value: " << def;
 
-    std::cout << key << " = " << val << std::endl;
-
+    ROS_INFO_STREAM(oss.str());
   }
 
   /**
@@ -100,11 +100,11 @@ public:
   {
     std::cout << "loading config\n";
 
-    std::vector<std::string> sadsad;
-
     ConnectionConfig cfg;
 
     loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
+
+    loadParam(nh, "/rmi_driver/connection/port", cfg.port_, 30000);
 
     loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
 
@@ -126,7 +126,7 @@ public:
 
   void start();
 
-  void addConnection(std::string host, int port, std::shared_ptr<CommandRegister> commands);
+  void addConnection(std::string host, int port, CommandRegisterPtr commands);
 
   void publishJointState();
 
@@ -157,9 +157,9 @@ public:
 
 protected:
 
-  std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader;
+  std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
 
-  ros::NodeHandle nh;
+  ros::NodeHandle nh_;
 
   std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 

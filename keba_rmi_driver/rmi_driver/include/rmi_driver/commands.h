@@ -256,6 +256,8 @@ protected:
   CommandHandlerFunc process_func_ = nullptr;
 };
 
+
+
 inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
 {
   return cmdh.dump(o);
@@ -268,7 +270,8 @@ class CommandRegister
 {
 public:
 
-  typedef std::vector<std::unique_ptr<CommandHandler>> CommandHandlerPtrVec;
+  using CommandHandlerPtrVec = std::vector<std::unique_ptr<CommandHandler>>;
+
   CommandRegister()
   {
   }
@@ -297,7 +300,7 @@ public:
    *
    * @return a reference to the vector of handlers
    */
-  std::vector<std::unique_ptr<CommandHandler>>& handlers()
+  CommandHandlerPtrVec & handlers()
   {
     return command_handlers_;
   }
@@ -313,6 +316,8 @@ public:
 protected:
   CommandHandlerPtrVec command_handlers_;
 };
+
+using CommandRegisterPtr = std::shared_ptr<CommandRegister>;
 
 } //namespace rmi_driver
 
