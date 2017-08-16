@@ -45,12 +45,8 @@
 #include <thread>
 #include <memory>
 
-
-
 namespace rmi_driver
 {
-
-
 
 class Connector
 {
@@ -62,8 +58,17 @@ public:
   bool connect();
   bool connect(std::string host, int port);
 
+  /**
+   * Sends a command.  It will choose the socket to used based on the command type.
+   * @param command
+   * @return the reply from the socket.
+   */
   std::string sendCommand(const Command &command);
 
+  /**
+   * Adds a command to the queue.  Currently only takes Cmd type
+   * @param command
+   */
   void addCommand(const Command &command);
 
   void clearCommands();
@@ -71,6 +76,11 @@ public:
   sensor_msgs::JointState getLastJointState()
   {
     return last_joint_state_;
+  }
+
+  void cancelSocketGet()
+  {
+    socket_get_.cancel();
   }
 
 protected:

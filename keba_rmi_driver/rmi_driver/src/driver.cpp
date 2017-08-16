@@ -109,7 +109,19 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       std::cout << "Found cmd handler\n";
       Command telnet_command;
       handler->processMsg(msg_cmd, telnet_command);
-      conn->addCommand(telnet_command);
+
+      //Standard Cmds get added to the queue
+      if(telnet_command.getType() == Command::CommandType::Cmd)
+      {
+        conn->addCommand(telnet_command);
+      }
+      else
+      {
+        ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command.getCommand());
+        conn->cancelSocketGet();
+        conn->sendCommand(telnet_command);
+
+      }
       continue;
     }
     else

@@ -84,6 +84,7 @@ void KebaCommandRegister::registerCommands()
   command_handlers_.emplace_back(new KebaCommandPtpJoints());
   command_handlers_.emplace_back(new KebaCommandLinQuat());
   command_handlers_.emplace_back(new KebaCommandLinEuler());
+  command_handlers_.emplace_back(new KebaCommandAbort());
 
   //Sample command for lambda usage
   robot_movement_interface::Command cmd;
@@ -119,10 +120,8 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
   std::string command_str = "joint move";
   std::string command_params = "";
 
-
   Command cmd(Command::Command::CommandType::Cmd);
   cmd.setCommand("joint move", Command::paramsToString(cmd_msg.pose));
-
 
   bool had_a_keba_dyn = processKebaDyn(cmd_msg, cmd);
 
@@ -167,9 +166,7 @@ bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-
   cmd.setCommand("linq move", Command::paramsToString(pose_temp));
-
 
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
@@ -214,3 +211,19 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
 
 } //namespace keba_rmi_plugin
 
+keba_rmi_plugin::KebaCommandAbort::KebaCommandAbort()
+{
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "ABORT";
+  sample_command_ = cmd;
+}
+
+bool keba_rmi_plugin::KebaCommandAbort::processMsg(const robot_movement_interface::Command& cmd_msg,
+                                                   Command& telnet_cmd) const
+{
+  Command cmd(Command::CommandType::Get);
+  cmd.setCommand("abort", "");
+  telnet_cmd = cmd;
+
+  return true;
+}

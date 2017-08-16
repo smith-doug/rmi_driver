@@ -60,7 +60,7 @@ public:
   Command(CommandType type = CommandType::Cmd) :
       type_(type)
   {
-    makeCommand(CommandType::Cmd, "", "");
+    makeCommand(type, "", "");
   }
 
   Command(CommandType type, const std::string &command, std::string params = "") :

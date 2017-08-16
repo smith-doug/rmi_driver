@@ -143,6 +143,16 @@ public:
 
 };
 
+class KebaCommandAbort : public CommandHandler
+{
+public:
+
+  KebaCommandAbort();
+
+  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
+
+};
+
 } // namespace keba_rmi_plugin
 
 #endif /* INCLUDE_COMMANDS_KEBA_H_ */
