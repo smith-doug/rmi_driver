@@ -44,6 +44,7 @@
 #include <mutex>
 #include <thread>
 #include <memory>
+#include <future>
 
 namespace rmi_driver
 {
@@ -57,6 +58,8 @@ public:
 
   bool connect();
   bool connect(std::string host, int port);
+
+  bool connectCmd(std::string host, int port);
 
   /**
    * Sends a command.  It will choose the socket to used based on the command type.
@@ -83,6 +86,11 @@ public:
     socket_get_.cancel();
   }
 
+  void cancelSocketCmd()
+  {
+    socket_cmd_.cancel();
+  }
+
   CommandRegisterPtr getCommandRegister()
   {
     return cmd_register_;
@@ -97,6 +105,7 @@ protected:
   void getThread();
 
   //Socket used for motion commands that may block.  Default port 30000
+  std::shared_ptr<boost::asio::ip::tcp::socket> socket_cmd_ptr_;
   boost::asio::ip::tcp::socket socket_cmd_;
 
   //Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
@@ -107,10 +116,22 @@ protected:
   std::mutex socket_cmd_mutex_;
   std::mutex socket_get_mutex_;
 
+  std::promise<int> get_promise_;
+  std::future<int> get_future_;
+
+  //boost::asio::streambuf get_buff_;
+  boost::asio::mutable_buffer get_buff_;
+
   std::string host_;
   int port_;
 
   boost::asio::io_service& io_service_;
+
+  boost::asio::io_service io_service_test_;
+  std::thread io_service_test_thread_;
+
+
+  boost::asio::io_service local_io_service_;
 
   std::queue<Command> command_list_;
 

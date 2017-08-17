@@ -168,12 +168,15 @@ protected:
   int conn_num_ = 0;
 
   boost::asio::io_service io_service_;
+  boost::asio::io_service::work work_;
 
   ros::Subscriber command_list_sub_;
 
   ros::Publisher joint_state_publisher_;
 
   std::thread pub_thread_;
+
+  std::thread io_service_thread_;
 
   //std::vector<CommandHandler> cmd_handlers_;  //###testing
 

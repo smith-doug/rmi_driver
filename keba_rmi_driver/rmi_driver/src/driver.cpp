@@ -32,14 +32,22 @@
 
 namespace rmi_driver
 {
-Driver::Driver()
+Driver::Driver() : work_(io_service_)
 {
+
+
+
+  //boost::asio::io_service work(io_service_);
+  io_service_thread_ = std::thread([&]() {io_service_.run();});
+
   ros::NodeHandle nh;
   config_.loadConfig(nh);
 }
 
 void Driver::start()
 {
+
+
   //Hardcoded to 1 connection for now
 
   //Get the config for the connection.  Should be a loop in the future.
@@ -122,7 +130,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       else
       {
         ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command.getCommand());
-        conn->cancelSocketGet();
+        conn->cancelSocketCmd();
         std::string send_response = conn->sendCommand(telnet_command);
         boost::trim_right(send_response);
         ROS_INFO_STREAM("High priority response: " << send_response);

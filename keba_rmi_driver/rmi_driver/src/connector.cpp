@@ -29,6 +29,9 @@
 
 #include "rmi_driver/connector.h"
 #include <boost/algorithm/string.hpp>
+#include <future>
+#include <memory>
+#include <boost/asio/use_future.hpp>
 
 namespace rmi_driver
 {
@@ -69,10 +72,14 @@ std::vector<double> stringToDoubleVec(const std::string &s)
 
 }
 
-Connector::Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names, CommandRegisterPtr cmd_register) :
-    io_service_(io_service), socket_cmd_(io_service), socket_get_(io_service), host_(host), port_(port), cmd_register_(cmd_register)
+Connector::Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
+                     CommandRegisterPtr cmd_register) :
+    io_service_(io_service), socket_cmd_(io_service), socket_get_(io_service), host_(host), port_(port), cmd_register_(
+        cmd_register)
 {
   joint_names_ = joint_names;
+
+
 }
 
 bool Connector::connect()
@@ -80,14 +87,51 @@ bool Connector::connect()
   return connect(host_, port_);
 }
 
+bool Connector::connectCmd(std::string host, int port)
+{
+  int local_port = port;
+  tcp::resolver resolver(io_service_);
+
+  tcp::resolver::query query(host, boost::lexical_cast<std::string>(local_port));
+  tcp::resolver::iterator endpointIterator = resolver.resolve(query);
+
+  boost::asio::async_connect(
+      socket_cmd_, endpointIterator, [=](const boost::system::error_code& ec, tcp::resolver::iterator i)
+      {
+        ROS_INFO_NAMED("connector", "cmd fafssadconnection established to %s:%i", host.c_str(), local_port);
+        //this->cmdThread();
+
+      //auto handle = std::async(std::launch::async, &Connector::cmdThread, this);
+
+      //handle.wait();
+      cmd_thread_ = std::thread(&Connector::cmdThread, this);
+
+//      cmd_thread_.join();
+//      if(ros::ok)
+//      {
+//        connectCmd(host, local_port);
+//      }
+    });
+
+
+
+  return true;
+}
+
 bool Connector::connect(std::string host, int port)
 {
   tcp::resolver resolver(io_service_);
 
-  tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
+  tcp::resolver::query query(host, boost::lexical_cast<std::string>(port + 1));
   tcp::resolver::iterator endpointIterator = resolver.resolve(query);
 
-  socket_cmd_.connect(*endpointIterator);
+  //socket_cmd_.connect(*endpointIterator);
+
+
+  connectCmd(host, port);
+
+
+
   ROS_INFO_NAMED("connector", "cmd connection established to %s:%i", host.c_str(), port);
 
   port++;
@@ -97,7 +141,9 @@ bool Connector::connect(std::string host, int port)
   ROS_INFO_NAMED("connector", "get connection established to %s:%i", host.c_str(), port);
 
   get_thread_ = std::thread(&Connector::getThread, this);
-  cmd_thread_ = std::thread(&Connector::cmdThread, this);
+  //cmd_thread_ = std::thread(&Connector::cmdThread, this);
+
+  //io_service_.run();
 
   return true;
   /*
@@ -132,17 +178,75 @@ std::string Connector::sendCommand(const Command &command)
   std::string sendStr = command.toString();
 
   std::lock_guard<std::mutex> lock(*mutex);
-  boost::asio::write(*socket, boost::asio::buffer(sendStr));
-  boost::asio::streambuf buff;
-  boost::asio::read_until(*socket, buff, '\n');
 
-  std::string line;
-  std::istream is(&buff);
-  std::getline(is, line);
-  //std::istream is(&buff);
-  //std::string ret;
-  //is >> ret;
-  return line;
+  std::promise<size_t> promise_write;
+  auto write_future = promise_write.get_future();
+
+  boost::asio::async_write(*socket, boost::asio::buffer(sendStr),
+                           [&](const boost::system::error_code& e, std::size_t size)
+                           {
+                             if(e)
+                             {
+                               promise_write.set_exception(std::make_exception_ptr(boost::system::system_error(e)));
+                             }
+                             else
+                             {
+                               promise_write.set_value(size);
+                             }
+
+                           });
+
+  write_future.wait();
+
+  //boost::asio::write(*socket, boost::asio::buffer(sendStr));
+  boost::asio::streambuf buff;
+
+  //boost::asio::read_until(*socket, buff, '\n');
+
+  //Perform an asynchronous read.
+  std::promise<size_t> promise_read;
+  auto read_future = promise_read.get_future();
+
+  boost::asio::async_read_until(*socket, buff, '\n', [&](const boost::system::error_code& e, std::size_t size)
+  {
+    if(e)
+    {
+      promise_read.set_exception(std::make_exception_ptr(boost::system::system_error(e)));
+    }
+    else
+    {
+      promise_read.set_value(size);
+    }
+  });
+
+  /*
+   * This <works> but I don't understand it.  The usual boost::asio::use_future doesn't work.  Giving it an allocator
+   * makes it happy, but to be honest I don't really understand how use_future_t actually works and gets back to
+   * an async result and exactly what kind of allocator is actually wants.
+   *
+   * See: https://github.com/chriskohlhoff/asio/issues/112
+   *
+   * //static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
+   * //std::future<std::size_t> my_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
+   */
+  //static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
+  //std::future<std::size_t> read_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
+  read_future.wait();
+  try
+  {
+    read_future.get();
+    std::string line;
+    std::istream is(&buff);
+    std::getline(is, line);
+
+    return line;
+  }
+  catch (const std::exception &e)
+  {
+    //Maybe I should throw this up to whatever thread called send?
+    return "error";
+  }
+
 }
 
 void Connector::addCommand(const Command &command)
@@ -165,6 +269,10 @@ void Connector::clearCommands()
 void Connector::getThread()
 {
   ros::Rate rate(50);
+
+  //io_service_.run();
+  //local_io_service_.run();
+  std::cout << "io service running\n";
 
   Command get_joint_position(Command::CommandType::Get, "get joint position");
   Command get_tool_frame(Command::CommandType::Get, "get tool frame");
