@@ -103,6 +103,8 @@ void KebaCommandRegister::registerCommands()
 
 KebaCommandPtpJoints::KebaCommandPtpJoints()
 {
+  handler_name_ = "KebaCommandPtpJoints";
+
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
   cmd.pose_type = "JOINTS";
@@ -144,6 +146,8 @@ bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& c
 
 KebaCommandLinQuat::KebaCommandLinQuat()
 {
+  handler_name_ = "KebaCommandLinQuat";
+
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
@@ -180,6 +184,9 @@ bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd
 
 KebaCommandLinEuler::KebaCommandLinEuler()
 {
+
+  handler_name_ = "KebaCommandLinEuler";
+
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
@@ -213,6 +220,8 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
 
 keba_rmi_plugin::KebaCommandAbort::KebaCommandAbort()
 {
+  handler_name_ = "KebaCommandAbort";
+
   robot_movement_interface::Command cmd;
   cmd.command_type = "ABORT";
   sample_command_ = cmd;

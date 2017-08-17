@@ -111,7 +111,7 @@ public:
         oss << " : " << cmd.second;
       oss << ";";
     }
-    if(append_newline)
+    if (append_newline)
       oss << "\n";
 
     std::string ret = oss.str();
@@ -175,8 +175,10 @@ public:
 
   typedef std::function<Command(const robot_movement_interface::Command&)> CommandHandlerFunc;
 
-  CommandHandler()
+  CommandHandler() :
+      handler_name_("Base CommandHandler")
   {
+
   }
 
   virtual ~CommandHandler()
@@ -189,7 +191,6 @@ public:
    * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
    */
   //CommandHandler(const robot_movement_interface::Command &cmd_msg);
-
   /**
    * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
    * create a new class.
@@ -246,6 +247,11 @@ public:
     process_func_ = f;
   }
 
+  virtual std::string getName() const
+  {
+    return handler_name_;
+  }
+
   const robot_movement_interface::Command& getSampleCommand() const;
 
   virtual std::ostream& dump(std::ostream& o) const;
@@ -253,10 +259,10 @@ public:
 protected:
   robot_movement_interface::Command sample_command_;
 
+  std::string handler_name_;
+
   CommandHandlerFunc process_func_ = nullptr;
 };
-
-
 
 inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
 {

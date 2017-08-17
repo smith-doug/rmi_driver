@@ -124,7 +124,7 @@ bool CommandHandler::operator ==(const robot_movement_interface::Command &cmd_ms
 std::ostream& CommandHandler::dump(std::ostream& o) const
 {
 
-  o << "CommandHandler criteria: " << std::endl;
+  o << "CommandHandler " << getName() << " criteria: " << std::endl;
 
   if (sample_command_.command_type.length() > 0)
     o << "command_type:" << sample_command_.command_type << std::endl;

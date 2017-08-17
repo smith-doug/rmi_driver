@@ -118,7 +118,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
     if (handler)
     {
-      ROS_INFO_STREAM("Found cmd handler");
+      ROS_INFO_STREAM("Found cmd handler: " << handler->getName());
       Command telnet_command;
       handler->processMsg(msg_cmd, telnet_command);
 
