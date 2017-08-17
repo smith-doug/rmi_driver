@@ -79,7 +79,6 @@ Connector::Connector(boost::asio::io_service& io_service, std::string host, int 
 {
   joint_names_ = joint_names;
 
-
 }
 
 bool Connector::connect()
@@ -113,8 +112,6 @@ bool Connector::connectCmd(std::string host, int port)
 //      }
     });
 
-
-
   return true;
 }
 
@@ -127,10 +124,7 @@ bool Connector::connect(std::string host, int port)
 
   //socket_cmd_.connect(*endpointIterator);
 
-
   connectCmd(host, port);
-
-
 
   ROS_INFO_NAMED("connector", "cmd connection established to %s:%i", host.c_str(), port);
 
@@ -226,11 +220,10 @@ std::string Connector::sendCommand(const Command &command)
    *
    * See: https://github.com/chriskohlhoff/asio/issues/112
    *
-   * //static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
-   * //std::future<std::size_t> my_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
    */
   //static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
   //std::future<std::size_t> read_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
+
   read_future.wait();
   try
   {
@@ -244,7 +237,7 @@ std::string Connector::sendCommand(const Command &command)
   catch (const std::exception &e)
   {
     //Maybe I should throw this up to whatever thread called send?
-    return "error";
+    return "error internal";
   }
 
 }
