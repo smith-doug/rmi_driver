@@ -126,7 +126,7 @@ public:
 
   void start();
 
-  void addConnection(std::string host, int port, CommandRegisterPtr commands);
+  void addConnection(std::string host, int port, CommandRegisterPtr commands, std::vector<std::string> joint_names);
 
   void publishJointState();
 

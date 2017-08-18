@@ -72,7 +72,13 @@ void Driver::start()
       ROS_INFO_STREAM(*cmh);
     }
 
-    this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register);
+    std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
+                                            "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
+    this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
+
+    joint_names = {"rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint", "rob2_wrist_1_joint", "rob2_wrist_2_joint", "rob2_wrist_3_joint"};
+
+    this->addConnection(con_cfg.ip_address_, 30002, cmd_register, joint_names);
 
 
   }
@@ -99,10 +105,17 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
   ROS_INFO_STREAM("Driver::commandListCb Got a command with " << msg.commands.size() << " commands");
 
-  auto &conn = conn_map_.begin()->second;
 
-  if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
+
+
+  //if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
+  //  return false;
+
+  auto conn_entry = conn_map_.find(1); //conn_map_.begin()->second;
+  if(conn_entry == conn_map_.end() || !conn_entry->second)
     return false;
+
+  auto &conn = conn_entry->second;
 
   auto cmd_register = conn->getCommandRegister();
 
@@ -150,12 +163,12 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
 }
 
-void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands)
+void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands, std::vector<std::string> joint_names)
 {
   conn_num_++;
 
-  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
+//  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
+//                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
 
   auto shared = std::make_shared<Connector>(io_service_, host, port, joint_names, commands);
   conn_map_.emplace(conn_num_, shared);
@@ -170,13 +183,21 @@ void Driver::publishJointState()
   ros::Rate pub_rate(30);
   std::cout << "Driver pub" << std::endl;
   ROS_INFO_NAMED("Driver", "publishJointState");
+
+  sensor_msgs::JointState stateFull;
   while (ros::ok())
   {
-    for (auto &conn : conn_map_)
+    stateFull = sensor_msgs::JointState();
+    for (auto &&conn : conn_map_)
     {
       auto lastState = conn.second->getLastJointState();
-      joint_state_publisher_.publish(lastState);
+      stateFull.header = lastState.header;
+      stateFull.position.insert(stateFull.position.end(), lastState.position.begin(), lastState.position.end());
+      stateFull.name.insert(stateFull.name.end(), lastState.name.begin(), lastState.name.end());
+
     }
+
+    joint_state_publisher_.publish(stateFull);
     pub_rate.sleep();
   }
 }
