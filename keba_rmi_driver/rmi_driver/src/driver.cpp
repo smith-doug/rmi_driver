@@ -63,6 +63,8 @@ void Driver::start()
     CommandRegisterPtr cmd_register = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
     cmd_register->registerCommands();
 
+    ROS_INFO_STREAM("Loaded the plugin successfully");
+
     //Display some info about the loaded plugin
     ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
     for (auto &cmh : cmd_register->handlers())
@@ -72,7 +74,7 @@ void Driver::start()
 
     this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register);
 
-    ROS_INFO_STREAM("Loaded the plugin successfully");
+
   }
   catch (pluginlib::PluginlibException& ex)
   {

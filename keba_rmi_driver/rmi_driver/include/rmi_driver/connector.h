@@ -54,7 +54,8 @@ class Connector
   typedef std::vector<std::string> StringVec;
 public:
 
-  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names, CommandRegisterPtr cmd_register);
+  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
+            CommandRegisterPtr cmd_register);
 
   bool connect();
   bool connect(std::string host, int port);
@@ -129,7 +130,6 @@ protected:
 
   boost::asio::io_service io_service_test_;
   std::thread io_service_test_thread_;
-
 
   boost::asio::io_service local_io_service_;
 
