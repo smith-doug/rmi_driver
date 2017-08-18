@@ -45,6 +45,24 @@
 using namespace rmi_driver;
 namespace keba_rmi_plugin
 {
+
+class KebaCommand : public Command
+{
+public:
+
+  KebaCommand(CommandType type = CommandType::Cmd)
+  {
+    type_ = type;
+  }
+
+  /*
+   std::string toString(bool append_newline = true) const override
+   {
+   std::cout << "########!@$@!$%!@\n";
+   return Command::toString(append_newline);
+   }
+   */
+};
 class KebaCommandRegister : public CommandRegister
 {
 public:
@@ -100,6 +118,8 @@ class KebaCommandPtpJoints : public CommandHandler
 {
 public:
   KebaCommandPtpJoints();
+
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 
   bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
 

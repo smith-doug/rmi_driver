@@ -247,9 +247,9 @@ std::string Connector::sendCommand(const Command &command)
 
 }
 
-void Connector::addCommand(const Command &command)
+void Connector::addCommand(CommandPtr command)
 {
-  if (command.getType() == Command::CommandType::Cmd)
+  if (command->getType() == Command::CommandType::Cmd)
   {
     command_list_mutex_.lock();
     command_list_.push(command);
@@ -257,10 +257,13 @@ void Connector::addCommand(const Command &command)
   }
 }
 
+/**
+ * Erase the command queue.  This does NOT abort commands that are already executing on the robot.
+ */
 void Connector::clearCommands()
 {
   command_list_mutex_.lock();
-  command_list_ = std::queue<Command>();
+  command_list_ = std::queue<CommandPtr>();
   command_list_mutex_.unlock();
 }
 
@@ -302,7 +305,7 @@ void Connector::cmdThread()
   ros::Rate rate(30);
   std::cout << "Cmd starting" << std::endl;
 
-  Command cmd;
+  CommandPtr cmd;
 
   while (!ros::isShuttingDown())
   {
@@ -319,9 +322,10 @@ void Connector::cmdThread()
       command_list_.pop();
 
       std::ostringstream oss;
-      oss << cmd;
+      oss << *cmd;
 
-      ROS_INFO_STREAM("Cmd (" << oss.str().length() << "): " << cmd);
+      auto cmd_str = oss.str();
+      ROS_INFO_STREAM("Cmd (" << cmd_str.length() << "): " << cmd_str);
     }
     command_list_mutex_.unlock();
 
@@ -329,8 +333,9 @@ void Connector::cmdThread()
     {
       try
       {
-        std::string response = sendCommand(cmd);
+        std::string response = sendCommand(*cmd);
         ROS_INFO_STREAM("Connector::cmdThread Cmd response: " << response << std::endl);
+        cmd.reset();
       }
       catch (const boost::system::system_error &ex)
       {

@@ -92,7 +92,7 @@ void KebaCommandRegister::registerCommands()
 
   CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
   {
-    return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+    return std::make_shared<Command>(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
   });
 
   command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
@@ -117,10 +117,36 @@ KebaCommandPtpJoints::KebaCommandPtpJoints()
   sample_command_ = cmd;
 }
 
+CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  cmd_ptr->setCommand("joint move", Command::paramsToString(cmd_msg.pose));
+
+  bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+
+  if (!had_a_keba_dyn)
+  {
+    if (cmd_msg.velocity_type.compare("ROS") == 0)
+    {
+      cmd_ptr->addParam("velros", Command::paramsToString(cmd_msg.velocity));
+
+    }
+    if (cmd_msg.acceleration_type.compare("ROS") == 0)
+    {
+      cmd_ptr->addParam("accros", Command::paramsToString(cmd_msg.acceleration));
+    }
+  }
+
+  //processMsg(cmd_msg, *cmd_ptr);
+
+  return cmd_ptr;
+
+}
+
 bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
 {
   std::string command_str = "joint move";
-  std::string command_params = "";
 
   Command cmd(Command::Command::CommandType::Cmd);
   cmd.setCommand("joint move", Command::paramsToString(cmd_msg.pose));

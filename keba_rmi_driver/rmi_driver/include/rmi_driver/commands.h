@@ -75,6 +75,17 @@ public:
     makeCommand(type, command, Command::paramsToString(floatVec));
   }
 
+//  Command(const Command &other)
+//  {
+//    this->full_command_ = other.full_command_;
+//    this->type_ = other.type_;
+//  }
+//
+//  Command(Command&& other) :full_command_(std::move(other.full_command_)), type_(other.type_)
+//  {
+//
+//  }
+
   void makeCommand(CommandType type, std::string command, std::string params)
   {
     type_ = type;
@@ -84,6 +95,7 @@ public:
 
   virtual ~Command()
   {
+    //std::cout << "Destroying: " << this->toString() << std::endl;
   }
 
   void setCommand(std::string command, std::string param_vals)
@@ -97,10 +109,10 @@ public:
   }
 
   /**
-   * @todo rethink this now that option params can be entered
+   * @todo rethink this now that option params can be entered.  Or just make it virtual and leave it for someone else to think about!
    * @return
    */
-  std::string toString(bool append_newline = true) const
+  virtual std::string toString(bool append_newline = true) const
   {
     std::ostringstream oss;
 
@@ -160,6 +172,9 @@ inline std::ostream& operator<<(std::ostream& o, const Command& cmd)
   return cmd.dump(o);
 }
 
+class CommandHandler;
+using CommandPtr = std::shared_ptr<Command>;
+
 /**
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
  * Fill out any fields you want checked.  Vectors will be checked for length, strings for equality.
@@ -173,7 +188,7 @@ class CommandHandler
 {
 public:
 
-  typedef std::function<Command(const robot_movement_interface::Command&)> CommandHandlerFunc;
+  typedef std::function<CommandPtr(const robot_movement_interface::Command&)> CommandHandlerFunc;
 
   CommandHandler() :
       handler_name_("Base CommandHandler")
@@ -237,8 +252,33 @@ public:
       return false;
     }
 
-    telnet_cmd = process_func_(cmd_msg);
+    auto ret = process_func_(cmd_msg);
+    telnet_cmd = *ret;
+
+    //telnet_cmd = process_func_(cmd_msg);
     return telnet_cmd.getCommand().compare("error") != 0;
+
+  }
+
+  /**
+   * Create a new std::shared_ptr<Command>.
+   * The base version will create a base shared_ptr then call processMsg(cmd_msg, telnet_command)
+   * @param cmd_msg The message received from the command_list topic
+   * @return a new CommandPtr.  nullptr if processing the message failed.
+   */
+  virtual CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const
+  {
+    CommandPtr cmd_ptr = std::make_shared<Command>();
+
+    bool cmd_res = processMsg(cmd_msg, *cmd_ptr);
+    if (cmd_res)
+    {
+      return cmd_ptr;
+    }
+    else
+    {
+      return nullptr;
+    }
 
   }
 

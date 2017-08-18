@@ -32,13 +32,13 @@
 
 namespace rmi_driver
 {
-Driver::Driver() : work_(io_service_)
+Driver::Driver() :
+    work_(io_service_)
 {
 
-
-
   //boost::asio::io_service work(io_service_);
-  io_service_thread_ = std::thread([&]() {io_service_.run();});
+  io_service_thread_ = std::thread([&]()
+  { io_service_.run();});
 
   ros::NodeHandle nh;
   config_.loadConfig(nh);
@@ -46,7 +46,6 @@ Driver::Driver() : work_(io_service_)
 
 void Driver::start()
 {
-
 
   //Hardcoded to 1 connection for now
 
@@ -73,13 +72,13 @@ void Driver::start()
     }
 
     std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                            "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
+                                          "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
     this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
 
-    joint_names = {"rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint", "rob2_wrist_1_joint", "rob2_wrist_2_joint", "rob2_wrist_3_joint"};
+    joint_names =
+    { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint", "rob2_wrist_1_joint", "rob2_wrist_2_joint", "rob2_wrist_3_joint"};
 
     this->addConnection(con_cfg.ip_address_, 30002, cmd_register, joint_names);
-
 
   }
   catch (pluginlib::PluginlibException& ex)
@@ -105,14 +104,9 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
   ROS_INFO_STREAM("Driver::commandListCb Got a command with " << msg.commands.size() << " commands");
 
-
-
-
-  //if (conn_map_.begin() == conn_map_.end() || conn_map_.begin()->second == NULL)
-  //  return false;
-
+  //Hardcoded to robot 1.
   auto conn_entry = conn_map_.find(1); //conn_map_.begin()->second;
-  if(conn_entry == conn_map_.end() || !conn_entry->second)
+  if (conn_entry == conn_map_.end() || !conn_entry->second)
     return false;
 
   auto &conn = conn_entry->second;
@@ -122,7 +116,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
   if (msg.replace_previous_commands)
     conn->clearCommands();
 
-  for (auto &msg_cmd : msg.commands)
+  for (auto &&msg_cmd : msg.commands)
   {
     std::string command_str = "";
     std::string command_params = "";
@@ -134,19 +128,26 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
     if (handler)
     {
       ROS_INFO_STREAM("Found cmd handler: " << handler->getName());
-      Command telnet_command;
-      handler->processMsg(msg_cmd, telnet_command);
+      //Command telnet_command;
+
+      //Create a new CommandPtr with the found handler
+      auto telnet_command_ptr = handler->processMsg(msg_cmd);
+      if (!telnet_command_ptr)
+      {
+        ROS_WARN_STREAM("Driver::commandListCb got a null telnet_command_ptr");
+        continue;
+      }
 
       //Standard Cmds get added to the queue
-      if (telnet_command.getType() == Command::CommandType::Cmd)
+      if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
       {
-        conn->addCommand(telnet_command);
+        conn->addCommand(telnet_command_ptr);
       }
       else
       {
-        ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command.getCommand());
+        ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command_ptr->getCommand());
         conn->cancelSocketCmd();
-        std::string send_response = conn->sendCommand(telnet_command);
+        std::string send_response = conn->sendCommand(*telnet_command_ptr);
         boost::trim_right(send_response);
         ROS_INFO_STREAM("High priority response: " << send_response);
 
@@ -163,7 +164,8 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 
 }
 
-void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands, std::vector<std::string> joint_names)
+void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands,
+                           std::vector<std::string> joint_names)
 {
   conn_num_++;
 

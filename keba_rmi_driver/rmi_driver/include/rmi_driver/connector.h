@@ -73,7 +73,7 @@ public:
    * Adds a command to the queue.  Currently only takes Cmd type
    * @param command
    */
-  void addCommand(const Command &command);
+  void addCommand(CommandPtr command);
 
   void clearCommands();
 
@@ -133,7 +133,7 @@ protected:
 
   boost::asio::io_service local_io_service_;
 
-  std::queue<Command> command_list_;
+  std::queue<CommandPtr> command_list_;
 
   std::thread get_thread_;
   std::thread cmd_thread_;
