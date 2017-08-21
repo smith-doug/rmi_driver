@@ -38,53 +38,50 @@
 
 namespace rmi_driver
 {
-
 /**
- * Commands that will be sent to the robot controller.  They are represented by a string with a command, a :, then parameters
+ * Commands that will be sent to the robot controller.  They are represented by a string with a command, a :, then
+ * parameters
  * <command> : <params>
  */
 class Command
 {
 public:
-
   using CommandEntry = std::pair<std::string, std::string>;
 
   using FullCommand = std::vector<CommandEntry>;
 
-  //Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
+  // Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
   enum CommandType
   {
-    Get, Cmd
+    Get,
+    Cmd
   };
 
-  Command(CommandType type = CommandType::Cmd) :
-      type_(type)
+  Command(CommandType type = CommandType::Cmd) : type_(type)
   {
     makeCommand(type, "", "");
   }
 
-  Command(CommandType type, const std::string &command, std::string params = "") :
-      type_(type)
+  Command(CommandType type, const std::string& command, std::string params = "") : type_(type)
   {
     makeCommand(type, command, params);
   }
 
-  Command(CommandType type, const std::string &command, const std::vector<float> &floatVec) :
-      type_(type)
+  Command(CommandType type, const std::string& command, const std::vector<float>& floatVec) : type_(type)
   {
     makeCommand(type, command, Command::paramsToString(floatVec));
   }
 
-//  Command(const Command &other)
-//  {
-//    this->full_command_ = other.full_command_;
-//    this->type_ = other.type_;
-//  }
-//
-//  Command(Command&& other) :full_command_(std::move(other.full_command_)), type_(other.type_)
-//  {
-//
-//  }
+  //  Command(const Command &other)
+  //  {
+  //    this->full_command_ = other.full_command_;
+  //    this->type_ = other.type_;
+  //  }
+  //
+  //  Command(Command&& other) :full_command_(std::move(other.full_command_)), type_(other.type_)
+  //  {
+  //
+  //  }
 
   void makeCommand(CommandType type, std::string command, std::string params)
   {
@@ -95,7 +92,7 @@ public:
 
   virtual ~Command()
   {
-    //std::cout << "Destroying: " << this->toString() << std::endl;
+    // std::cout << "Destroying: " << this->toString() << std::endl;
   }
 
   void setCommand(std::string command, std::string param_vals)
@@ -109,14 +106,15 @@ public:
   }
 
   /**
-   * @todo rethink this now that option params can be entered.  Or just make it virtual and leave it for someone else to think about!
+   * @todo rethink this now that option params can be entered.  Or just make it virtual and leave it for someone else to
+   * think about!
    * @return
    */
   virtual std::string toString(bool append_newline = true) const
   {
     std::ostringstream oss;
 
-    for (auto &&cmd : full_command_)
+    for (auto&& cmd : full_command_)
     {
       oss << cmd.first;
       if (cmd.second.length() > 0)
@@ -130,9 +128,9 @@ public:
     return ret;
   }
 
-  virtual bool checkResponse(std::string &response) const
+  virtual bool checkResponse(std::string& response) const
   {
-    if(response.compare("error") != 0)
+    if (response.compare("error") != 0)
       return true;
     else
       return false;
@@ -145,7 +143,7 @@ public:
    * @param precision default 4
    * @return string of values separated by spaces
    */
-  static std::string paramsToString(const std::vector<float> &floatVec, int precision = 4);
+  static std::string paramsToString(const std::vector<float>& floatVec, int precision = 4);
 
   /**
    * Used to have an inheritance based << override.
@@ -159,17 +157,16 @@ public:
     return o;
   }
 
-  //Getters/setters
+  // Getters/setters
 
-  //const std::string& getParams() const;
-  //void setParams(const std::string& params);
+  // const std::string& getParams() const;
+  // void setParams(const std::string& params);
   CommandType getType() const;
   void setType(CommandType type);
   std::string getCommand() const;
-  //void setCommand(const std::string& command);
+  // void setCommand(const std::string& command);
 
 protected:
-
   FullCommand full_command_;
 
   CommandType type_;
@@ -195,14 +192,10 @@ using CommandPtr = std::shared_ptr<Command>;
 class CommandHandler
 {
 public:
-
   typedef std::function<CommandPtr(const robot_movement_interface::Command&)> CommandHandlerFunc;
 
-
-  CommandHandler() :
-      handler_name_("Base CommandHandler")
+  CommandHandler() : handler_name_("Base CommandHandler")
   {
-
   }
 
   virtual ~CommandHandler()
@@ -214,11 +207,11 @@ public:
    *
    * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
    */
-  //CommandHandler(const robot_movement_interface::Command &cmd_msg);
-
+  // CommandHandler(const robot_movement_interface::Command &cmd_msg);
 
   /**
-   * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
+   * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having
+   to
    * create a new class.
    *
    * Example:
@@ -230,7 +223,7 @@ public:
    * @param sample_command The sample command to match
    * @param f a std::function/lambda that takes an rmi::Command returns a telnet Command
    */
-  CommandHandler(const robot_movement_interface::Command &sample_command, CommandHandlerFunc f);
+  CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f);
 
   virtual void initialize()
   {
@@ -244,7 +237,7 @@ public:
    * @param cmd_msg The message received from the command_list topic
    * @return True if it's a match
    */
-  bool operator==(const robot_movement_interface::Command &cmd_msg);
+  bool operator==(const robot_movement_interface::Command& cmd_msg);
 
   /**
    * \deprecated replaced by virtual CommandPtr processMsg.
@@ -257,21 +250,21 @@ public:
    * @param telnet_cmd The command to send to the robot
    * @return True if OK
    */
-//  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
-//  {
-//    if (!process_func_)
-//    {
-//      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
-//      return false;
-//    }
-//
-//    auto ret = process_func_(cmd_msg);
-//    telnet_cmd = *ret;
-//
-//    //telnet_cmd = process_func_(cmd_msg);
-//    return telnet_cmd.getCommand().compare("error") != 0;
-//
-//  }
+  //  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
+  //  {
+  //    if (!process_func_)
+  //    {
+  //      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
+  //      return false;
+  //    }
+  //
+  //    auto ret = process_func_(cmd_msg);
+  //    telnet_cmd = *ret;
+  //
+  //    //telnet_cmd = process_func_(cmd_msg);
+  //    return telnet_cmd.getCommand().compare("error") != 0;
+  //
+  //  }
 
   /**
    * Create a new std::shared_ptr<Command>.
@@ -280,7 +273,7 @@ public:
    * @param cmd_msg The message received from the command_list topic
    * @return a new CommandPtr.  nullptr if processing the message failed.
    */
-  virtual CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const
+  virtual CommandPtr processMsg(const robot_movement_interface::Command& cmd_msg) const
   {
     if (!process_func_)
     {
@@ -288,14 +281,13 @@ public:
       return false;
     }
 
-    //proceess_func_ will return a shared_ptr<Command>
+    // proceess_func_ will return a shared_ptr<Command>
     auto ret = process_func_(cmd_msg);
 
     return ret;
-
   }
 
-  void setProcFunc(CommandHandlerFunc &f)
+  void setProcFunc(CommandHandlerFunc& f)
   {
     process_func_ = f;
   }
@@ -328,7 +320,6 @@ inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
 class CommandRegister
 {
 public:
-
   using CommandHandlerPtrVec = std::vector<std::unique_ptr<CommandHandler>>;
 
   CommandRegister()
@@ -348,7 +339,7 @@ public:
    *
    * @param joints
    */
-  virtual void initialize(const std::vector<std::string> &joints) = 0;
+  virtual void initialize(const std::vector<std::string>& joints) = 0;
 
   /**
    * Create commands and put them in the command_handlers_ vector.
@@ -359,7 +350,7 @@ public:
    *
    * @return a reference to the vector of handlers
    */
-  CommandHandlerPtrVec & handlers()
+  CommandHandlerPtrVec& handlers()
   {
     return command_handlers_;
   }
@@ -370,7 +361,7 @@ public:
    * @param msg_cmd robot_movement_interface::Command that was received
    * @return const CommandHandler* that matched the msg_cmd.  nullptr if no match found
    */
-  const CommandHandler* findHandler(const robot_movement_interface::Command &msg_cmd);
+  const CommandHandler* findHandler(const robot_movement_interface::Command& msg_cmd);
 
 protected:
   CommandHandlerPtrVec command_handlers_;
@@ -378,6 +369,6 @@ protected:
 
 using CommandRegisterPtr = std::shared_ptr<CommandRegister>;
 
-} //namespace rmi_driver
+}  // namespace rmi_driver
 
 #endif /* INCLUDE_COMMANDS_H_ */

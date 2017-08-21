@@ -30,30 +30,29 @@
 #ifndef INCLUDE_CONNECTOR_H_
 #define INCLUDE_CONNECTOR_H_
 
+#include <iiwa_driver/StringCommand.h>
+#include <industrial_utils/param_utils.h>
+#include <industrial_utils/utils.h>
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
-#include <iiwa_driver/StringCommand.h>
-#include <industrial_utils/utils.h>
-#include <industrial_utils/param_utils.h>
 
 #include <sensor_msgs/JointState.h>
 
 #include <boost/asio.hpp>
-#include <string>
-#include <queue>
-#include <mutex>
-#include <thread>
-#include <memory>
 #include <future>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
 
 namespace rmi_driver
 {
-
 class Connector
 {
   typedef std::vector<std::string> StringVec;
-public:
 
+public:
   Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
             CommandRegisterPtr cmd_register);
 
@@ -67,7 +66,7 @@ public:
    * @param command
    * @return the reply from the socket.
    */
-  std::string sendCommand(const Command &command);
+  std::string sendCommand(const Command& command);
 
   /**
    * Adds a command to the queue.  Currently only takes Cmd type
@@ -98,18 +97,17 @@ public:
   }
 
 protected:
-
   void commandThread();
 
   void cmdThread();
 
   void getThread();
 
-  //Socket used for motion commands that may block.  Default port 30000
+  // Socket used for motion commands that may block.  Default port 30000
   std::shared_ptr<boost::asio::ip::tcp::socket> socket_cmd_ptr_;
   boost::asio::ip::tcp::socket socket_cmd_;
 
-  //Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
+  // Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
   boost::asio::ip::tcp::socket socket_get_;
 
   std::mutex command_list_mutex_;
@@ -120,7 +118,7 @@ protected:
   std::promise<int> get_promise_;
   std::future<int> get_future_;
 
-  //boost::asio::streambuf get_buff_;
+  // boost::asio::streambuf get_buff_;
   boost::asio::mutable_buffer get_buff_;
 
   std::string host_;
@@ -143,9 +141,8 @@ protected:
   std::vector<std::string> joint_names_;
 
   CommandRegisterPtr cmd_register_;
-
 };
 
-} //namespace rmi_driver
+}  // namespace rmi_driver
 
 #endif /* INCLUDE_CONNECTOR_H_ */

@@ -32,13 +32,10 @@
 
 namespace rmi_driver
 {
-Driver::Driver() :
-    work_(io_service_)
+Driver::Driver() : work_(io_service_)
 {
-
-  //boost::asio::io_service work(io_service_);
-  io_service_thread_ = std::thread([&]()
-  { io_service_.run();});
+  // boost::asio::io_service work(io_service_);
+  io_service_thread_ = std::thread([&]() { io_service_.run(); });
 
   ros::NodeHandle nh;
   config_.loadConfig(nh);
@@ -46,66 +43,62 @@ Driver::Driver() :
 
 void Driver::start()
 {
+  // Hardcoded to 1 connection for now
 
-  //Hardcoded to 1 connection for now
-
-  //Get the config for the connection.  Should be a loop in the future.
+  // Get the config for the connection.  Should be a loop in the future.
   auto &con_cfg = config_.connections_[0];
 
-  //Load the specified plugin.  This should be done in the individual connection in the future.
+  // Load the specified plugin.  This should be done in the individual connection in the future.
   ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
-  cmh_loader_.reset(
-      new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "rmi_driver::CommandRegister"));
+  cmh_loader_.reset(new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "rmi_driver::"
+                                                                                             "CommandRegister"));
   try
   {
-    //cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
+    // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
     CommandRegisterPtr cmd_register = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
     cmd_register->registerCommands();
 
     ROS_INFO_STREAM("Loaded the plugin successfully");
 
-    //Display some info about the loaded plugin
+    // Display some info about the loaded plugin
     ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
     for (auto &cmh : cmd_register->handlers())
     {
       ROS_INFO_STREAM(*cmh);
     }
 
-    std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                          "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
+    std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
+                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
     this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
 
-    joint_names =
-    { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint", "rob2_wrist_1_joint", "rob2_wrist_2_joint", "rob2_wrist_3_joint"};
+    joint_names = { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint",
+                    "rob2_wrist_1_joint",      "rob2_wrist_2_joint",       "rob2_wrist_3_joint" };
 
     this->addConnection(con_cfg.ip_address_, 30002, cmd_register, joint_names);
-
   }
-  catch (pluginlib::PluginlibException& ex)
+  catch (pluginlib::PluginlibException &ex)
   {
     ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
   }
 
-  //Add the connection from the current config
+  // Add the connection from the current config
 
-  //Create ros publishers and subscribers
+  // Create ros publishers and subscribers
   joint_state_publisher_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
   command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
-  //Publish joint states.  @todo aggregate multiple robots
+  // Publish joint states.  @todo aggregate multiple robots
   pub_thread_ = std::thread(&Driver::publishJointState, this);
 
   return;
-
 }
 
 bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
 {
-
   ROS_INFO_STREAM("Driver::commandListCb Got a command with " << msg.commands.size() << " commands");
 
-  //Hardcoded to robot 1.
-  auto conn_entry = conn_map_.find(1); //conn_map_.begin()->second;
+  // Hardcoded to robot 1.
+  auto conn_entry = conn_map_.find(1);  // conn_map_.begin()->second;
   if (conn_entry == conn_map_.end() || !conn_entry->second)
     return false;
 
@@ -128,9 +121,9 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
     if (handler)
     {
       ROS_INFO_STREAM("Found cmd handler: " << handler->getName());
-      //Command telnet_command;
+      // Command telnet_command;
 
-      //Create a new CommandPtr with the found handler
+      // Create a new CommandPtr with the found handler
       auto telnet_command_ptr = handler->processMsg(msg_cmd);
       if (!telnet_command_ptr)
       {
@@ -138,7 +131,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
         continue;
       }
 
-      //Standard Cmds get added to the queue
+      // Standard Cmds get added to the queue
       if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
       {
         conn->addCommand(telnet_command_ptr);
@@ -150,7 +143,6 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
         std::string send_response = conn->sendCommand(*telnet_command_ptr);
         boost::trim_right(send_response);
         ROS_INFO_STREAM("High priority response: " << send_response);
-
       }
       continue;
     }
@@ -161,7 +153,6 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
   }
 
   return true;
-
 }
 
 void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands,
@@ -169,15 +160,15 @@ void Driver::addConnection(std::string host, int port, CommandRegisterPtr comman
 {
   conn_num_++;
 
-//  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-//                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
+  //  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
+  //                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
 
   auto shared = std::make_shared<Connector>(io_service_, host, port, joint_names, commands);
   conn_map_.emplace(conn_num_, shared);
 
   auto &conn = conn_map_.at(conn_num_);
   conn->connect();
-  //conn.connect(host, port);
+  // conn.connect(host, port);
 }
 
 void Driver::publishJointState()
@@ -196,7 +187,6 @@ void Driver::publishJointState()
       stateFull.header = lastState.header;
       stateFull.position.insert(stateFull.position.end(), lastState.position.begin(), lastState.position.end());
       stateFull.name.insert(stateFull.name.end(), lastState.name.begin(), lastState.name.end());
-
     }
 
     joint_state_publisher_.publish(stateFull);
@@ -207,8 +197,6 @@ void Driver::publishJointState()
 void Driver::loadConfig()
 {
   ros::NodeHandle nh("~");
-
 }
 
-} // namespace rmi_driver
-
+}  // namespace rmi_driver

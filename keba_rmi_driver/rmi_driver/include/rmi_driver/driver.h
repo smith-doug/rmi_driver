@@ -30,16 +30,16 @@
 #ifndef INCLUDE_DRIVER_H_
 #define INCLUDE_DRIVER_H_
 
-#include <ros/ros.h>
 #include <pluginlib/class_loader.h>
+#include <ros/ros.h>
 
-#include "rmi_driver/connector.h"
 #include "rmi_driver/commands.h"
+#include "rmi_driver/connector.h"
 
 //#include "rmi_driver/commands_keba.h"
 
-#include <sensor_msgs/JointState.h>
 #include <robot_movement_interface/CommandList.h>
+#include <sensor_msgs/JointState.h>
 
 #include <boost/asio.hpp>
 #include <unordered_map>
@@ -48,11 +48,9 @@
 
 namespace rmi_driver
 {
-
 class DriverConfig
 {
 public:
-
   class ConnectionConfig
   {
   public:
@@ -65,21 +63,20 @@ public:
     std::string rmi_plugin_package_;
     std::string rmi_plugin_lookup_name_;
     std::vector<std::string> joints_;
-
   };
 
   DriverConfig()
   {
   }
 
-  //Force template deduction to be a string and not a char[] when passed a "" string
-  template<typename T>
+  // Force template deduction to be a string and not a char[] when passed a "" string
+  template <typename T>
   struct identity
   {
     typedef T type;
   };
 
-  template<typename T>
+  template <typename T>
   void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
   {
     std::ostringstream oss;
@@ -108,15 +105,13 @@ public:
 
     loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
 
-    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_,
-              "keba_rmi_plugin::KebaCommandRegister");
+    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_, "keba_rmi_plugin::"
+                                                                                                "KebaCommandRegister");
 
     connections_.push_back(cfg);
-
   }
 
   std::vector<ConnectionConfig> connections_;
-
 };
 
 class Driver
@@ -156,14 +151,13 @@ public:
   DriverConfig config_;
 
 protected:
-
   std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
 
   ros::NodeHandle nh_;
 
   std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 
-  //Connector connector_;
+  // Connector connector_;
 
   int conn_num_ = 0;
 
@@ -178,11 +172,10 @@ protected:
 
   std::thread io_service_thread_;
 
-  //std::vector<CommandHandler> cmd_handlers_;  //###testing
+  // std::vector<CommandHandler> cmd_handlers_;  //###testing
 
-  //std::shared_ptr<CommandRegister> cmd_register_;
-
+  // std::shared_ptr<CommandRegister> cmd_register_;
 };
-} //namespace rmi_driver
+}  // namespace rmi_driver
 
 #endif /* INCLUDE_DRIVER_H_ */
