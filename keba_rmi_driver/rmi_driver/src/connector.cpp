@@ -86,33 +86,90 @@ bool Connector::connect()
   return connect(host_, port_);
 }
 
-bool Connector::connectCmd(std::string host, int port)
+// bool Connector::connectCmd(std::string host, int port)
+//{
+//  int local_port = port;
+//  tcp::resolver resolver(io_service_);
+//
+//  tcp::resolver::query query(host, boost::lexical_cast<std::string>(local_port));
+//  tcp::resolver::iterator endpointIterator = resolver.resolve(query);
+//
+//  if (cmd_thread_.joinable())
+//    cmd_thread_.join();
+//
+//  boost::asio::async_connect(socket_cmd_, endpointIterator,
+//                             [this, host, local_port](const boost::system::error_code &ec, tcp::resolver::iterator i)
+//                             {
+//                               if (ec)
+//                               {
+//                                 ROS_INFO_STREAM("Ec was set " << ec.message());
+//                                 std::this_thread::sleep_for(std::chrono::seconds(1));
+//                                 connectCmd(host, local_port);
+//                               }
+//                               else
+//                               {
+//                                 ROS_INFO_STREAM("Async cmd establisted to " << host << ":" << local_port);
+//
+//                                 cmd_thread_ = std::thread(&Connector::cmdThread, this);
+//                               }
+//
+//                             });
+//
+//  return true;
+//}
+
+bool Connector::connectSocket(std::string host, int port, Command::CommandType cmd_type)
 {
   int local_port = port;
+
   tcp::resolver resolver(io_service_);
 
   tcp::resolver::query query(host, boost::lexical_cast<std::string>(local_port));
   tcp::resolver::iterator endpointIterator = resolver.resolve(query);
 
-  if (cmd_thread_.joinable())
-    cmd_thread_.join();
+  std::thread *thread;
+  boost::asio::ip::tcp::socket *sock;
+  if (cmd_type == Command::CommandType::Cmd)
+  {
+    thread = &cmd_thread_;
+    sock = &socket_cmd_;
+  }
+  else if (cmd_type == Command::CommandType::Get)
+  {
+    thread = &get_thread_;
+    sock = &socket_get_;
+  }
 
-  boost::asio::async_connect(socket_cmd_, endpointIterator,
-                             [this, host, local_port](const boost::system::error_code &ec, tcp::resolver::iterator i) {
-                               if (ec)
-                               {
-                                 ROS_INFO_STREAM("Ec was set " << ec.message());
-                                 std::this_thread::sleep_for(std::chrono::seconds(1));
-                                 connectCmd(host, local_port);
-                               }
-                               else
-                               {
-                                 ROS_INFO_STREAM("Async cmd establisted to " << host << ":" << local_port);
+  if (thread->joinable())
+    thread->join();
 
-                                 cmd_thread_ = std::thread(&Connector::cmdThread, this);
-                               }
+  boost::asio::async_connect(
+      *sock, endpointIterator,
+      [this, host, local_port, cmd_type](const boost::system::error_code &ec, tcp::resolver::iterator i) {
+        if (ec)
+        {
+          ROS_INFO_STREAM("Ec was set " << ec.message());
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          connectSocket(host, local_port, cmd_type);
+        }
+        else
+        {
+          std::string con_type;
+          if (cmd_type == Command::CommandType::Cmd)
+          {
+            con_type = "Cmd";
+            cmd_thread_ = std::thread(&Connector::cmdThread, this);
+          }
+          else if (cmd_type == Command::CommandType::Get)
+          {
+            con_type = "Get";
+            get_thread_ = std::thread(&Connector::getThread, this);
+          }
 
-                             });
+          ROS_INFO_STREAM("Async " << con_type << " established to " << host << ":" << local_port);
+        }
+
+      });
 
   return true;
 }
@@ -128,14 +185,16 @@ bool Connector::connect(std::string host, int port)
   // ROS_INFO_NAMED("connector", "cmd connection established to %s:%i", host.c_str(), port);
   // cmd_thread_ = std::thread(&Connector::cmdThread, this);
 
-  connectCmd(host, port);
+  // connectCmd(host, port);
+  connectSocket(host, port, Command::CommandType::Cmd);
+  connectSocket(host, port + 1, Command::CommandType::Get);
 
-  query = tcp::resolver::query(host, boost::lexical_cast<std::string>(port + 1));
-  endpointIterator = resolver.resolve(query);
-  socket_get_.connect(*endpointIterator);
-  ROS_INFO_NAMED("connector", "get connection established to %s:%i", host.c_str(), port + 1);
-
-  get_thread_ = std::thread(&Connector::getThread, this);
+  //  query = tcp::resolver::query(host, boost::lexical_cast<std::string>(port + 1));
+  //  endpointIterator = resolver.resolve(query);
+  //  socket_get_.connect(*endpointIterator);
+  //  ROS_INFO_NAMED("connector", "get connection established to %s:%i", host.c_str(), port + 1);
+  //
+  //  get_thread_ = std::thread(&Connector::getThread, this);
 
   return true;
 }
@@ -303,26 +362,39 @@ void Connector::getThread()
   Command get_joint_position(Command::CommandType::Get, "get joint position");
   Command get_tool_frame(Command::CommandType::Get, "get tool frame");
 
+  std::string response;
+  std::vector<double> pos_real;
+
   while (ros::ok())
   {
-    std::string response = sendCommand(get_joint_position);
-
-    std::vector<double> pos_real;
     try
     {
+      response = sendCommand(get_joint_position);
+
       pos_real = stringToDoubleVec(response);
+
+      response = sendCommand(get_tool_frame);
+
+      last_joint_state_.header.stamp = ros::Time::now();
+      last_joint_state_.name = joint_names_;
+      last_joint_state_.position = pos_real;
     }
     catch (const boost::bad_lexical_cast &)
     {
       ROS_ERROR_STREAM("Unable to parse joint positions");
       continue;
     }
+    catch (const boost::system::system_error &ex)
+    {
+      ROS_INFO_STREAM("Connector::getThread exception: " << ex.what());
 
-    response = sendCommand(get_tool_frame);
+      if (ex.code() != boost::asio::error::operation_aborted)
+      {
+        std::thread(&Connector::connectSocket, this, host_, port_ + 1, Command::CommandType::Get).detach();
 
-    last_joint_state_.header.stamp = ros::Time::now();
-    last_joint_state_.name = joint_names_;
-    last_joint_state_.position = pos_real;
+        return;
+      }
+    }
 
     rate.sleep();
   }
@@ -383,7 +455,7 @@ void Connector::cmdThread()
         if (ex.code() != boost::asio::error::operation_aborted)
         {
           clearCommands();
-          std::thread(&Connector::connectCmd, this, host_, port_).detach();
+          std::thread(&Connector::connectSocket, this, host_, port_, Command::CommandType::Cmd).detach();
 
           return;
         }

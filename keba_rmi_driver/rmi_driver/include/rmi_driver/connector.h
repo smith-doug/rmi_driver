@@ -60,7 +60,9 @@ public:
   bool connect();
   bool connect(std::string host, int port);
 
-  bool connectCmd(std::string host, int port);
+  // bool connectCmd(std::string host, int port);
+
+  bool connectSocket(std::string host, int port, Command::CommandType cmd_type);
 
   /**
    * Sends a command.  It will choose the socket to used based on the command type.
@@ -82,10 +84,10 @@ public:
     return last_joint_state_;
   }
 
-  void cancelSocketGet()
-  {
-    socket_get_.cancel();
-  }
+  //  void cancelSocketGet()
+  //  {
+  //    socket_get_.cancel();
+  //  }
 
   /**
    *This function will cancel active socket async commands and launch cmdSocketFlusher if needed.  This is
