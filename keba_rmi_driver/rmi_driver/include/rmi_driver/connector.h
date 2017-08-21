@@ -39,6 +39,7 @@
 #include <sensor_msgs/JointState.h>
 
 #include <boost/asio.hpp>
+#include <chrono>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -86,15 +87,48 @@ public:
     socket_get_.cancel();
   }
 
-  void cancelSocketCmd()
+  /**
+   *This function will cancel active socket async commands and launch cmdSocketFlusher if needed.  This is
+   * automatically launched  by the driver when a high priority command like ABORT is received as a
+   * robot_movement_interface::Command.
+   * It will try to lock the socket_cmd_mutex_ to timeout ms.
+   * @param timeout ms to try to lock the socket mutex for before actually canceling
+   */
+  void cancelSocketCmd(int timeout = 50)
   {
-    socket_cmd_.cancel();
+    // Give the socket a chance to finish.  If an abort is sent, active motion commands may be able to finish naturally
+    // and respond.
+    if (socket_cmd_mutex_.try_lock_for(std::chrono::milliseconds(timeout)))
+    {
+      socket_cmd_mutex_.unlock();
+      ROS_INFO_STREAM("cancelSocketCmd() lock successful, no need to cancel");
+    }
+    else  // It failed to respond.
+    {
+      socket_cmd_.cancel();  // Cancel any async commands on this socket
+
+      flush_socket_cmd_ = true;
+      cmdSocketFlusher();  // Launch the flusher to consume any messages that are sent late.
+
+      ROS_INFO_STREAM("cancelSocketCmd() lock failed, canceling");
+    }
   }
 
   CommandRegisterPtr getCommandRegister()
   {
     return cmd_register_;
   }
+
+  /**
+   * This will run and consume any erroneous messages sent by the controller after a cancel.
+   * This can happen if
+   * 1. A motion command like PTP is sent while the PLC is set to stop at a breakpoint.
+   * 2. An ABORT command is issued.  The socket timer will abort, indicating that it didn't get a response.
+   * 3. The PLC is unpaused and it sends a "done" or whatever.
+   * Without this function running, the next async_read would return immediately with the contents of an old message,
+   * and it would be "off by one" forever.
+   */
+  void cmdSocketFlusher();
 
 protected:
   void commandThread();
@@ -112,11 +146,8 @@ protected:
 
   std::mutex command_list_mutex_;
 
-  std::mutex socket_cmd_mutex_;
-  std::mutex socket_get_mutex_;
-
-  std::promise<int> get_promise_;
-  std::future<int> get_future_;
+  std::timed_mutex socket_cmd_mutex_;
+  std::timed_mutex socket_get_mutex_;
 
   // boost::asio::streambuf get_buff_;
   boost::asio::mutable_buffer get_buff_;
@@ -141,6 +172,11 @@ protected:
   std::vector<std::string> joint_names_;
 
   CommandRegisterPtr cmd_register_;
+
+  // Used to read and consume and messages sent after a cancel.  This was happening to me if I paused the PLC, aborted a
+  // command, then unpaused the PLC.
+  bool flush_socket_cmd_ = false;
+  boost::asio::streambuf socket_cmd_flush_buff_;
 };
 
 }  // namespace rmi_driver

@@ -94,8 +94,6 @@ bool Connector::connectCmd(std::string host, int port)
   tcp::resolver::query query(host, boost::lexical_cast<std::string>(local_port));
   tcp::resolver::iterator endpointIterator = resolver.resolve(query);
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
   if (cmd_thread_.joinable())
     cmd_thread_.join();
 
@@ -142,10 +140,40 @@ bool Connector::connect(std::string host, int port)
   return true;
 }
 
+void Connector::cmdSocketFlusher()
+{
+  if (flush_socket_cmd_)
+  {
+    // Consume the buffer to reset it.
+    socket_cmd_flush_buff_.consume(socket_cmd_flush_buff_.size());
+
+    boost::asio::async_read_until(
+        socket_cmd_, socket_cmd_flush_buff_, '\n', [&](const boost::system::error_code &e, std::size_t size) {
+
+          if (e)  // If there is an error code, this was either cancelled or disconnected.
+          {
+            ROS_INFO_STREAM("Connector::readCmdSocket() is exiting with ec: " << e.message());
+            flush_socket_cmd_ = false;
+            return;
+          }
+          else  // Some message was consumed.  That should hopefully be the only one, but read again anyway.
+          {
+            std::string line;
+            std::istream is(&socket_cmd_flush_buff_);
+            std::getline(is, line);
+
+            ROS_INFO_STREAM("Connector::readCmdSocket() flushed a message (" << size << "): " << line);
+            if (flush_socket_cmd_)
+              cmdSocketFlusher();
+          }
+        });
+  }
+}
+
 std::string Connector::sendCommand(const Command &command)
 {
   tcp::socket *socket = NULL;
-  std::mutex *mutex = NULL;
+  std::timed_mutex *mutex = NULL;
   if (command.getType() == Command::CommandType::Get)
   {
     socket = &socket_get_;
@@ -155,6 +183,12 @@ std::string Connector::sendCommand(const Command &command)
   {
     socket = &socket_cmd_;
     mutex = &socket_cmd_mutex_;
+
+    if (flush_socket_cmd_)
+    {
+      flush_socket_cmd_ = false;
+      socket->cancel();
+    }
   }
 
   if (socket == NULL || mutex == NULL)
@@ -164,7 +198,7 @@ std::string Connector::sendCommand(const Command &command)
 
   std::string sendStr = command.toString();
 
-  std::lock_guard<std::mutex> lock(*mutex);
+  std::lock_guard<std::timed_mutex> lock(*mutex);
 
   std::promise<size_t> promise_sendCommand;
   auto future_sendCommand = promise_sendCommand.get_future();
@@ -210,6 +244,7 @@ std::string Connector::sendCommand(const Command &command)
     }
   });
 
+  // old synchronous methods
   // boost::asio::write(*socket, boost::asio::buffer(sendStr));
   // boost::asio::read_until(*socket, buff, '\n');
 
@@ -300,6 +335,8 @@ void Connector::cmdThread()
 
   CommandPtr cmd;
 
+  flush_socket_cmd_ = true;
+  cmdSocketFlusher();
   while (!ros::isShuttingDown())
   {
     // Separate the command list mutex and the socket mutex.  This makes it possible to add/remove commands even if it's

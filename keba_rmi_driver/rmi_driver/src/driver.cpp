@@ -28,6 +28,7 @@
  */
 
 #include "rmi_driver/driver.h"
+#include <future>
 #include <iostream>
 
 namespace rmi_driver
@@ -67,10 +68,13 @@ void Driver::start()
       ROS_INFO_STREAM(*cmh);
     }
 
+    // Add the connection from the current config
+
     std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
                                           "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
     this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
 
+    // Add a second hardcoded connection for now
     joint_names = { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint",
                     "rob2_wrist_1_joint",      "rob2_wrist_2_joint",       "rob2_wrist_3_joint" };
 
@@ -80,8 +84,6 @@ void Driver::start()
   {
     ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
   }
-
-  // Add the connection from the current config
 
   // Create ros publishers and subscribers
   joint_state_publisher_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
@@ -139,10 +141,15 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       else
       {
         ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command_ptr->getCommand());
-        conn->cancelSocketCmd();
+
+        // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
+        auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
+
         std::string send_response = conn->sendCommand(*telnet_command_ptr);
         boost::trim_right(send_response);
+
         ROS_INFO_STREAM("High priority response: " << send_response);
+        fut.wait();
       }
       continue;
     }
