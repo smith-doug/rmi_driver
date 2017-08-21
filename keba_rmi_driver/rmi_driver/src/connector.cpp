@@ -325,7 +325,7 @@ void Connector::cmdThread()
       oss << *cmd;
 
       auto cmd_str = oss.str();
-      ROS_INFO_STREAM("Cmd (" << cmd_str.length() << "): " << cmd_str);
+      ROS_INFO_STREAM("Connector::cmdThread Cmd (" << cmd_str.length() << "): " << cmd_str);
     }
     command_list_mutex_.unlock();
 
@@ -334,7 +334,15 @@ void Connector::cmdThread()
       try
       {
         std::string response = sendCommand(*cmd);
-        ROS_INFO_STREAM("Connector::cmdThread Cmd response: " << response << std::endl);
+        if(cmd->checkResponse(response))
+        {
+          ROS_INFO_STREAM("Connector::cmdThread sendCommand OK. Response: " << response << std::endl);
+        }
+        else
+        {
+          ROS_INFO_STREAM("Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
+        }
+
         cmd.reset();
       }
       catch (const boost::system::system_error &ex)

@@ -130,6 +130,14 @@ public:
     return ret;
   }
 
+  virtual bool checkResponse(std::string &response) const
+  {
+    if(response.compare("error") != 0)
+      return true;
+    else
+      return false;
+  }
+
   /**
    * Converts a float vector into a string of values separated by spaces.  Removes trailing zeroes
    *
@@ -190,6 +198,7 @@ public:
 
   typedef std::function<CommandPtr(const robot_movement_interface::Command&)> CommandHandlerFunc;
 
+
   CommandHandler() :
       handler_name_("Base CommandHandler")
   {
@@ -206,15 +215,17 @@ public:
    * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
    */
   //CommandHandler(const robot_movement_interface::Command &cmd_msg);
+
+
   /**
    * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having to
    * create a new class.
    *
    * Example:
-   *  CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
-   {
-   return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
-   });
+   *   CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
+       {
+         return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+       });
    *
    * @param sample_command The sample command to match
    * @param f a std::function/lambda that takes an rmi::Command returns a telnet Command
@@ -236,6 +247,8 @@ public:
   bool operator==(const robot_movement_interface::Command &cmd_msg);
 
   /**
+   * \deprecated replaced by virtual CommandPtr processMsg.
+   *
    * Processes a robot_movement_interface::Command.  Override this method in extended classes.
    * The message should have already been checked for relevance.
    * This base version will call the stored std::function.
@@ -244,7 +257,30 @@ public:
    * @param telnet_cmd The command to send to the robot
    * @return True if OK
    */
-  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
+//  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
+//  {
+//    if (!process_func_)
+//    {
+//      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
+//      return false;
+//    }
+//
+//    auto ret = process_func_(cmd_msg);
+//    telnet_cmd = *ret;
+//
+//    //telnet_cmd = process_func_(cmd_msg);
+//    return telnet_cmd.getCommand().compare("error") != 0;
+//
+//  }
+
+  /**
+   * Create a new std::shared_ptr<Command>.
+   * The base version will create a base shared_ptr then call processMsg(cmd_msg, telnet_command)
+   *
+   * @param cmd_msg The message received from the command_list topic
+   * @return a new CommandPtr.  nullptr if processing the message failed.
+   */
+  virtual CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const
   {
     if (!process_func_)
     {
@@ -252,33 +288,10 @@ public:
       return false;
     }
 
+    //proceess_func_ will return a shared_ptr<Command>
     auto ret = process_func_(cmd_msg);
-    telnet_cmd = *ret;
 
-    //telnet_cmd = process_func_(cmd_msg);
-    return telnet_cmd.getCommand().compare("error") != 0;
-
-  }
-
-  /**
-   * Create a new std::shared_ptr<Command>.
-   * The base version will create a base shared_ptr then call processMsg(cmd_msg, telnet_command)
-   * @param cmd_msg The message received from the command_list topic
-   * @return a new CommandPtr.  nullptr if processing the message failed.
-   */
-  virtual CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const
-  {
-    CommandPtr cmd_ptr = std::make_shared<Command>();
-
-    bool cmd_res = processMsg(cmd_msg, *cmd_ptr);
-    if (cmd_res)
-    {
-      return cmd_ptr;
-    }
-    else
-    {
-      return nullptr;
-    }
+    return ret;
 
   }
 

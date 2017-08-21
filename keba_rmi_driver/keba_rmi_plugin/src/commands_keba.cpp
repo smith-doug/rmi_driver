@@ -35,13 +35,8 @@ namespace keba_rmi_plugin
 {
 
 /**
- * Creates a dynamic parameter string from a float vector
- * @param velocity vector of a full Keba dynamic
- * @return string containing "dyn : velAxis accAxis decAxis jerkAxis vel acc dec jerk velOri accOri decOri jerkOri"
- */
-
-/**
  * Checks for velocity type DYN and adds the param entry if found
+ *
  * @param cmd_msg [in] the whole message
  * @param telnet_cmd [in,out] the telnet command to add the dyn entry to
  * @return true if a keba DYN entry was found
@@ -110,9 +105,6 @@ KebaCommandPtpJoints::KebaCommandPtpJoints()
   cmd.pose_type = "JOINTS";
   cmd.pose =
   { 0,1,2,3,4,5,6};
-//  cmd.velocity_type = "%";
-//  cmd.velocity =
-//  { 0,1,2,3,4,5,6};
 
   sample_command_ = cmd;
 }
@@ -138,36 +130,7 @@ CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Comm
     }
   }
 
-  //processMsg(cmd_msg, *cmd_ptr);
-
   return cmd_ptr;
-
-}
-
-bool KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
-{
-  std::string command_str = "joint move";
-
-  Command cmd(Command::Command::CommandType::Cmd);
-  cmd.setCommand("joint move", Command::paramsToString(cmd_msg.pose));
-
-  bool had_a_keba_dyn = processKebaDyn(cmd_msg, cmd);
-
-  if (!had_a_keba_dyn)
-  {
-    if (cmd_msg.velocity_type.compare("ROS") == 0)
-    {
-      cmd.addParam("velros", Command::paramsToString(cmd_msg.velocity));
-
-    }
-    if (cmd_msg.acceleration_type.compare("ROS") == 0)
-    {
-      cmd.addParam("accros", Command::paramsToString(cmd_msg.acceleration));
-    }
-  }
-
-  telnet_cmd = cmd;
-  return true;
 }
 
 KebaCommandLinQuat::KebaCommandLinQuat()
@@ -180,32 +143,24 @@ KebaCommandLinQuat::KebaCommandLinQuat()
   cmd.pose_type = "QUATERNION";
   cmd.pose =
   { 0,1,2,3,4,5,6};
-  //cmd.velocity =
-  //{ 0};
 
   sample_command_ = cmd;
 }
 
-bool KebaCommandLinQuat::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
+CommandPtr KebaCommandLinQuat::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  Command cmd(Command::CommandType::Cmd);
-
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
   auto pose_temp = cmd_msg.pose;
 
   pose_temp[0] *= 1000.0;
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  cmd.setCommand("linq move", Command::paramsToString(pose_temp));
+  cmd_ptr->setCommand("linq move", Command::paramsToString(pose_temp));
 
-  if (cmd_msg.velocity_type.compare("DYN") == 0)
-  {
-    cmd.addParam("dyn", Command::paramsToString(cmd_msg.velocity));
-  }
+  processKebaDyn(cmd_msg, *cmd_ptr);
 
-  telnet_cmd = cmd;
-  return true;
-
+  return cmd_ptr;
 }
 
 KebaCommandLinEuler::KebaCommandLinEuler()
@@ -223,10 +178,9 @@ KebaCommandLinEuler::KebaCommandLinEuler()
   sample_command_ = cmd;
 }
 
-bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd) const
+CommandPtr KebaCommandLinEuler::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-
-  Command cmd(Command::CommandType::Cmd);
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
 
   auto pose_temp = cmd_msg.pose;
 
@@ -234,17 +188,14 @@ bool KebaCommandLinEuler::processMsg(const robot_movement_interface::Command& cm
   pose_temp[1] *= 1000.0;
   pose_temp[2] *= 1000.0;
 
-  cmd.setCommand("lin move", Command::paramsToString(pose_temp));
+  cmd_ptr->setCommand("lin move", Command::paramsToString(pose_temp));
 
-  processKebaDyn(cmd_msg, cmd);
+  processKebaDyn(cmd_msg, *cmd_ptr);
 
-  telnet_cmd = cmd;
-  return true;
+  return cmd_ptr;
 }
 
-} //namespace keba_rmi_plugin
-
-keba_rmi_plugin::KebaCommandAbort::KebaCommandAbort()
+KebaCommandAbort::KebaCommandAbort()
 {
   handler_name_ = "KebaCommandAbort";
 
@@ -253,12 +204,12 @@ keba_rmi_plugin::KebaCommandAbort::KebaCommandAbort()
   sample_command_ = cmd;
 }
 
-bool keba_rmi_plugin::KebaCommandAbort::processMsg(const robot_movement_interface::Command& cmd_msg,
-                                                   Command& telnet_cmd) const
+CommandPtr KebaCommandAbort::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  Command cmd(Command::CommandType::Get);
-  cmd.setCommand("abort", "");
-  telnet_cmd = cmd;
-
-  return true;
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Get);
+  cmd_ptr->setCommand("abort", "");
+  return cmd_ptr;
 }
+
+} //namespace keba_rmi_plugin
+

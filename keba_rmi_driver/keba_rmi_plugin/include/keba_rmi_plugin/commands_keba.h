@@ -121,8 +121,6 @@ public:
 
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 
-  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
-
 };
 
 /**
@@ -149,7 +147,7 @@ public:
 
   KebaCommandLinQuat();
 
-  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 
 };
 
@@ -159,7 +157,7 @@ public:
 
   KebaCommandLinEuler();
 
-  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 
 };
 
@@ -169,7 +167,7 @@ public:
 
   KebaCommandAbort();
 
-  bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const override;
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 
 };
 
