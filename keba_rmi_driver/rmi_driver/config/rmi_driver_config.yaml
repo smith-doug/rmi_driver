@@ -1,4 +1,5 @@
 rmi_driver:
+  publish_rate: 30
   connection:
       ip_address: "192.168.100.100"
       port: 30000
