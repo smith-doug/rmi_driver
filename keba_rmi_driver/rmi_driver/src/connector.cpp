@@ -351,6 +351,7 @@ void Connector::addCommand(CommandPtr command)
 void Connector::clearCommands()
 {
   command_list_mutex_.lock();
+  ROS_INFO_STREAM("Connector::clearCommands clearing " << command_list_.size() << " entries");
   command_list_ = std::queue<CommandPtr>();
   command_list_mutex_.unlock();
 }
