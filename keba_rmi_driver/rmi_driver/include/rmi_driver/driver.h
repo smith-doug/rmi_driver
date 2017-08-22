@@ -39,6 +39,7 @@
 //#include "rmi_driver/commands_keba.h"
 
 #include <robot_movement_interface/CommandList.h>
+#include <robot_movement_interface/Result.h>
 #include <sensor_msgs/JointState.h>
 
 #include <boost/asio.hpp>
@@ -95,8 +96,12 @@ public:
    */
   void loadConfig(ros::NodeHandle &nh)
   {
-    std::cout << "loading config\n";
+    ROS_INFO_STREAM(__func__ << " loading");
 
+    // Load "global" params first
+    loadParam(nh, "/rmi_driver/publish_rate", publishing_rate_, 30);
+
+    // Load connection specific params
     ConnectionConfig cfg;
 
     loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
@@ -112,6 +117,8 @@ public:
   }
 
   std::vector<ConnectionConfig> connections_;
+
+  int publishing_rate_;
 };
 
 class Driver
@@ -121,7 +128,8 @@ public:
 
   void start();
 
-  void addConnection(std::string host, int port, CommandRegisterPtr commands, std::vector<std::string> joint_names);
+  void addConnection(std::string ns, std::string host, int port, CommandRegisterPtr commands,
+                     std::vector<std::string> joint_names);
 
   void publishJointState();
 

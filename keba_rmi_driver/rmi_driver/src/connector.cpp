@@ -69,16 +69,21 @@ std::vector<double> stringToDoubleVec(const std::string &s)
   return doubleVec;
 }
 
-Connector::Connector(boost::asio::io_service &io_service, std::string host, int port, StringVec joint_names,
-                     CommandRegisterPtr cmd_register)
-  : io_service_(io_service)
+Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::string host, int port,
+                     StringVec joint_names, CommandRegisterPtr cmd_register)
+  : ns_(ns)
+  , io_service_(io_service)
   , socket_cmd_(io_service)
   , socket_get_(io_service)
   , host_(host)
   , port_(port)
   , cmd_register_(cmd_register)
+  , nh_(ns)
 {
   joint_names_ = joint_names;
+
+  command_result_pub_ = nh_.advertise<robot_movement_interface::Result>("command_result", 30);
+  command_list_sub_ = nh_.subscribe("command_list", 1, &Connector::subCB_CommandList, this);
 }
 
 bool Connector::connect()
@@ -356,6 +361,67 @@ void Connector::clearCommands()
   command_list_mutex_.unlock();
 }
 
+bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
+{
+  auto conn = this;
+  auto cmd_register = this->getCommandRegister();
+
+  if (msg.replace_previous_commands)
+    conn->clearCommands();
+
+  for (auto &&msg_cmd : msg.commands)
+  {
+    std::string command_str = "";
+    std::string command_params = "";
+
+    std::ostringstream oss;
+
+    auto handler = cmd_register->findHandler(msg_cmd);
+
+    if (handler)
+    {
+      ROS_INFO_STREAM("Found cmd handler: " << handler->getName());
+      // Command telnet_command;
+
+      // Create a new CommandPtr with the found handler
+      auto telnet_command_ptr = handler->processMsg(msg_cmd);
+      if (!telnet_command_ptr)
+      {
+        ROS_WARN_STREAM("Driver::commandListCb got a null telnet_command_ptr");
+        continue;
+      }
+
+      telnet_command_ptr->setCommandId(msg_cmd.command_id);
+
+      // Standard Cmds get added to the queue
+      if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
+      {
+        conn->addCommand(telnet_command_ptr);
+      }
+      else
+      {
+        ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command_ptr->getCommand());
+
+        // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
+        auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
+
+        std::string send_response = conn->sendCommand(*telnet_command_ptr);
+        boost::trim_right(send_response);
+
+        ROS_INFO_STREAM("High priority response: " << send_response);
+        fut.wait();
+      }
+      continue;
+    }
+    else
+    {
+      std::cout << "Failed to find cmd handler\n";
+    }
+  }
+
+  return true;
+}
+
 void Connector::getThread()
 {
   ros::Rate rate(50);
@@ -437,14 +503,23 @@ void Connector::cmdThread()
       try
       {
         std::string response = sendCommand(*cmd);
+
+        robot_movement_interface::Result result;
+        result.command_id = cmd->getCommandId();
         if (cmd->checkResponse(response))
         {
           ROS_INFO_STREAM("Connector::cmdThread sendCommand OK. Response: " << response << std::endl);
+          result.result_code = 0;
         }
         else
         {
           ROS_INFO_STREAM("Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
+          result.result_code = 1;
         }
+        result.additional_information = response;
+
+        result.header.stamp = ros::Time::now();
+        command_result_pub_.publish(result);
 
         cmd.reset();
       }

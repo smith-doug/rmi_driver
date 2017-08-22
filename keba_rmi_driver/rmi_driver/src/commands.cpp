@@ -168,6 +168,16 @@ void Command::setType(CommandType type)
   type_ = type;
 }
 
+int Command::getCommandId() const
+{
+  return command_id_;
+}
+
+void Command::setCommandId(int commandId)
+{
+  command_id_ = commandId;
+}
+
 const CommandHandler* CommandRegister::findHandler(const robot_movement_interface::Command& msg_cmd)
 {
   auto foundItem = std::find_if(this->handlers().begin(), this->handlers().end(),

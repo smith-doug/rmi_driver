@@ -166,8 +166,13 @@ public:
   std::string getCommand() const;
   // void setCommand(const std::string& command);
 
+  int getCommandId() const;
+  void setCommandId(int commandId);
+
 protected:
   FullCommand full_command_;
+
+  int command_id_;
 
   CommandType type_;
 };

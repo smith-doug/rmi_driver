@@ -72,13 +72,13 @@ void Driver::start()
 
     std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
                                           "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
-    this->addConnection(con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
+    this->addConnection("/", con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
 
     // Add a second hardcoded connection for now
     joint_names = { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint",
                     "rob2_wrist_1_joint",      "rob2_wrist_2_joint",       "rob2_wrist_3_joint" };
 
-    this->addConnection(con_cfg.ip_address_, 30002, cmd_register, joint_names);
+    this->addConnection("/rob2", con_cfg.ip_address_, 30002, cmd_register, joint_names);
   }
   catch (pluginlib::PluginlibException &ex)
   {
@@ -87,7 +87,7 @@ void Driver::start()
 
   // Create ros publishers and subscribers
   joint_state_publisher_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
-  command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
+  // command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
   // Publish joint states.  @todo aggregate multiple robots
   pub_thread_ = std::thread(&Driver::publishJointState, this);
@@ -133,6 +133,8 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
         continue;
       }
 
+      telnet_command_ptr->setCommandId(msg_cmd.command_id);
+
       // Standard Cmds get added to the queue
       if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
       {
@@ -162,7 +164,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
   return true;
 }
 
-void Driver::addConnection(std::string host, int port, CommandRegisterPtr commands,
+void Driver::addConnection(std::string ns, std::string host, int port, CommandRegisterPtr commands,
                            std::vector<std::string> joint_names)
 {
   conn_num_++;
@@ -170,7 +172,7 @@ void Driver::addConnection(std::string host, int port, CommandRegisterPtr comman
   //  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
   //                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
 
-  auto shared = std::make_shared<Connector>(io_service_, host, port, joint_names, commands);
+  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands);
   conn_map_.emplace(conn_num_, shared);
 
   auto &conn = conn_map_.at(conn_num_);
@@ -180,9 +182,10 @@ void Driver::addConnection(std::string host, int port, CommandRegisterPtr comman
 
 void Driver::publishJointState()
 {
-  ros::Rate pub_rate(30);
-  std::cout << "Driver pub" << std::endl;
-  ROS_INFO_NAMED("Driver", "publishJointState");
+  ros::Rate pub_rate(config_.publishing_rate_);
+
+  ROS_INFO_STREAM(__func__ << "Driver pub starting");
+  // ROS_INFO_NAMED("Driver", "publishJointState");
 
   sensor_msgs::JointState stateFull;
   while (ros::ok())

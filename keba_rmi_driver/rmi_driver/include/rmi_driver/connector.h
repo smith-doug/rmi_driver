@@ -36,6 +36,8 @@
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
 
+#include <robot_movement_interface/Result.h>
+
 #include <sensor_msgs/JointState.h>
 
 #include <boost/asio.hpp>
@@ -47,6 +49,8 @@
 #include <string>
 #include <thread>
 
+#include <robot_movement_interface/CommandList.h>
+
 namespace rmi_driver
 {
 class Connector
@@ -54,7 +58,7 @@ class Connector
   typedef std::vector<std::string> StringVec;
 
 public:
-  Connector(boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
+  Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
             CommandRegisterPtr cmd_register);
 
   bool connect();
@@ -78,6 +82,13 @@ public:
   void addCommand(CommandPtr command);
 
   void clearCommands();
+
+  void subCB_CommandList(const robot_movement_interface::CommandListConstPtr& msg)
+  {
+    commandListCb(*msg);
+  }
+
+  bool commandListCb(const robot_movement_interface::CommandList& msg);
 
   sensor_msgs::JointState getLastJointState()
   {
@@ -139,6 +150,8 @@ protected:
 
   void getThread();
 
+  std::string ns_;
+
   // Socket used for motion commands that may block.  Default port 30000
   std::shared_ptr<boost::asio::ip::tcp::socket> socket_cmd_ptr_;
   boost::asio::ip::tcp::socket socket_cmd_;
@@ -165,6 +178,12 @@ protected:
   boost::asio::io_service local_io_service_;
 
   std::queue<CommandPtr> command_list_;
+
+  ros::Subscriber command_list_sub_;
+  ros::Publisher command_result_pub_;
+  ros::NodeHandle nh_;
+
+  std::queue<std::shared_ptr<robot_movement_interface::Result>> command_result_list_;
 
   std::thread get_thread_;
   std::thread cmd_thread_;
