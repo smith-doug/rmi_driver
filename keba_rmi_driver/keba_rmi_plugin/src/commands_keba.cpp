@@ -33,7 +33,6 @@
 
 namespace keba_rmi_plugin
 {
-
 /**
  * Checks for velocity type DYN and adds the param entry if found
  *
@@ -41,7 +40,7 @@ namespace keba_rmi_plugin
  * @param telnet_cmd [in,out] the telnet command to add the dyn entry to
  * @return true if a keba DYN entry was found
  */
-bool processKebaDyn(const robot_movement_interface::Command& cmd_msg, Command& telnet_cmd)
+bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
 {
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
@@ -52,8 +51,7 @@ bool processKebaDyn(const robot_movement_interface::Command& cmd_msg, Command& t
     return false;
 }
 
-KebaCommandRegister::KebaCommandRegister() :
-    commands_registered_(0)
+KebaCommandRegister::KebaCommandRegister() : commands_registered_(0)
 {
   registerCommands();
 }
@@ -80,20 +78,19 @@ void KebaCommandRegister::registerCommands()
   command_handlers_.emplace_back(new KebaCommandLinQuat());
   command_handlers_.emplace_back(new KebaCommandLinEuler());
   command_handlers_.emplace_back(new KebaCommandAbort());
+  command_handlers_.emplace_back(new KebaCommandSync());
 
-  //Sample command for lambda usage
+  // Sample command for lambda usage
   robot_movement_interface::Command cmd;
   cmd.command_type = "TEST";
 
-  CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
-  {
+  CommandHandler chtest(cmd, [](const robot_movement_interface::Command &cmd_msg) {
     return std::make_shared<Command>(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
   });
 
   command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
 
   commands_registered_ = true;
-
 }
 
 KebaCommandPtpJoints::KebaCommandPtpJoints()
@@ -103,15 +100,13 @@ KebaCommandPtpJoints::KebaCommandPtpJoints()
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
   cmd.pose_type = "JOINTS";
-  cmd.pose =
-  { 0,1,2,3,4,5,6};
+  cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
 
   sample_command_ = cmd;
 }
 
 CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-
   CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
   cmd_ptr->setCommand("joint move", Command::paramsToString(cmd_msg.pose));
 
@@ -122,7 +117,6 @@ CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Comm
     if (cmd_msg.velocity_type.compare("ROS") == 0)
     {
       cmd_ptr->addParam("velros", Command::paramsToString(cmd_msg.velocity));
-
     }
     if (cmd_msg.acceleration_type.compare("ROS") == 0)
     {
@@ -141,8 +135,7 @@ KebaCommandLinQuat::KebaCommandLinQuat()
   cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
   cmd.pose_type = "QUATERNION";
-  cmd.pose =
-  { 0,1,2,3,4,5,6};
+  cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
 
   sample_command_ = cmd;
 }
@@ -165,15 +158,13 @@ CommandPtr KebaCommandLinQuat::processMsg(const robot_movement_interface::Comman
 
 KebaCommandLinEuler::KebaCommandLinEuler()
 {
-
   handler_name_ = "KebaCommandLinEuler";
 
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
   cmd.pose_type = "EULER_INTRINSIC_ZYX";
-  cmd.pose =
-  { 0,1,2,3,4,5};
+  cmd.pose = { 0, 1, 2, 3, 4, 5 };
 
   sample_command_ = cmd;
 }
@@ -211,5 +202,23 @@ CommandPtr KebaCommandAbort::processMsg(const robot_movement_interface::Command 
   return cmd_ptr;
 }
 
-} //namespace keba_rmi_plugin
+KebaCommandSync::KebaCommandSync()
+{
+  handler_name_ = "KebaCommandSync";
 
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "SYNC";
+  cmd.pose_type = "SYNC_NUM";
+  cmd.pose = { 0 };
+  sample_command_ = cmd;
+}
+
+CommandPtr KebaCommandSync::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+
+  cmd_ptr->setCommand("sync", Command::paramsToString(cmd_msg.pose));
+  return cmd_ptr;
+}
+
+}  // namespace keba_rmi_plugin

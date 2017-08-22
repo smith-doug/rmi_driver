@@ -4,4 +4,3 @@
 #include "keba_rmi_plugin/commands_keba.h"
 
 PLUGINLIB_EXPORT_CLASS(keba_rmi_plugin::KebaCommandRegister, rmi_driver::CommandRegister);
-
