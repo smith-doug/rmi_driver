@@ -488,7 +488,7 @@ void Connector::cmdThread()
       should_send = true;
 
       cmd = command_list_.front();
-      command_list_.pop();
+      // command_list_.pop();
 
       std::ostringstream oss;
       oss << *cmd;
@@ -516,6 +516,12 @@ void Connector::cmdThread()
           ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
           result.result_code = 1;
         }
+
+        command_list_mutex_.lock();
+        if (command_list_.size() > 0)
+          command_list_.pop();
+        command_list_mutex_.unlock();
+
         result.additional_information = response;
 
         result.header.stamp = ros::Time::now();
