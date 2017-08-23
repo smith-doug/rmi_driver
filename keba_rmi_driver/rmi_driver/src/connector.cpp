@@ -566,7 +566,11 @@ void Connector::cmdThread()
 
         if (ex.code() != boost::asio::error::operation_aborted)
         {
-          clearCommands();
+          // Removing clearCommands() actually allows the robot to continue if the socket is lost due to a plc restart
+          // or whatever.
+          // An abort command will still clear it out.  Maybe a timer would be safer?
+          // clearCommands();
+
           std::thread(&Connector::connectSocket, this, host_, port_, Command::CommandType::Cmd).detach();
 
           return;
