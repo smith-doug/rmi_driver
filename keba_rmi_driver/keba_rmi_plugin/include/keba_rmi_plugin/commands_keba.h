@@ -76,6 +76,12 @@ public:
 
   void registerCommands();
 
+  const std::string &getVersion()
+  {
+    static std::string version("0.0.1");
+    return version;
+  }
+
 protected:
   int num_main_joints_;
   int num_aux_joints_;

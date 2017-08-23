@@ -87,7 +87,7 @@ public:
   {
     type_ = type;
 
-    if(erase_params)
+    if (erase_params)
       full_command_.clear();
 
     if (full_command_.size() > 0)
@@ -356,6 +356,8 @@ public:
    * Create commands and put them in the command_handlers_ vector.
    */
   virtual void registerCommands() = 0;
+
+  virtual const std::string& getVersion() = 0;
 
   /**
    *

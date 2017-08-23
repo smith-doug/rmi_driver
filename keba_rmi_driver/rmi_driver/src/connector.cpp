@@ -426,11 +426,41 @@ void Connector::getThread()
 {
   ros::Rate rate(50);
 
+  // I should use the command register to get these from the plugin.
   Command get_joint_position(Command::CommandType::Get, "get joint position");
   Command get_tool_frame(Command::CommandType::Get, "get tool frame");
+  Command get_version(Command::CommandType::Get, "get version");
 
   std::string response;
   std::vector<double> pos_real;
+
+  // Check the version string
+  try
+  {
+    response = sendCommand(get_version);
+    if (response.compare(cmd_register_->getVersion()) != 0)
+    {
+      ROS_ERROR_STREAM(ns_ << " WARNING!  The version returned by the robot does NOT match the version of the active "
+                           << "command register!  Things may not work!");
+      ROS_ERROR_STREAM(ns_ << " Command register version: " << cmd_register_->getVersion()
+                           << ", robot version: " << response);
+    }
+    else
+    {
+      ROS_INFO_STREAM(ns_ << " Command register version matches the robot: " << response);
+    }
+  }
+  catch (const boost::system::system_error &ex)
+  {
+    ROS_INFO_STREAM(ns_ << " Connector::getThread exception: " << ex.what());
+
+    if (ex.code() != boost::asio::error::operation_aborted)
+    {
+      // Relaunch the get socket/thread
+      std::thread(&Connector::connectSocket, this, host_, port_ + 1, Command::CommandType::Get).detach();
+      return;
+    }
+  }
 
   while (ros::ok())
   {
@@ -457,8 +487,8 @@ void Connector::getThread()
 
       if (ex.code() != boost::asio::error::operation_aborted)
       {
+        // Relaunch the get socket/thread
         std::thread(&Connector::connectSocket, this, host_, port_ + 1, Command::CommandType::Get).detach();
-
         return;
       }
     }
