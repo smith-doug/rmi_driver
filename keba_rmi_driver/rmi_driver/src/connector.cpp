@@ -153,7 +153,7 @@ bool Connector::connectSocket(std::string host, int port, Command::CommandType c
       [this, host, local_port, cmd_type](const boost::system::error_code &ec, tcp::resolver::iterator i) {
         if (ec)
         {
-          ROS_INFO_STREAM("Ec was set " << ec.message());
+          ROS_INFO_STREAM(ns_ << " Ec was set " << ec.message());
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
         }
@@ -171,7 +171,7 @@ bool Connector::connectSocket(std::string host, int port, Command::CommandType c
             get_thread_ = std::thread(&Connector::getThread, this);
           }
 
-          ROS_INFO_STREAM("Async " << con_type << " established to " << host << ":" << local_port);
+          ROS_INFO_STREAM(ns_ << " Async " << con_type << " established to " << host << ":" << local_port);
         }
 
       });
@@ -216,7 +216,7 @@ void Connector::cmdSocketFlusher()
 
           if (e)  // If there is an error code, this was either cancelled or disconnected.
           {
-            ROS_INFO_STREAM("Connector::readCmdSocket() is exiting with ec: " << e.message());
+            ROS_INFO_STREAM(ns_ << " Connector::cmdSocketFlusher() is exiting with ec: " << e.message());
             flush_socket_cmd_ = false;
             return;
           }
@@ -226,7 +226,7 @@ void Connector::cmdSocketFlusher()
             std::istream is(&socket_cmd_flush_buff_);
             std::getline(is, line);
 
-            ROS_INFO_STREAM("Connector::readCmdSocket() flushed a message (" << size << "): " << line);
+            ROS_INFO_STREAM(ns_ << " Connector::cmdSocketFlusher() flushed a message (" << size << "): " << line);
             if (flush_socket_cmd_)
               cmdSocketFlusher();
           }
@@ -356,7 +356,7 @@ void Connector::addCommand(CommandPtr command)
 void Connector::clearCommands()
 {
   command_list_mutex_.lock();
-  ROS_INFO_STREAM("Connector::clearCommands clearing " << command_list_.size() << " entries");
+  ROS_INFO_STREAM(ns_ << " Connector::clearCommands clearing " << command_list_.size() << " entries");
   command_list_ = std::queue<CommandPtr>();
   command_list_mutex_.unlock();
 }
@@ -380,14 +380,14 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
 
     if (handler)
     {
-      ROS_INFO_STREAM("Found cmd handler: " << handler->getName());
+      ROS_INFO_STREAM(ns_ << " Found cmd handler: " << handler->getName());
       // Command telnet_command;
 
       // Create a new CommandPtr with the found handler
       auto telnet_command_ptr = handler->processMsg(msg_cmd);
       if (!telnet_command_ptr)
       {
-        ROS_WARN_STREAM("Driver::commandListCb got a null telnet_command_ptr");
+        ROS_WARN_STREAM(ns_ << " Connector::commandListCb got a null telnet_command_ptr");
         continue;
       }
 
@@ -400,7 +400,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       }
       else
       {
-        ROS_INFO_STREAM("Got a high priority command via a message: " << telnet_command_ptr->getCommand());
+        ROS_INFO_STREAM(ns_ << " Got a high priority command via a message: " << telnet_command_ptr->getCommand());
 
         // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
         auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
@@ -408,7 +408,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
         std::string send_response = conn->sendCommand(*telnet_command_ptr);
         boost::trim_right(send_response);
 
-        ROS_INFO_STREAM("High priority response: " << send_response);
+        ROS_INFO_STREAM(ns_ << " High priority response: " << send_response);
         fut.wait();
       }
       continue;
@@ -453,7 +453,7 @@ void Connector::getThread()
     }
     catch (const boost::system::system_error &ex)
     {
-      ROS_INFO_STREAM("Connector::getThread exception: " << ex.what());
+      ROS_INFO_STREAM(ns_ << " Connector::getThread exception: " << ex.what());
 
       if (ex.code() != boost::asio::error::operation_aborted)
       {
@@ -470,7 +470,7 @@ void Connector::getThread()
 void Connector::cmdThread()
 {
   ros::Rate rate(30);
-  std::cout << "Cmd starting" << std::endl;
+  ROS_INFO_STREAM(ns_ << " Connector::cmdThread() starting");
 
   CommandPtr cmd;
 
@@ -494,7 +494,7 @@ void Connector::cmdThread()
       oss << *cmd;
 
       auto cmd_str = oss.str();
-      ROS_INFO_STREAM("Connector::cmdThread Cmd (" << cmd_str.length() << "): " << cmd_str);
+      ROS_INFO_STREAM(ns_ << " Connector::cmdThread Cmd (" << cmd_str.length() << "): " << cmd_str);
     }
     command_list_mutex_.unlock();
 
@@ -508,12 +508,12 @@ void Connector::cmdThread()
         result.command_id = cmd->getCommandId();
         if (cmd->checkResponse(response))
         {
-          ROS_INFO_STREAM("Connector::cmdThread sendCommand OK. Response: " << response << std::endl);
+          ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand OK. Response: " << response << std::endl);
           result.result_code = 0;
         }
         else
         {
-          ROS_INFO_STREAM("Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
+          ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
           result.result_code = 1;
         }
         result.additional_information = response;
@@ -525,7 +525,7 @@ void Connector::cmdThread()
       }
       catch (const boost::system::system_error &ex)
       {
-        ROS_INFO_STREAM("Connector::cmdThread exception: " << ex.what());
+        ROS_INFO_STREAM(ns_ << " Connector::cmdThread exception: " << ex.what());
         // code 125 is
 
         if (ex.code() != boost::asio::error::operation_aborted)
