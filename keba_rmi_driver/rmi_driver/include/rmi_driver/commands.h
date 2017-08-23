@@ -83,11 +83,17 @@ public:
   //
   //  }
 
-  void makeCommand(CommandType type, std::string command, std::string params)
+  void makeCommand(CommandType type, std::string command, std::string params, bool erase_params = false)
   {
     type_ = type;
-    full_command_.clear();
-    full_command_.emplace_back(command, params);
+
+    if(erase_params)
+      full_command_.clear();
+
+    if (full_command_.size() > 0)
+      full_command_[0] = std::make_pair(command, params);
+    else
+      full_command_.emplace_back(command, params);
   }
 
   virtual ~Command()
