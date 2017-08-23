@@ -31,6 +31,7 @@
 #include <robot_movement_interface/Command.h>
 #include <ros/ros.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
 #include <vector>
 
 namespace rmi_driver
@@ -84,7 +85,21 @@ CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_c
 // If sample is "" it will return false as this param isn't used in the match.
 bool usedAndNotEqual(const std::string& sample, const std::string& msg)
 {
-  return sample.length() > 0 && sample.compare(msg) != 0;
+  if (sample.length() <= 0)
+    return false;
+
+  boost::char_separator<char> sep("|");
+  boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
+
+  // Eclipse compares about auto&& with a tokenizer?
+  for (const std::string& entry : tok)
+  {
+    // Found an entry that matches.
+    if (entry.compare(msg) == 0)
+      return false;
+  }
+  return true;
+  // return sample.length() > 0 && sample.compare(msg) != 0;
 }
 
 bool usedAndNotEqual(const std::vector<float>& sample, const std::vector<float>& msg)
