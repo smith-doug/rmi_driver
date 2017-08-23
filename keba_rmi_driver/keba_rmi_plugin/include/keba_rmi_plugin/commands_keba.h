@@ -83,6 +83,14 @@ protected:
   bool commands_registered_;
 };
 
+class KebaCommandLin : public CommandHandler
+{
+public:
+  KebaCommandLin();
+
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
 /**
  * PTP moves to joint positions
  *
@@ -110,6 +118,14 @@ class KebaCommandPtpJoints : public CommandHandler
 {
 public:
   KebaCommandPtpJoints();
+
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+class KebaCommandPtp : public CommandHandler
+{
+public:
+  KebaCommandPtp();
 
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };

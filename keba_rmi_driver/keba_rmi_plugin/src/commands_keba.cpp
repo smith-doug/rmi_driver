@@ -28,6 +28,7 @@
  */
 
 #include "keba_rmi_plugin/commands_keba.h"
+#include <boost/algorithm/string.hpp>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,28 @@ bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, Command &t
   }
   else
     return false;
+}
+
+/**
+ * Check for velo/accel types to be ROS  @todo should I require both?
+ * @param cmd_msg
+ * @param telnet_cmd
+ * @return
+ */
+bool processRosDyn(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+{
+  bool ret = false;
+  if (cmd_msg.velocity_type.compare("ROS") == 0)
+  {
+    telnet_cmd.addParam("velros", Command::paramsToString(cmd_msg.velocity));
+    ret = true;
+  }
+  if (cmd_msg.acceleration_type.compare("ROS") == 0)
+  {
+    telnet_cmd.addParam("accros", Command::paramsToString(cmd_msg.acceleration));
+    ret = true;
+  }
+  return ret;
 }
 
 KebaCommandRegister::KebaCommandRegister() : commands_registered_(0)
@@ -74,7 +97,8 @@ void KebaCommandRegister::registerCommands()
   if (commands_registered_)
     return;
 
-  command_handlers_.emplace_back(new KebaCommandPtpJoints());
+  // command_handlers_.emplace_back(new KebaCommandPtpJoints());
+  command_handlers_.emplace_back(new KebaCommandPtp());
   command_handlers_.emplace_back(new KebaCommandLinQuat());
   command_handlers_.emplace_back(new KebaCommandLinEuler());
   command_handlers_.emplace_back(new KebaCommandAbort());
@@ -91,6 +115,39 @@ void KebaCommandRegister::registerCommands()
   command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
 
   commands_registered_ = true;
+}
+
+KebaCommandLin::KebaCommandLin()
+{
+  handler_name_ = "KebaCommandLin";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "LIN";
+  cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
+  // cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
+
+  sample_command_ = cmd;
+}
+
+CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  auto pose_temp = cmd_msg.pose;
+
+  if (cmd_msg.pose_type.compare("JOINTS"))
+  {
+  }
+
+  pose_temp[0] *= 1000.0;
+  pose_temp[1] *= 1000.0;
+  pose_temp[2] *= 1000.0;
+
+  cmd_ptr->setCommand("linq move", Command::paramsToString(pose_temp));
+
+  processKebaDyn(cmd_msg, *cmd_ptr);
+
+  return cmd_ptr;
 }
 
 KebaCommandPtpJoints::KebaCommandPtpJoints()
@@ -122,6 +179,52 @@ CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Comm
     {
       cmd_ptr->addParam("accros", Command::paramsToString(cmd_msg.acceleration));
     }
+  }
+
+  return cmd_ptr;
+}
+
+KebaCommandPtp::KebaCommandPtp()
+{
+  handler_name_ = "KebaCommandPtpJoints";
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "PTP";
+  cmd.pose_type = "JOINTS|QUATERNION|EULER_INTRINSIC_ZYX";
+  // cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
+
+  sample_command_ = cmd;
+}
+
+CommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+
+  std::ostringstream oss;
+  // oss << "ptp " <<
+  std::string command_str = "ptp " + boost::to_lower_copy(cmd_msg.pose_type);
+
+  auto pose_temp = cmd_msg.pose;
+
+  if (cmd_msg.pose_type.compare("JOINTS") == 0)
+  {
+    //@todo check length and stuff
+  }
+  else if (cmd_msg.pose_type.compare("QUATERNION") == 0 || cmd_msg.pose_type.compare("EULER_INTRINSIC_ZYX"))
+  {
+    pose_temp[0] *= 1000.0;
+    pose_temp[1] *= 1000.0;
+    pose_temp[2] *= 1000.0;
+  }
+
+  cmd_ptr->setCommand(command_str, Command::paramsToString(pose_temp));
+
+  bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+
+  if (!had_a_keba_dyn)
+  {
+    // Joint velo/accel is good enough for a PTP move
+    processRosDyn(cmd_msg, *cmd_ptr);
   }
 
   return cmd_ptr;
