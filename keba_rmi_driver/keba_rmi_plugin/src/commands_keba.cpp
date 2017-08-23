@@ -99,8 +99,9 @@ void KebaCommandRegister::registerCommands()
 
   // command_handlers_.emplace_back(new KebaCommandPtpJoints());
   command_handlers_.emplace_back(new KebaCommandPtp());
-  command_handlers_.emplace_back(new KebaCommandLinQuat());
-  command_handlers_.emplace_back(new KebaCommandLinEuler());
+  command_handlers_.emplace_back(new KebaCommandLin());
+  // command_handlers_.emplace_back(new KebaCommandLinQuat());
+  // command_handlers_.emplace_back(new KebaCommandLinEuler());
   command_handlers_.emplace_back(new KebaCommandAbort());
   command_handlers_.emplace_back(new KebaCommandSync());
 
@@ -133,19 +134,26 @@ KebaCommandLin::KebaCommandLin()
 CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
   CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+
+  std::string command_str = "lin " + boost::to_lower_copy(cmd_msg.pose_type);
+
   auto pose_temp = cmd_msg.pose;
 
-  if (cmd_msg.pose_type.compare("JOINTS"))
+  if (cmd_msg.pose_type.compare("JOINTS") == 0)
   {
+    //@todo check length and stuff
+  }
+  else if (cmd_msg.pose_type.compare("QUATERNION") == 0 || cmd_msg.pose_type.compare("EULER_INTRINSIC_ZYX"))
+  {
+    pose_temp[0] *= 1000.0;
+    pose_temp[1] *= 1000.0;
+    pose_temp[2] *= 1000.0;
   }
 
-  pose_temp[0] *= 1000.0;
-  pose_temp[1] *= 1000.0;
-  pose_temp[2] *= 1000.0;
+  cmd_ptr->setCommand(command_str, Command::paramsToString(pose_temp));
 
-  cmd_ptr->setCommand("linq move", Command::paramsToString(pose_temp));
-
-  processKebaDyn(cmd_msg, *cmd_ptr);
+  // ROS joint isn't enough for a Lin.  Only look for a DYN.
+  bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
 
   return cmd_ptr;
 }
@@ -200,8 +208,6 @@ CommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &c
 {
   CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
 
-  std::ostringstream oss;
-  // oss << "ptp " <<
   std::string command_str = "ptp " + boost::to_lower_copy(cmd_msg.pose_type);
 
   auto pose_temp = cmd_msg.pose;
