@@ -78,7 +78,7 @@ public:
 
   const std::string &getVersion()
   {
-    static std::string version("0.0.1");
+    static std::string version("0.0.2");
     return version;
   }
 
