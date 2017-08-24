@@ -39,9 +39,20 @@
 namespace rmi_driver
 {
 /**
- * Commands that will be sent to the robot controller.  They are represented by a string with a command, a :, then
- * parameters
- * <command> : <params>
+ * \brief Commands that will be sent to the robot controller as strings.
+ *
+ * @todo come up with a better name.  It's confusing since there is already robot_movement_interface/Command
+ *
+ * Commands contain a list of pairs of strings.  The pairs represent a command/parameters with optional values.  At
+ * command string (with optional values) is required.  Additional parameter pairs can be added.  toString is used to
+ * create the actual string to the robot.  << is overridden for easier stream console output.
+ *
+ * Default string format:
+ * <command>[ : <values>]; [\<param>[: <values>];]
+ *
+ * Examples: \n
+ * "ptp : 1 2 3 4 5 6;"  A ptp move \n
+ * "ptp : 1 2 3 4 5 6; speed : 100;" A ptp move with the speed parameter specified
  */
 class Command
 {
@@ -50,11 +61,11 @@ public:
 
   using FullCommand = std::vector<CommandEntry>;
 
-  // Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
+  /// Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
   enum CommandType
   {
-    Get,
-    Cmd
+    Get,  //!< Get Commands that should return almost immediately.  get joint position, get digital io, etc
+    Cmd   //!< Cmd Commands that might take some time.  Moving, waiting on inputs, etc
   };
 
   Command(CommandType type = CommandType::Cmd) : type_(type)
@@ -83,64 +94,57 @@ public:
   //
   //  }
 
-  void makeCommand(CommandType type, std::string command, std::string params, bool erase_params = false)
-  {
-    type_ = type;
-
-    if (erase_params)
-      full_command_.clear();
-
-    if (full_command_.size() > 0)
-      full_command_[0] = std::make_pair(command, params);
-    else
-      full_command_.emplace_back(command, params);
-  }
+  /**
+   * \brief Sets up the command.
+   *
+   * Sets the first element of full_command_ to (command, params).  It can optionally remove all existing parameters.
+   * @param type Cmd or Get
+   * @param command command string
+   * @param command_vals parameters for the command
+   * @param erase_params erase the full_command_ before setting
+   */
+  void makeCommand(CommandType type, std::string command, std::string command_vals, bool erase_params = false);
 
   virtual ~Command()
   {
     // std::cout << "Destroying: " << this->toString() << std::endl;
   }
 
-  void setCommand(std::string command, std::string param_vals)
+  /**
+   * Sets the command and values without modifying the parameters or type
+   *
+   * @param command command string
+   * @param command_vals parameters for the command
+   */
+  void setCommand(std::string command, std::string command_vals)
   {
-    makeCommand(type_, command, param_vals);
-  }
-
-  void addParam(std::string param, std::string param_vals)
-  {
-    full_command_.push_back(std::make_pair(param, param_vals));
+    makeCommand(type_, command, command_vals);
   }
 
   /**
+   * Add a parameter and values
+   *
+   * @param param
+   * @param param_vals
+   */
+  void addParam(std::string param, std::string param_vals);
+
+  /**
+   * \brief Prepare the string to send to the robot.
+   *
    * @todo rethink this now that option params can be entered.  Or just make it virtual and leave it for someone else to
    * think about!
-   * @return
+   * @return The full, formatted string that will be send to the robot
    */
-  virtual std::string toString(bool append_newline = true) const
-  {
-    std::ostringstream oss;
+  virtual std::string toString(bool append_newline = true) const;
 
-    for (auto&& cmd : full_command_)
-    {
-      oss << cmd.first;
-      if (cmd.second.length() > 0)
-        oss << " : " << cmd.second;
-      oss << ";";
-    }
-    if (append_newline)
-      oss << "\n";
-
-    std::string ret = oss.str();
-    return ret;
-  }
-
-  virtual bool checkResponse(std::string& response) const
-  {
-    if (response.compare("error") != 0)
-      return true;
-    else
-      return false;
-  }
+  /**
+   * Check the reponse of a command.  By default it just checks if the response is "error".
+   *
+   * @param response The string returned by the robot
+   * @return True if the response is OK
+   */
+  virtual bool checkResponse(std::string& response) const;
 
   /**
    * Converts a float vector into a string of values separated by spaces.  Removes trailing zeroes
@@ -153,8 +157,9 @@ public:
 
   /**
    * Used to have an inheritance based << override.
+   *
    * @param o operator<<(std::ostream& o, T t)
-   * @return ostream
+   * @return ostream containing the results of toString without a newline
    */
   virtual std::ostream& dump(std::ostream& o) const
   {
@@ -165,12 +170,9 @@ public:
 
   // Getters/setters
 
-  // const std::string& getParams() const;
-  // void setParams(const std::string& params);
   CommandType getType() const;
   void setType(CommandType type);
   std::string getCommand() const;
-  // void setCommand(const std::string& command);
 
   int getCommandId() const;
   void setCommandId(int commandId);
@@ -178,6 +180,7 @@ public:
 protected:
   FullCommand full_command_;
 
+  /// Used in the /command_result response
   int command_id_;
 
   CommandType type_;
@@ -192,6 +195,8 @@ class CommandHandler;
 using CommandPtr = std::shared_ptr<Command>;
 
 /**
+ * \brief Handle robot_movement_interface::Command and create Commands that are ready to send to the robot.
+ *
  * Used to prepare command and parameter strings.  Provide the constructor with a similar message.
  * Fill out any fields you want checked.  Vectors will be checked for length, strings for equality.
  * Fields that have a length of 0 will be ignored.
@@ -284,19 +289,7 @@ public:
    * @param cmd_msg The message received from the command_list topic
    * @return a new CommandPtr.  nullptr if processing the message failed.
    */
-  virtual CommandPtr processMsg(const robot_movement_interface::Command& cmd_msg) const
-  {
-    if (!process_func_)
-    {
-      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
-      return false;
-    }
-
-    // proceess_func_ will return a shared_ptr<Command>
-    auto ret = process_func_(cmd_msg);
-
-    return ret;
-  }
+  virtual CommandPtr processMsg(const robot_movement_interface::Command& cmd_msg) const;
 
   void setProcFunc(CommandHandlerFunc& f)
   {
@@ -357,10 +350,14 @@ public:
    */
   virtual void registerCommands() = 0;
 
+  /**
+   * Get the version string.  This will be checked against the string returned by the robot
+   * @return version string
+   */
   virtual const std::string& getVersion() = 0;
 
   /**
-   *
+   * Get the registered handlers
    * @return a reference to the vector of handlers
    */
   CommandHandlerPtrVec& handlers()

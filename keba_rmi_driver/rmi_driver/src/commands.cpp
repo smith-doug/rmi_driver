@@ -36,6 +36,8 @@
 
 namespace rmi_driver
 {
+// Begin stuff that needs moved to a util file.
+
 /**
  * Convert a float into a string with no trailing zeroes
  * @todo move it to a util file
@@ -55,6 +57,39 @@ std::string floatToStringNoTrailing(float fval, int precision)
 
   return str;
 }
+
+bool usedAndNotEqual(const std::vector<float>& sample, const std::vector<float>& msg)
+{
+  return sample.size() > 0 && sample.size() != msg.size();
+}
+
+const robot_movement_interface::Command& CommandHandler::getSampleCommand() const
+{
+  return sample_command_;
+}
+
+// Returns True if the sample length is > 0 and it doesn't match msg.
+// If sample is "" it will return false as this param isn't used in the match.
+bool usedAndNotEqual(const std::string& sample, const std::string& msg)
+{
+  if (sample.length() <= 0)
+    return false;
+
+  boost::char_separator<char> sep("|");
+  boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
+
+  // Eclipse complains about auto&& with a tokenizer?
+  for (const std::string& entry : tok)
+  {
+    // Found an entry that matches.
+    if (entry.compare(msg) == 0)
+      return false;
+  }
+  return true;
+  // return sample.length() > 0 && sample.compare(msg) != 0;
+}
+
+// Begin Command::
 
 std::string Command::paramsToString(const std::vector<float>& floatVec, int precision)
 {
@@ -76,40 +111,92 @@ std::string Command::paramsToString(const std::vector<float>& floatVec, int prec
   return out_str;
 }
 
+std::string Command::toString(bool append_newline) const
+{
+  std::ostringstream oss;
+
+  for (auto&& cmd : full_command_)
+  {
+    oss << cmd.first;
+    if (cmd.second.length() > 0)
+      oss << " : " << cmd.second;
+    oss << ";";
+  }
+  if (append_newline)
+    oss << "\n";
+
+  std::string ret = oss.str();
+  return ret;
+}
+
+bool Command::checkResponse(std::string& response) const
+{
+  if (response.compare("error") != 0)
+    return true;
+  else
+    return false;
+}
+
+void Command::makeCommand(CommandType type, std::string command, std::string params, bool erase_params)
+{
+  type_ = type;
+  if (erase_params)
+    full_command_.clear();
+
+  if (full_command_.size() > 0)
+    full_command_[0] = std::make_pair(command, params);  //@todo check this
+  else
+    full_command_.emplace_back(command, params);
+}
+
+void Command::addParam(std::string param, std::string param_vals)
+{
+  if (full_command_.empty())
+    full_command_[1] = std::make_pair(param, param_vals);
+  else
+    full_command_.emplace_back(param, param_vals);
+}
+
+// Eclipse has a fit every time I try to call resize(int) or construct the vector with a size,
+// even though it compiles fine, so I have no way to guarantee that the vector isn't empty.
+// So, I need to check at() and return a string, not a reference to one.
+std::string Command::getCommand() const
+{
+  try
+  {
+    return full_command_.at(0).first;
+  }
+  catch (const std::out_of_range& oor)
+  {
+    return "";
+  }
+}
+
+Command::CommandType Command::getType() const
+{
+  return type_;
+}
+
+void Command::setType(CommandType type)
+{
+  type_ = type;
+}
+
+int Command::getCommandId() const
+{
+  return command_id_;
+}
+
+void Command::setCommandId(int commandId)
+{
+  command_id_ = commandId;
+}
+
+// Begin CommandHandler::
+
 CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f)
   : sample_command_(sample_command), process_func_(std::move(f))
 {
-}
-
-// Returns True if the sample length is > 0 and it doesn't match msg.
-// If sample is "" it will return false as this param isn't used in the match.
-bool usedAndNotEqual(const std::string& sample, const std::string& msg)
-{
-  if (sample.length() <= 0)
-    return false;
-
-  boost::char_separator<char> sep("|");
-  boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
-
-  // Eclipse compares about auto&& with a tokenizer?
-  for (const std::string& entry : tok)
-  {
-    // Found an entry that matches.
-    if (entry.compare(msg) == 0)
-      return false;
-  }
-  return true;
-  // return sample.length() > 0 && sample.compare(msg) != 0;
-}
-
-bool usedAndNotEqual(const std::vector<float>& sample, const std::vector<float>& msg)
-{
-  return sample.size() > 0 && sample.size() != msg.size();
-}
-
-const robot_movement_interface::Command& CommandHandler::getSampleCommand() const
-{
-  return sample_command_;
 }
 
 bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg)
@@ -158,41 +245,6 @@ std::ostream& CommandHandler::dump(std::ostream& o) const
   return o;
 }
 
-// Eclipse has a fit every time I try to call resize(int) or construct the vector with a size,
-// even though it compiles fine, so I have no way to guarantee that the vector isn't empty.
-// So, I need to check at() and return a string, not a reference to one.
-std::string Command::getCommand() const
-{
-  try
-  {
-    return full_command_.at(0).first;
-  }
-  catch (const std::out_of_range& oor)
-  {
-    return "";
-  }
-}
-
-Command::CommandType Command::getType() const
-{
-  return type_;
-}
-
-void Command::setType(CommandType type)
-{
-  type_ = type;
-}
-
-int Command::getCommandId() const
-{
-  return command_id_;
-}
-
-void Command::setCommandId(int commandId)
-{
-  command_id_ = commandId;
-}
-
 const CommandHandler* CommandRegister::findHandler(const robot_movement_interface::Command& msg_cmd)
 {
   auto foundItem = std::find_if(this->handlers().begin(), this->handlers().end(),
@@ -206,6 +258,20 @@ const CommandHandler* CommandRegister::findHandler(const robot_movement_interfac
   {
     return nullptr;
   }
+}
+
+CommandPtr CommandHandler::processMsg(const robot_movement_interface::Command& cmd_msg) const
+{
+  if (!process_func_)
+  {
+    ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
+    return false;
+  }
+
+  // proceess_func_ will return a shared_ptr<Command>
+  auto ret = process_func_(cmd_msg);
+
+  return ret;
 }
 
 }  // namespace rmi_driver

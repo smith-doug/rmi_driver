@@ -123,6 +123,26 @@ bool Connector::connect()
 //  return true;
 //}
 
+void Connector::cancelSocketCmd(int timeout)
+{
+  // Give the socket a chance to finish.  If an abort is sent, active motion commands may be able to finish naturally
+  // and respond.
+  if (socket_cmd_mutex_.try_lock_for(std::chrono::milliseconds(timeout)))
+  {
+    socket_cmd_mutex_.unlock();
+    ROS_INFO_STREAM("cancelSocketCmd() lock successful, no need to cancel");
+  }
+  else  // It failed to respond.
+  {
+    socket_cmd_.cancel();  // Cancel any async commands on this socket
+
+    flush_socket_cmd_ = true;
+    cmdSocketFlusher();  // Launch the flusher to consume any messages that are sent late.
+
+    ROS_INFO_STREAM("cancelSocketCmd() lock failed, canceling");
+  }
+}
+
 bool Connector::connectSocket(std::string host, int port, Command::CommandType cmd_type)
 {
   int local_port = port;

@@ -36,6 +36,7 @@
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
 
+#include <robot_movement_interface/EulerFrame.h>
 #include <robot_movement_interface/Result.h>
 
 #include <sensor_msgs/JointState.h>
@@ -107,25 +108,7 @@ public:
    * It will try to lock the socket_cmd_mutex_ to timeout ms.
    * @param timeout ms to try to lock the socket mutex for before actually canceling
    */
-  void cancelSocketCmd(int timeout = 50)
-  {
-    // Give the socket a chance to finish.  If an abort is sent, active motion commands may be able to finish naturally
-    // and respond.
-    if (socket_cmd_mutex_.try_lock_for(std::chrono::milliseconds(timeout)))
-    {
-      socket_cmd_mutex_.unlock();
-      ROS_INFO_STREAM("cancelSocketCmd() lock successful, no need to cancel");
-    }
-    else  // It failed to respond.
-    {
-      socket_cmd_.cancel();  // Cancel any async commands on this socket
-
-      flush_socket_cmd_ = true;
-      cmdSocketFlusher();  // Launch the flusher to consume any messages that are sent late.
-
-      ROS_INFO_STREAM("cancelSocketCmd() lock failed, canceling");
-    }
-  }
+  void cancelSocketCmd(int timeout = 50);
 
   CommandRegisterPtr getCommandRegister()
   {
@@ -150,40 +133,42 @@ protected:
 
   void getThread();
 
-  std::string ns_;
+  std::string ns_;  ///< Namespace of this connection
 
-  // Socket used for motion commands that may block.  Default port 30000
+  /// Socket used for motion commands that may block.  Default port 30000
   std::shared_ptr<boost::asio::ip::tcp::socket> socket_cmd_ptr_;
   boost::asio::ip::tcp::socket socket_cmd_;
 
-  // Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
+  /// Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
   boost::asio::ip::tcp::socket socket_get_;
 
+  /// Mutex for adding/removing Commands from the queue
   std::mutex command_list_mutex_;
 
+  /// Cmd socket mutex
   std::timed_mutex socket_cmd_mutex_;
+  /// Get socket mutex
   std::timed_mutex socket_get_mutex_;
 
-  // boost::asio::streambuf get_buff_;
-  boost::asio::mutable_buffer get_buff_;
-
+  /// IP address of the robot
   std::string host_;
+  /// Port of the robot
   int port_;
 
+  /// asio io service.  Owned by Driver.
   boost::asio::io_service& io_service_;
 
-  boost::asio::io_service io_service_test_;
-  std::thread io_service_test_thread_;
-
-  boost::asio::io_service local_io_service_;
-
+  /// Queue of all telnet commands to be sent by Connector::cmdThread().
   std::queue<CommandPtr> command_list_;
 
+  /// Receives the robot_movement_interface/CommandList for this namespace
   ros::Subscriber command_list_sub_;
+  /// Publishes the robot_movement_interface/Result for this namespace
   ros::Publisher command_result_pub_;
+  /// NodeHandle for this namespace
   ros::NodeHandle nh_;
 
-  std::queue<std::shared_ptr<robot_movement_interface::Result>> command_result_list_;
+  // std::queue<std::shared_ptr<robot_movement_interface::Result>> command_result_list_;
 
   std::thread get_thread_;
   std::thread cmd_thread_;
@@ -194,9 +179,11 @@ protected:
 
   CommandRegisterPtr cmd_register_;
 
-  // Used to read and consume and messages sent after a cancel.  This was happening to me if I paused the PLC, aborted a
-  // command, then unpaused the PLC.
+  ///\brief Used to read and consume and messages sent after a cancel.
+  ///
+  /// This was happening to me if I paused the PLC, aborted a command, then unpaused the PLC.
   bool flush_socket_cmd_ = false;
+
   boost::asio::streambuf socket_cmd_flush_buff_;
 };
 
