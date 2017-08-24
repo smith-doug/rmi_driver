@@ -188,6 +188,14 @@ public:
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+class KebaCommandWait : public CommandHandler
+{
+public:
+  KebaCommandWait();
+
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
 }  // namespace keba_rmi_plugin
 
 #endif /* INCLUDE_COMMANDS_KEBA_H_ */

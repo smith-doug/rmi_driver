@@ -104,6 +104,7 @@ void KebaCommandRegister::registerCommands()
   // command_handlers_.emplace_back(new KebaCommandLinEuler());
   command_handlers_.emplace_back(new KebaCommandAbort());
   command_handlers_.emplace_back(new KebaCommandSync());
+  command_handlers_.emplace_back(new KebaCommandWait());
 
   // Sample command for lambda usage
   robot_movement_interface::Command cmd;
@@ -327,6 +328,26 @@ CommandPtr KebaCommandSync::processMsg(const robot_movement_interface::Command &
   CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
 
   cmd_ptr->setCommand("sync", Command::paramsToString(cmd_msg.pose));
+  return cmd_ptr;
+}
+
+KebaCommandWait::KebaCommandWait()
+{
+  handler_name_ = "KebaCommandWait";
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "WAIT";
+  cmd.pose_type = "IS_FINISHED";  // Can add more types later
+  sample_command_ = cmd;
+}
+
+CommandPtr KebaCommandWait::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+
+  std::string command_str = "wait " + boost::to_lower_copy(cmd_msg.pose_type);
+  cmd_ptr->setCommand(command_str, "");
+
   return cmd_ptr;
 }
 
