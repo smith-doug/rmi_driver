@@ -68,6 +68,7 @@ include_directories(
 set(SRC_FILES src/commands.cpp
               src/connector.cpp
               src/driver.cpp
+              src/util.cpp
   )
 
 add_library(rmi_driver ${SRC_FILES})
@@ -78,11 +79,11 @@ add_executable(rmi_driver_node
   src/main.cpp
 )
 
-add_dependencies(rmi_driver 
-  sensor_msgs_gencpp
-  ${PROJECT_NAME}_gencfg
-  ${PROJECT_NAME}_gencpp
-)
+# add_dependencies(rmi_driver 
+#   sensor_msgs_gencpp
+#   ${PROJECT_NAME}_gencfg
+#   ${PROJECT_NAME}_gencpp
+# )
 
 target_link_libraries(rmi_driver_node
   rmi_driver
