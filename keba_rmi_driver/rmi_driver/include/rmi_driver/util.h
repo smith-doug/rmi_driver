@@ -48,17 +48,13 @@ namespace util
 std::string floatToStringNoTrailing(float fval, int precision);
 
 ///@{
-/*
- * \brief Compare 2 vectors.  Check if the same is not empty and the lengths of the vectors match.
- *
- * @todo This may not work now that I'm using more flexible criteria.  Maybe the sample should be a vector of sizes and
- * the sample's length can be checked against them?
- */
-
 /**
  * \brief Check if the sample is used, then check if msg matches sample.
  *
  * \details Checks that the sample vector is not empty, then checks if the size of the 2 vectors is equal.
+ *
+ * @todo This may not work now that I'm using more flexible criteria.  Maybe the sample should be a vector of sizes and
+ * the sample's length can be checked against them?
  *
  * @param sample The stored sample to check.
  * @param msg The value from a message to check.
@@ -76,6 +72,7 @@ bool usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
  * \detail Checks that the sample is not empty and for exact equality.
  */
 bool usedAndNotEqual(const std::string& sample, const std::string& msg);
+
 ///@}
 
 }  // namespace util

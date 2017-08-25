@@ -57,8 +57,10 @@ namespace rmi_driver
 class Command
 {
 public:
+  //! Each entry is stored as a pair<string, string>
   using CommandEntry = std::pair<std::string, std::string>;
 
+  //! The full command with all optional params is stored in a vector.  Entry [0] is the actual command.
   using FullCommand = std::vector<CommandEntry>;
 
   /// Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
@@ -181,7 +183,7 @@ protected:
   FullCommand full_command_;
 
   /// Used in the /command_result response
-  int command_id_;
+  int command_id_ = 0;
 
   CommandType type_;
 };
