@@ -66,7 +66,7 @@ public:
     std::vector<std::string> joints_;
   };
 
-  DriverConfig()
+  DriverConfig() : publishing_rate_(30)
   {
   }
 

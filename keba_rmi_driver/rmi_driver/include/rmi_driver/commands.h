@@ -219,25 +219,19 @@ public:
   }
 
   /**
-   * Construct a new CommandHandler.  Not used
+   * \brief Construct a new base CommandHandler that will call a std::function.  Used to quickly create a new handler
+   without having to create a new class.
    *
-   * @param cmd_msg The sample command to match while choosing a handler.  Will be stored.
-   */
-  // CommandHandler(const robot_movement_interface::Command &cmd_msg);
-
-  /**
-   * Construct a new CommandHandler that will call a std::function.  Used to quickly create a new handler without having
-   to
-   * create a new class.
-   *
-   * Example:
+   * Example:\n
+   * \code{.cpp}
    *   CommandHandler chtest(cmd, [](const robot_movement_interface::Command& cmd_msg)
        {
          return Command(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
        });
+   * \endcode
    *
    * @param sample_command The sample command to match
-   * @param f a std::function/lambda that takes an rmi::Command returns a telnet Command
+   * @param f a std::function/lambda that takes a robot_movement_interface::Command returns a telnet Command
    */
   CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f);
 
@@ -246,9 +240,8 @@ public:
   }
 
   /**
-   * Checks if the values specified in the sample_command match those in cmd_msg.
-   * Strings are checked for equality.
-   * Vectors are checked for length.
+   * \brief Checks if the values specified in the sample_command match those in cmd_msg.
+   * \details Strings are checked for equality.  Vectors are checked for length.
    *
    * @param cmd_msg The message received from the command_list topic
    * @return True if it's a match
@@ -256,35 +249,10 @@ public:
   bool operator==(const robot_movement_interface::Command& cmd_msg);
 
   /**
-   * \deprecated replaced by virtual CommandPtr processMsg.
+   * \brief Processes a robot_movement_interface::Command.  Override this method in extended classes.
    *
-   * Processes a robot_movement_interface::Command.  Override this method in extended classes.
-   * The message should have already been checked for relevance.
-   * This base version will call the stored std::function.
-   *
-   * @param cmd_msg The message received from the command_list topic
-   * @param telnet_cmd The command to send to the robot
-   * @return True if OK
-   */
-  //  virtual bool processMsg(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd) const
-  //  {
-  //    if (!process_func_)
-  //    {
-  //      ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
-  //      return false;
-  //    }
-  //
-  //    auto ret = process_func_(cmd_msg);
-  //    telnet_cmd = *ret;
-  //
-  //    //telnet_cmd = process_func_(cmd_msg);
-  //    return telnet_cmd.getCommand().compare("error") != 0;
-  //
-  //  }
-
-  /**
-   * Create a new std::shared_ptr<Command>.
-   * The base version will create a base shared_ptr then call processMsg(cmd_msg, telnet_command)
+   * \details Create a new std::shared_ptr<Command>.  The base version will create a base shared_ptr then call
+   * the stored function processMsg(cmd_msg, telnet_command)
    *
    * @param cmd_msg The message received from the command_list topic
    * @return a new CommandPtr.  nullptr if processing the message failed.
@@ -296,11 +264,19 @@ public:
     process_func_ = f;
   }
 
+  /**
+   * \brief Get the stored name of the handler.  Used for debug output.
+   * @return The handler name
+   */
   virtual std::string getName() const
   {
     return handler_name_;
   }
 
+  /**
+   * \brief Get the sample robot_movement_interface::Command message.
+   * @todo Change the name of Command!!!
+   */
   const robot_movement_interface::Command& getSampleCommand() const;
 
   virtual std::ostream& dump(std::ostream& o) const;

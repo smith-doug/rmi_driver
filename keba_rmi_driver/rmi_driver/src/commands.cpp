@@ -33,63 +33,16 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/tokenizer.hpp>
 #include <vector>
+#include "rmi_driver/util.h"
 
 namespace rmi_driver
 {
-// Begin stuff that needs moved to a util file.
-
-/**
- * Convert a float into a string with no trailing zeroes
- * @todo move it to a util file
- *
- * @param fval float to convert
- * @param precision max number of decimals
- * @return string representation of fval
- */
-std::string floatToStringNoTrailing(float fval, int precision)
-{
-  std::ostringstream oss;
-  oss << std::setprecision(precision) << std::fixed;
-  oss << fval;
-  auto str = oss.str();
-  boost::trim_right_if(str, boost::is_any_of("0"));
-  boost::trim_right_if(str, boost::is_any_of("."));
-
-  return str;
-}
-
-bool usedAndNotEqual(const std::vector<float>& sample, const std::vector<float>& msg)
-{
-  return sample.size() > 0 && sample.size() != msg.size();
-}
+// Begin Command::
 
 const robot_movement_interface::Command& CommandHandler::getSampleCommand() const
 {
   return sample_command_;
 }
-
-// Returns True if the sample length is > 0 and it doesn't match msg.
-// If sample is "" it will return false as this param isn't used in the match.
-bool usedAndNotEqual(const std::string& sample, const std::string& msg)
-{
-  if (sample.length() <= 0)
-    return false;
-
-  boost::char_separator<char> sep("|");
-  boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
-
-  // Eclipse complains about auto&& with a tokenizer?
-  for (const std::string& entry : tok)
-  {
-    // Found an entry that matches.
-    if (entry.compare(msg) == 0)
-      return false;
-  }
-  return true;
-  // return sample.length() > 0 && sample.compare(msg) != 0;
-}
-
-// Begin Command::
 
 std::string Command::paramsToString(const std::vector<float>& floatVec, int precision)
 {
@@ -99,12 +52,12 @@ std::string Command::paramsToString(const std::vector<float>& floatVec, int prec
   std::ostringstream oss;
 
   std::for_each(floatVec.begin(), floatVec.end() - 1, [&](const float& fval) {
-    auto str_val = floatToStringNoTrailing(fval, precision);
+    auto str_val = util::floatToStringNoTrailing(fval, precision);
     oss << str_val << " ";
 
   });
 
-  oss << floatToStringNoTrailing(floatVec.back(), precision);
+  oss << util::floatToStringNoTrailing(floatVec.back(), precision);
 
   auto out_str = oss.str();
 
@@ -203,19 +156,19 @@ bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg
 {
   // Check strings for usage and equality
   // Check vectors for usage and length
-  if (usedAndNotEqual(sample_command_.command_type, cmd_msg.command_type))
+  if (util::usedAndNotEqual(sample_command_.command_type, cmd_msg.command_type))
     return false;
 
-  if (usedAndNotEqual(sample_command_.pose_reference, cmd_msg.pose_reference))
+  if (util::usedAndNotEqual(sample_command_.pose_reference, cmd_msg.pose_reference))
     return false;
 
-  if (usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type))
+  if (util::usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type))
     return false;
 
-  if (usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
+  if (util::usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
     return false;
 
-  if (usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type))
+  if (util::usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type))
     return false;
 
   return true;  // If it got this far it's a match
