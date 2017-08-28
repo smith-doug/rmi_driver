@@ -57,7 +57,11 @@ void Driver::start()
   {
     // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
     CommandRegisterPtr cmd_register = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-    cmd_register->registerCommands();
+
+    std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
+                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
+    cmd_register->initialize(joint_names);
+    // cmd_register->registerCommands();
 
     ROS_INFO_STREAM("Loaded the plugin successfully");
 
@@ -70,15 +74,17 @@ void Driver::start()
 
     // Add the connection from the current config
 
-    std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
     this->addConnection("/", con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
+
+    CommandRegisterPtr cmd_register2 = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+    // cmd_register2->registerCommands();
 
     // Add a second hardcoded connection for now
     joint_names = { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint",
                     "rob2_wrist_1_joint",      "rob2_wrist_2_joint",       "rob2_wrist_3_joint" };
+    cmd_register2->initialize(joint_names);
 
-    this->addConnection("/rob2", con_cfg.ip_address_, 30002, cmd_register, joint_names);
+    this->addConnection("/rob2", con_cfg.ip_address_, 30002, cmd_register2, joint_names);
   }
   catch (pluginlib::PluginlibException &ex)
   {

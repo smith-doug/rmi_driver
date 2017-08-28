@@ -57,20 +57,18 @@ public:
     type_ = type;
   }
 
-  /*
-   std::string toString(bool append_newline = true) const override
-   {
-   std::cout << "########!@$@!$%!@\n";
-   return Command::toString(append_newline);
-   }
-   */
+  //  std::string toString(bool append_newline = true) const override
+  //  {
+  //    std::cout << "overloaded KebaCommand::toString()\n";
+  //    return Command::toString(append_newline);
+  //  }
 };
 class KebaCommandRegister : public CommandRegister
 {
 public:
   KebaCommandRegister();
 
-  void initialize();
+  // void initialize();
 
   void initialize(const std::vector<std::string> &joints);
 
@@ -82,6 +80,8 @@ public:
     return version;
   }
 
+  std::vector<std::string> joint_names_;
+
 protected:
   int num_main_joints_;
   int num_aux_joints_;
@@ -89,7 +89,25 @@ protected:
   bool commands_registered_;
 };
 
-class KebaCommandLin : public CommandHandler
+class KebaCommandHandler : public CommandHandler
+{
+public:
+  KebaCommandHandler()
+  {
+    this->command_register_ = 0;
+    sample_command_.pose_type = "NOT_SET";
+  }
+
+  const KebaCommandRegister *getCommandRegister() const
+  {
+    return (KebaCommandRegister *)command_register_;
+  }
+
+protected:
+  // KebaCommandRegister *cmd_register_;
+};
+
+class KebaCommandLin : public KebaCommandHandler
 {
 public:
   KebaCommandLin();
@@ -128,7 +146,7 @@ public:
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
-class KebaCommandPtp : public CommandHandler
+class KebaCommandPtp : public KebaCommandHandler
 {
 public:
   KebaCommandPtp();

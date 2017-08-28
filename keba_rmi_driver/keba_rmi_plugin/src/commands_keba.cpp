@@ -29,6 +29,7 @@
 
 #include "keba_rmi_plugin/commands_keba.h"
 #include <boost/algorithm/string.hpp>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -74,22 +75,25 @@ bool processRosDyn(const robot_movement_interface::Command &cmd_msg, Command &te
   return ret;
 }
 
-KebaCommandRegister::KebaCommandRegister() : commands_registered_(0)
+KebaCommandRegister::KebaCommandRegister() : commands_registered_(0), num_aux_joints_(0), num_main_joints_(0)
 {
-  registerCommands();
-}
-
-void KebaCommandRegister::initialize()
-{
-  num_main_joints_ = 6;
-  num_aux_joints_ = 1;
-
-  registerCommands();
+  // registerCommands();
 }
 
 void KebaCommandRegister::initialize(const std::vector<std::string> &joints)
 {
-  initialize();
+  joint_names_ = joints;
+
+  num_main_joints_ = 6;
+  num_aux_joints_ = 1;  //@todo figure this out
+
+  registerCommands();
+}
+
+template <typename T>
+std::unique_ptr<CommandHandler> createHandler()
+{
+  return std::unique_ptr<CommandHandler>(new T);
 }
 
 void KebaCommandRegister::registerCommands()
@@ -97,24 +101,27 @@ void KebaCommandRegister::registerCommands()
   if (commands_registered_)
     return;
 
-  // command_handlers_.emplace_back(new KebaCommandPtpJoints());
-  command_handlers_.emplace_back(new KebaCommandPtp());
-  command_handlers_.emplace_back(new KebaCommandLin());
-  // command_handlers_.emplace_back(new KebaCommandLinQuat());
-  // command_handlers_.emplace_back(new KebaCommandLinEuler());
-  command_handlers_.emplace_back(new KebaCommandAbort());
-  command_handlers_.emplace_back(new KebaCommandSync());
-  command_handlers_.emplace_back(new KebaCommandWait());
+  // Motion commands
+
+  // this->addHandler(std::unique_ptr<CommandHandler>(new KebaCommandPtp));
+
+  this->addHandler<KebaCommandPtp>();
+  this->addHandler<KebaCommandLin>();
+
+  // Other
+  this->addHandler<KebaCommandAbort>();
+  this->addHandler<KebaCommandSync>();
+  this->addHandler<KebaCommandWait>();
 
   // Sample command for lambda usage
   robot_movement_interface::Command cmd;
   cmd.command_type = "TEST";
 
-  CommandHandler chtest(cmd, [](const robot_movement_interface::Command &cmd_msg) {
+  CommandHandler chtest1(cmd, [](const robot_movement_interface::Command &cmd_msg) {
     return std::make_shared<Command>(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
   });
 
-  command_handlers_.emplace_back(new CommandHandler(std::move(chtest)));
+  this->addHandler(std::move(chtest1));
 
   commands_registered_ = true;
 }
@@ -142,7 +149,6 @@ CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &c
 
   if (cmd_msg.pose_type.compare("JOINTS") == 0)
   {
-    //@todo check length and stuff
   }
   else if (cmd_msg.pose_type.compare("QUATERNION") == 0 || cmd_msg.pose_type.compare("EULER_INTRINSIC_ZYX"))
   {
@@ -195,7 +201,7 @@ CommandPtr KebaCommandPtpJoints::processMsg(const robot_movement_interface::Comm
 
 KebaCommandPtp::KebaCommandPtp()
 {
-  handler_name_ = "KebaCommandPtpJoints";
+  handler_name_ = "KebaCommandPtp";
 
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
@@ -207,6 +213,7 @@ KebaCommandPtp::KebaCommandPtp()
 
 CommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
+  std::cout << "reg size: " << getCommandRegister()->joint_names_.size() << std::endl;
   CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
 
   std::string command_str = "ptp " + boost::to_lower_copy(cmd_msg.pose_type);

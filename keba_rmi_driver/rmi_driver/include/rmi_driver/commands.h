@@ -85,16 +85,17 @@ public:
     makeCommand(type, command, Command::paramsToString(floatVec));
   }
 
-  //  Command(const Command &other)
-  //  {
-  //    this->full_command_ = other.full_command_;
-  //    this->type_ = other.type_;
-  //  }
-  //
-  //  Command(Command&& other) :full_command_(std::move(other.full_command_)), type_(other.type_)
-  //  {
-  //
-  //  }
+  Command(const Command& other)
+  {
+    this->command_id_ = other.command_id_;
+    this->full_command_ = other.full_command_;
+    this->type_ = other.type_;
+  }
+
+  Command(Command&& other)
+    : full_command_(std::move(other.full_command_)), type_(other.type_), command_id_(other.command_id_)
+  {
+  }
 
   /**
    * \brief Sets up the command.
@@ -194,6 +195,7 @@ inline std::ostream& operator<<(std::ostream& o, const Command& cmd)
 }
 
 class CommandHandler;
+class CommandRegister;
 using CommandPtr = std::shared_ptr<Command>;
 
 /**
@@ -213,6 +215,10 @@ public:
   typedef std::function<CommandPtr(const robot_movement_interface::Command&)> CommandHandlerFunc;
 
   CommandHandler() : handler_name_("Base CommandHandler")
+  {
+  }
+
+  CommandHandler(CommandRegister* reg) : command_register_(reg)
   {
   }
 
@@ -266,6 +272,11 @@ public:
     process_func_ = f;
   }
 
+  CommandRegister* getCommandRegister()
+  {
+    return command_register_;
+  }
+
   /**
    * \brief Get the stored name of the handler.  Used for debug output.
    * @return The handler name
@@ -283,7 +294,14 @@ public:
 
   virtual std::ostream& dump(std::ostream& o) const;
 
+  void setCommandRegister(CommandRegister* commandRegister = nullptr)
+  {
+    command_register_ = commandRegister;
+  }
+
 protected:
+  CommandRegister* command_register_ = nullptr;
+
   robot_movement_interface::Command sample_command_;
 
   std::string handler_name_;
@@ -312,9 +330,9 @@ public:
   {
   }
 
-  virtual void initialize()
-  {
-  }
+  //  virtual void initialize()
+  //  {
+  //  }
 
   /**
    * @todo this should be used like the v2 industrial client's joint map to support multiple robots
@@ -324,21 +342,48 @@ public:
   virtual void initialize(const std::vector<std::string>& joints) = 0;
 
   /**
-   * Create commands and put them in the command_handlers_ vector.
-   */
-  virtual void registerCommands() = 0;
-
-  /**
    * Get the version string.  This will be checked against the string returned by the robot
    * @return version string
    */
   virtual const std::string& getVersion() = 0;
 
   /**
+   * Add a CommandHandler.  This will std::move a handler into the vector.
+   *
+   * @param handler rvalue reference to a handler.
+   */
+  void addHandler(std::unique_ptr<CommandHandler>&& handler)
+  {
+    handler->setCommandRegister(this);
+    command_handlers_.push_back(std::move(handler));
+  }
+
+  /**
+   * Add a CommandHandler of type T.
+   */
+  template <typename T>
+  void addHandler()
+  {
+    // emplace will handle all of the stuff to create a unique_ptr
+    command_handlers_.emplace_back(new T);
+    command_handlers_.back()->setCommandRegister(this);
+  }
+
+  /**
+   *
+   * @param handler
+   */
+  void addHandler(CommandHandler&& handler)
+  {
+    handler.setCommandRegister(this);
+    command_handlers_.emplace_back(new CommandHandler(handler));
+  }
+
+  /**
    * Get the registered handlers
    * @return a reference to the vector of handlers
    */
-  CommandHandlerPtrVec& handlers()
+  const CommandHandlerPtrVec& handlers() const
   {
     return command_handlers_;
   }
@@ -352,6 +397,11 @@ public:
   const CommandHandler* findHandler(const robot_movement_interface::Command& msg_cmd);
 
 protected:
+  /**
+     * Create commands and put them in the command_handlers_ vector.
+     */
+  virtual void registerCommands() = 0;
+
   CommandHandlerPtrVec command_handlers_;
 };
 
