@@ -124,10 +124,13 @@ using namespace rmi_driver;
 /**
  * \brief This plugin is used to send command to a Keba robot.
  *
- * \see
+ *
  */
 namespace keba_rmi_plugin
 {
+/**
+ * \brief A Keba Telnet Command.  Currently no different than the base.
+ */
 class KebaCommand : public Command
 {
 public:
@@ -142,24 +145,34 @@ public:
   //    return Command::toString(append_newline);
   //  }
 };
+
+/**
+ * \brief class that holds all of the registered commands and some joint information.
+ */
 class KebaCommandRegister : public CommandRegister
 {
 public:
   KebaCommandRegister();
 
-  void initialize(const std::vector<std::string> &joints);
+  /**
+   * \brief Set any local variables.  Make sure you call registerCommands.
+   * @param joints vector of joint names
+   */
+  void initialize(const std::vector<std::string> &joints) override;
 
-  void registerCommands();
-
-  const std::string &getVersion()
+  const std::string &getVersion() override
   {
     static std::string version("0.0.3");
     return version;
   }
 
+  /// vector of joint names.  @todo move it to CommandRegister?  Could there ever be a robot where they don't want to
+  /// specify joint names?
   std::vector<std::string> joint_names_;
 
 protected:
+  void registerCommands() override;
+
   int num_main_joints_;
   int num_aux_joints_;
 
@@ -186,22 +199,36 @@ protected:
 /**
  * \brief Linear move to Joint or Cartesian positions
  *
- * Required:
- *   command_type: LIN
- *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX\n
- *   \link KebaRmiTypesPoses Accepted poses\endlink
+ * \par Required:
+ *   command_type: LIN\n
  *
- * Optional: *
- *   if(velocity_type == dyn)  (a full Keba dynamic)
- *     velocity: [velAxis, accAxis, decAxis, jerkAxis, vel, acc, dec, jerk,
- * velOri, accOri, decOri, jerkOri]
+ *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX.
+ *   For details see \link KebaRmiTypesPoses Accepted poses\endlink
  *
- *   if(velocity_type == %)
- *     @todo
+ * \par Optional:
+ * velocity_type: DYN|ROS.  For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink\n
  *
- * Examples
- * linq move : 500 -600 365 0 0 1 0; dyn : 100 100 100 100 100 1000 1000 10000
- * 1000 10000 10000 100000;
+ * \par Examples:\n
+ * 1. Linear move to a joint position with no speed specified.\n
+ *
+ * \code
+ * command_type: 'LIN'
+ * pose_type: 'JOINTS'
+ * pose: [1.0, -2.1, -1.3, -1.4, 1.5, 0]
+ * \endcode
+ * Command::toString(): lin joints : 1.0 -2.1 -1.3 -1.4 1.5 0;
+ *
+ * 2. Linear move to a quaternion position with a DYN velocity
+ * \code
+ * command_type: 'LIN'
+ * pose_type: 'QUATERNION'
+ * pose: [0.3, -0.6, 0.365, 0, 0, 1, 0]
+ * velocity_type: 'DYN'
+ * velocity: [100, 100, 100, 100, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000]
+ * \endcode
+ * Command::toString(): lin quaternion : 300 -600 365 0 0 1 0; dyn : 100 100 100 100 250 1000 1000 10000 1000 10000
+ * 10000 100000;
+ *
  *
  */
 class KebaCommandLin : public KebaCommandHandler
