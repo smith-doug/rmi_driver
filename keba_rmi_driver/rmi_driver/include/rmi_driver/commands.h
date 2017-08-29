@@ -281,7 +281,7 @@ public:
     process_func_ = f;
   }
 
-  CommandRegister* getCommandRegister()
+  virtual const CommandRegister* getCommandRegister() const
   {
     return command_register_;
   }
