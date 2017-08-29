@@ -181,6 +181,23 @@ public:
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+/**
+ * Set a setting for all future unspecified moves
+ * Required: \n
+ *   command_type: DYN
+ *   velocity_type: DYN
+ *   velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
+ *    acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
+ *
+ */
+class KebaCommandDyn : public KebaCommandHandler
+{
+public:
+  KebaCommandDyn();
+
+  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
 class KebaCommandLinEuler : public CommandHandler
 {
 public:

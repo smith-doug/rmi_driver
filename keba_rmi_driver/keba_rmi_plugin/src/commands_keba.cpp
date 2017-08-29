@@ -100,6 +100,9 @@ void KebaCommandRegister::registerCommands()
   this->addHandler<KebaCommandPtp>();
   this->addHandler<KebaCommandLin>();
 
+  // Settings
+  this->addHandler<KebaCommandDyn>();
+
   // Other
   this->addHandler<KebaCommandAbort>();
   this->addHandler<KebaCommandSync>();
@@ -272,6 +275,32 @@ CommandPtr KebaCommandLinQuat::processMsg(const robot_movement_interface::Comman
   cmd_ptr->setCommand("linq move", Command::paramsToString(pose_temp));
 
   processKebaDyn(cmd_msg, *cmd_ptr);
+
+  return cmd_ptr;
+}
+
+KebaCommandDyn::KebaCommandDyn()
+{
+  handler_name_ = "KebaCommandDyn";
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "SETTING";
+  cmd.pose_type = "DYN";
+  cmd.velocity_type = "DYN";
+
+  sample_command_ = cmd;
+}
+
+CommandPtr KebaCommandDyn::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  std::string command_str = "setting dyn";
+  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  {
+    processKebaDyn(cmd_msg, *cmd_ptr);
+  }
+
+  cmd_ptr->setCommand(command_str, "");
 
   return cmd_ptr;
 }
