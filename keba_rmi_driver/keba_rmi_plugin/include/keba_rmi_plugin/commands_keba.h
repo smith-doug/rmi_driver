@@ -42,11 +42,90 @@
 
 /*
  * Current format for commands:
- * <command name> : <params>;[<dyn/eventually ovl> : <params>;]
- * There is a ; after each command and parameter group.
+ * <command name>[ : <params>];[<dyn/eventually ovl> [: <params>;]]
+ * There is a ; after each command and parameter group.  If there are no parameters, there is no additional :.
+ * Examples:
+ * ptp joints : 1 2 3 4 5 6;
+ * ptp joints : 1 2 3 4 5 6; dyn : 1 2 3 4 5 6 7 8 9;
+ * get version;
+ *
  */
 
 using namespace rmi_driver;
+
+/**
+ * @page KebaTelnetTypes Keba Telnet Types
+ * \tableofcontents
+ * This section documents the actual string that are send to a Keba controller.\n
+ * \ref Poses Types of poses\n
+ * \ref Dynamics Types of dynamics
+ *
+ *
+ * \section Poses
+ * JOINTS: A list of joint positions in ROS units (radians, meters) \n
+ * QUATERNION: A cartesian position with the orientation specified as a quaterniom. The form is "x y z w xx yy zz".  The
+ * x/y/z coordinates are given in mm.  Ex: \n
+ * EULER_INTRINSIC_ZYX: A cartesian position with the orientation in euler angles.  The form is "x y z zz, yy, zz'" The
+ * x/y/z coordinates are in mm and rotations are in degrees.  @todo check if EULER_INTRINSIC_ZYX
+ * is actually
+ * the type keba uses.  There are so many ways to specify them like ZYZ, XYZ, etc
+ *
+ * \section Dynamics
+ * Dyn: A normal Keba dynamic.  [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
+ * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
+ *
+ *
+ * @page KebaRmiTypes Keba RMI message types
+ * \tableofcontents
+ * This section describes the robot_movement_interface::Command structures this plugin responds to.\n
+ * \ref KebaRmiTypesPoses
+ *
+ * \ref KebaRmiTypesDynamics
+ *
+ * \section KebaRmiTypesPoses Pose types and values
+ * \par pose_type: \n
+ * QUATERNION:  A cartesian position with position values and orientation both in
+ * ROS units (meters, quaternion).  [x, y, z, rw, rx, ry, rz].\n
+ * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation represented by a
+ * Euler rotation in degrees. [x, y, z, rz, ry, rz']\n
+ * JOINTS: Joints positions in ROS units.
+ *
+ * \section KebaRmiTypesDynamics Types of speeds/accelerations
+ * \par velocity_type:
+ * DYN: A full Keba dynamic.  This specifies both the velocity and accelerations.  [velAxis(0..100->), accAxis, decAxis,
+ * jerkAxis, vel(mm/s->),
+ * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]\n
+ * ROS: ROS style speeds for each joint.  Cannot be used with Lin moves.  Using this without also specifying ROS as the
+ * acceleration_type could lead to undesired behavior.  Used by the standard joint_trajectory_action.
+ *
+ * \par acceleration_type:
+ * ROS : ROS style accelerations for each joint.  Cannot be used with Lin moves.  Using this without also specifying ROS
+ * as the
+ * velocity_type could lead to undesired behavior.  Used by the standard joint_trajectory_action.
+ *
+ *
+ */
+
+/*
+ * This plugin is used to send command to a Keba robot.
+ *
+ * PoseTypes:
+ *
+ * JOINTS: A list of joint positions in ROS units (radians, meters) \n
+ * QUATERNION: A cartesian position with the orientation specified as a quaterniom. The form is "x y z w xx yy zz".  The
+ * x/y/z coordinates are given in mm.\n
+ * EULER_INTRINSIC_ZYX: A cartesian position with the orientation in euler angles.  @todo check if these
+ * EULER_INTRINSIC_ZYX are actually
+ * the type keba uses.  There are so many ways to specify them like ZYZ, XYZ, etc
+ *
+ * Dynamic Types:
+ */
+
+/**
+ * \brief This plugin is used to send command to a Keba robot.
+ *
+ * \see
+ */
 namespace keba_rmi_plugin
 {
 class KebaCommand : public Command
@@ -68,15 +147,13 @@ class KebaCommandRegister : public CommandRegister
 public:
   KebaCommandRegister();
 
-  // void initialize();
-
   void initialize(const std::vector<std::string> &joints);
 
   void registerCommands();
 
   const std::string &getVersion()
   {
-    static std::string version("0.0.2");
+    static std::string version("0.0.3");
     return version;
   }
 
@@ -106,6 +183,27 @@ public:
 protected:
 };
 
+/**
+ * \brief Linear move to Joint or Cartesian positions
+ *
+ * Required:
+ *   command_type: LIN
+ *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX\n
+ *   \link KebaRmiTypesPoses Accepted poses\endlink
+ *
+ * Optional: *
+ *   if(velocity_type == dyn)  (a full Keba dynamic)
+ *     velocity: [velAxis, accAxis, decAxis, jerkAxis, vel, acc, dec, jerk,
+ * velOri, accOri, decOri, jerkOri]
+ *
+ *   if(velocity_type == %)
+ *     @todo
+ *
+ * Examples
+ * linq move : 500 -600 365 0 0 1 0; dyn : 100 100 100 100 100 1000 1000 10000
+ * 1000 10000 10000 100000;
+ *
+ */
 class KebaCommandLin : public KebaCommandHandler
 {
 public:
@@ -115,12 +213,15 @@ public:
 };
 
 /**
- * PTP moves to joint positions
+ * \brief PTP moves to Joint or Cartesian positons
  *
  * Required:
  *  command_type: PTP
- *  pose_type   : JOINTS
- *  pose len    : 7
+ *  pose_type   : JOINTS|QUATERNION|EULER_INTRINSIC_ZYX
+ *  pose:
+ *    joints: [joint positions] with size >= size of joint_names_ in the CommandRegister
+ *    quaternion: x y z w x y z
+ *
  *
  * Optional:
  *  -Keba dynamic:
@@ -137,46 +238,10 @@ public:
  *    acceleration: Same as ointTrajectoryPoint accelerations
  *
  */
-class KebaCommandPtpJoints : public CommandHandler
-{
-public:
-  KebaCommandPtpJoints();
-
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
-};
-
 class KebaCommandPtp : public KebaCommandHandler
 {
 public:
   KebaCommandPtp();
-
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
-};
-
-/**
- * Linear move with a quaternion orientation.
- *
- * Required:
- *   command_type: LIN
- *   pose_type: QUATERNION
- *   pose len: 7
- * Optional: *
- *   if(velocity_type == dyn)  (a full Keba dynamic)
- *     velocity: [velAxis, accAxis, decAxis, jerkAxis, vel, acc, dec, jerk,
- * velOri, accOri, decOri, jerkOri]
- *
- *   if(velocity_type == %)
- *     @todo
- *
- * Examples
- * linq move : 500 -600 365 0 0 1 0; dyn : 100 100 100 100 100 1000 1000 10000
- * 1000 10000 10000 100000;
- *
- */
-class KebaCommandLinQuat : public CommandHandler
-{
-public:
-  KebaCommandLinQuat();
 
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
@@ -194,14 +259,6 @@ class KebaCommandDyn : public KebaCommandHandler
 {
 public:
   KebaCommandDyn();
-
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
-};
-
-class KebaCommandLinEuler : public CommandHandler
-{
-public:
-  KebaCommandLinEuler();
 
   CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
