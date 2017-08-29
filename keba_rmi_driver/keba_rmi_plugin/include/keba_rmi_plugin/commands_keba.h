@@ -122,9 +122,13 @@ using namespace rmi_driver;
  */
 
 /**
- * \brief This plugin is used to send command to a Keba robot.
- *
- *
+ * \brief This plugin is used to send command to a Keba robot.\n
+ * Available commands:\n
+ * LIN KebaCommandLin\n
+ * PTP KebaCommandPtp\n
+ * DYN KebaCommandDyn\n
+ * WAIT KebaCommandWait\n
+ * SYNC KebaCommandSync\n
  */
 namespace keba_rmi_plugin
 {
@@ -179,6 +183,12 @@ protected:
   bool commands_registered_;
 };
 
+/**
+ * \brief Extended CommandHandler.  Base class of all command handlers in this plugin.
+ *
+ * Not doing much beyond what the base already does, but it does allow me to get a
+ * pointer to the KebaCommandRegister
+ */
 class KebaCommandHandler : public CommandHandler
 {
 public:
@@ -188,7 +198,7 @@ public:
     sample_command_.pose_type = "NOT_SET";
   }
 
-  const KebaCommandRegister *getCommandRegister() const
+  const KebaCommandRegister *getCommandRegister() const override
   {
     return (KebaCommandRegister *)command_register_;
   }
@@ -203,7 +213,7 @@ protected:
  *   command_type: LIN\n
  *
  *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX.
- *   For details see \link KebaRmiTypesPoses Accepted poses\endlink
+ *   pose: sFor details see \link KebaRmiTypesPoses Accepted poses\endlink
  *
  * \par Optional:
  * velocity_type: DYN|ROS.  For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink\n
@@ -242,28 +252,38 @@ public:
 /**
  * \brief PTP moves to Joint or Cartesian positons
  *
- * Required:
- *  command_type: PTP
- *  pose_type   : JOINTS|QUATERNION|EULER_INTRINSIC_ZYX
- *  pose:
- *    joints: [joint positions] with size >= size of joint_names_ in the CommandRegister
- *    quaternion: x y z w x y z
+ * \par Required:\n
+ *  command_type: PTP\n
+ *  pose_type   : JOINTS|QUATERNION|EULER_INTRINSIC_ZYX\n
+ *  pose: For details see \link KebaRmiTypesPoses Accepted poses\endlink\n
  *
+ *  \par Optional:\n
+ *  velocity_type: DYN|ROS\n
+ *  velocity: For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink \n\n
  *
- * Optional:
- *  -Keba dynamic:
- *    velocity_type: DYN
- *    velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
- * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
- *      outputs:  dyn : <values>
- *  -Ros velocities:
- *    velocity_type: ROS
- *    velocity: same as JointTrajectoryPoint velocities
- *      outputs: velros : <values>
- *  -Ros accelerations:
- *    acceleration_type: ROS
- *    acceleration: Same as ointTrajectoryPoint accelerations
+ *  acceleration_type: ROS  (Acceleration must be empty if using DYN.  The entire Dynamic is specified in velocty.)\n
+ *  acceleration: Empty if using DYN|For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink \n
  *
+ * \par Examples:\n
+ * 1. PTP move to a joint position with no speed specified.\n
+ *
+ * \code
+ * command_type: 'PTP'
+ * pose_type: 'JOINTS'
+ * pose: [1.0, -2.1, -1.3, -1.4, 1.5, 0]
+ * \endcode
+ * Command::toString(): ptp joints : 1.0 -2.1 -1.3 -1.4 1.5 0;
+ *
+ * 2. PTP move to a quaternion position with a DYN velocity
+ * \code
+ * command_type: 'PTP'
+ * pose_type: 'QUATERNION'
+ * pose: [0.3, -0.6, 0.365, 0, 0, 1, 0]
+ * velocity_type: 'DYN'
+ * velocity: [100, 100, 100, 100, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000]
+ * \endcode
+ * Command::toString(): ptp quaternion : 300 -600 365 0 0 1 0; dyn : 100 100 100 100 250 1000 1000 10000 1000 10000
+ * 10000 100000;
  */
 class KebaCommandPtp : public KebaCommandHandler
 {
@@ -274,7 +294,10 @@ public:
 };
 
 /**
- * Set a setting for all future unspecified moves
+ * \brief Set a Dyn for all future unspecified moves.
+ *
+ * This is the same as calling Dyn() on the pendant.  Only normal keba DYN is allowed.  ROS velocities aren't supported
+ *
  * Required: \n
  *   command_type: DYN
  *   velocity_type: DYN
