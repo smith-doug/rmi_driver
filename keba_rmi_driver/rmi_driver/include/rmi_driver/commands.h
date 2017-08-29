@@ -218,10 +218,6 @@ public:
   {
   }
 
-  CommandHandler(CommandRegister* reg) : command_register_(reg)
-  {
-  }
-
   virtual ~CommandHandler()
   {
   }
@@ -245,6 +241,19 @@ public:
 
   virtual void initialize()
   {
+  }
+
+  template <typename T>
+  static std::unique_ptr<CommandHandler> createHandler()
+  {
+    return std::unique_ptr<CommandHandler>(new T);
+  }
+
+  template <typename T = CommandHandler>
+  static std::unique_ptr<CommandHandler> createHandler(const robot_movement_interface::Command& sample_command,
+                                                       CommandHandler::CommandHandlerFunc f)
+  {
+    return std::unique_ptr<CommandHandler>(new T(sample_command, f));
   }
 
   /**
@@ -375,8 +384,8 @@ public:
    */
   void addHandler(CommandHandler&& handler)
   {
-    handler.setCommandRegister(this);
     command_handlers_.emplace_back(new CommandHandler(handler));
+    command_handlers_.back()->setCommandRegister(this);
   }
 
   /**

@@ -90,20 +90,12 @@ void KebaCommandRegister::initialize(const std::vector<std::string> &joints)
   registerCommands();
 }
 
-template <typename T>
-std::unique_ptr<CommandHandler> createHandler()
-{
-  return std::unique_ptr<CommandHandler>(new T);
-}
-
 void KebaCommandRegister::registerCommands()
 {
   if (commands_registered_)
     return;
 
   // Motion commands
-
-  // this->addHandler(std::unique_ptr<CommandHandler>(new KebaCommandPtp));
 
   this->addHandler<KebaCommandPtp>();
   this->addHandler<KebaCommandLin>();
@@ -117,11 +109,11 @@ void KebaCommandRegister::registerCommands()
   robot_movement_interface::Command cmd;
   cmd.command_type = "TEST";
 
-  CommandHandler chtest1(cmd, [](const robot_movement_interface::Command &cmd_msg) {
+  auto chtest = CommandHandler::createHandler(cmd, [](const robot_movement_interface::Command &cmd_msg) {
     return std::make_shared<Command>(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
   });
 
-  this->addHandler(std::move(chtest1));
+  this->addHandler(std::move(chtest));
 
   commands_registered_ = true;
 }
@@ -147,8 +139,19 @@ CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &c
 
   auto pose_temp = cmd_msg.pose;
 
+  auto cmd_register = this->getCommandRegister();
+
   if (cmd_msg.pose_type.compare("JOINTS") == 0)
   {
+    // Check if the pose size is smaller than the number of joints
+    // This should probably be if != but I have too many test bags that have more joints
+    if (cmd_msg.pose.size() < cmd_register->joint_names_.size())
+    {
+      ROS_ERROR_STREAM("Invalid KebaCommandLin message: cmd_msg.pose.size() " << cmd_msg.pose.size()
+                                                                              << " < cmd_register->joint_names_.size() "
+                                                                              << cmd_register->joint_names_.size());
+      return nullptr;
+    }
   }
   else if (cmd_msg.pose_type.compare("QUATERNION") == 0 || cmd_msg.pose_type.compare("EULER_INTRINSIC_ZYX"))
   {

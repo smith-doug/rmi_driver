@@ -104,7 +104,6 @@ public:
   }
 
 protected:
-  // KebaCommandRegister *cmd_register_;
 };
 
 class KebaCommandLin : public KebaCommandHandler
