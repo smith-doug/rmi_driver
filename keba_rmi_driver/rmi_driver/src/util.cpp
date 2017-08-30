@@ -48,6 +48,19 @@ std::string floatToStringNoTrailing(float fval, int precision)
   return str;
 }
 
+std::vector<double> stringToDoubleVec(const std::string& s)
+{
+  std::vector<double> doubleVec;
+  std::vector<std::string> strVec;
+
+  boost::split(strVec, s, boost::is_any_of(" "), boost::token_compress_on);
+
+  std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec),
+                 [](const std::string& val) { return boost::lexical_cast<double>(val); });
+
+  return doubleVec;
+}
+
 bool usedAndNotEqual(const std::string& sample, const std::string& msg)
 {
   if (sample.length() <= 0)

@@ -33,41 +33,11 @@
 #include <chrono>
 #include <future>
 #include <memory>
+#include "rmi_driver/util.h"
 
 namespace rmi_driver
 {
 using namespace boost::asio::ip;
-
-template <typename Out>
-void split(const std::string &s, char delim, Out result)
-{
-  std::stringstream ss;
-  ss.str(s);
-  std::string item;
-  while (std::getline(ss, item, delim))
-  {
-    std::stringstream temp_ss(item);
-    *(result++) = item;
-  }
-}
-
-std::vector<std::string> split(const std::string &s, char delim)
-{
-  std::vector<std::string> elems;
-  split(s, delim, std::back_inserter(elems));
-  return elems;
-}
-
-std::vector<double> stringToDoubleVec(const std::string &s)
-{
-  std::vector<std::string> strVec = split(s, ' ');
-  std::vector<double> doubleVec;
-
-  std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec),
-                 [](const std::string &val) { return boost::lexical_cast<double>(val); });
-
-  return doubleVec;
-}
 
 Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::string host, int port,
                      StringVec joint_names, CommandRegisterPtr cmd_register)
@@ -488,7 +458,7 @@ void Connector::getThread()
     {
       response = sendCommand(get_joint_position);
 
-      pos_real = stringToDoubleVec(response);
+      pos_real = util::stringToDoubleVec(response);
 
       response = sendCommand(get_tool_frame);
 

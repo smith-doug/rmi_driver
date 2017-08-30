@@ -47,6 +47,8 @@ namespace util
  */
 std::string floatToStringNoTrailing(float fval, int precision);
 
+std::vector<double> stringToDoubleVec(const std::string& s);
+
 ///@{
 /**
  * \brief Check if the sample is used, then check if msg matches sample.
