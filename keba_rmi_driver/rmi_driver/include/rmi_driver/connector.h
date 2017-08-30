@@ -89,6 +89,20 @@ public:
     commandListCb(*msg);
   }
 
+  /**
+   * \brief Called when a CommandList message is received.
+   *
+   * if replace_previous_commands is set, it will clear the queue.
+   * It will search through the registered command handlers for each message in the CommandList.
+   * If a handler is found, the handler will create a rmi_driver::Command (@todo come up with a better name).
+   *
+   * For a normal Cmd type, it will add it to the queue to be sent later.
+   * For a high priority Get type, it will clear the queue, then
+   * send it immediately.   This is useful for things like ABORT.   *
+   *
+   * @param msg received from the /command_list topic
+   * @return true
+   */
   bool commandListCb(const robot_movement_interface::CommandList& msg);
 
   sensor_msgs::JointState getLastJointState()
