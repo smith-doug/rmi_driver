@@ -135,7 +135,7 @@ namespace keba_rmi_plugin
 /**
  * \brief A Keba Telnet Command.  Currently no different than the base.
  */
-class KebaCommand : public Command
+class KebaCommand : public RobotCommand
 {
 public:
   KebaCommand(CommandType type = CommandType::Cmd)
@@ -246,7 +246,7 @@ class KebaCommandLin : public KebaCommandHandler
 public:
   KebaCommandLin();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
 /**
@@ -290,7 +290,7 @@ class KebaCommandPtp : public KebaCommandHandler
 public:
   KebaCommandPtp();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
 /**
@@ -310,31 +310,31 @@ class KebaCommandDyn : public KebaCommandHandler
 public:
   KebaCommandDyn();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
-class KebaCommandAbort : public CommandHandler
+class KebaCommandAbort : public KebaCommandHandler
 {
 public:
   KebaCommandAbort();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
-class KebaCommandSync : public CommandHandler
+class KebaCommandSync : public KebaCommandHandler
 {
 public:
   KebaCommandSync();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
-class KebaCommandWait : public CommandHandler
+class KebaCommandWait : public KebaCommandHandler
 {
 public:
   KebaCommandWait();
 
-  CommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
 }  // namespace keba_rmi_plugin

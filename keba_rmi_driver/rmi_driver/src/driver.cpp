@@ -142,7 +142,7 @@ bool Driver::commandListCb(const robot_movement_interface::CommandList &msg)
       telnet_command_ptr->setCommandId(msg_cmd.command_id);
 
       // Standard Cmds get added to the queue
-      if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
+      if (telnet_command_ptr->getType() == RobotCommand::CommandType::Cmd)
       {
         conn->addCommand(telnet_command_ptr);
       }

@@ -143,7 +143,7 @@ void Connector::cancelSocketCmd(int timeout)
   }
 }
 
-bool Connector::connectSocket(std::string host, int port, Command::CommandType cmd_type)
+bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandType cmd_type)
 {
   int local_port = port;
 
@@ -154,12 +154,12 @@ bool Connector::connectSocket(std::string host, int port, Command::CommandType c
 
   std::thread *thread;
   boost::asio::ip::tcp::socket *sock;
-  if (cmd_type == Command::CommandType::Cmd)
+  if (cmd_type == RobotCommand::CommandType::Cmd)
   {
     thread = &cmd_thread_;
     sock = &socket_cmd_;
   }
-  else if (cmd_type == Command::CommandType::Get)
+  else if (cmd_type == RobotCommand::CommandType::Get)
   {
     thread = &get_thread_;
     sock = &socket_get_;
@@ -180,12 +180,12 @@ bool Connector::connectSocket(std::string host, int port, Command::CommandType c
         else
         {
           std::string con_type;
-          if (cmd_type == Command::CommandType::Cmd)
+          if (cmd_type == RobotCommand::CommandType::Cmd)
           {
             con_type = "Cmd";
             cmd_thread_ = std::thread(&Connector::cmdThread, this);
           }
-          else if (cmd_type == Command::CommandType::Get)
+          else if (cmd_type == RobotCommand::CommandType::Get)
           {
             con_type = "Get";
             get_thread_ = std::thread(&Connector::getThread, this);
@@ -211,8 +211,8 @@ bool Connector::connect(std::string host, int port)
   // cmd_thread_ = std::thread(&Connector::cmdThread, this);
 
   // connectCmd(host, port);
-  connectSocket(host, port, Command::CommandType::Cmd);
-  connectSocket(host, port + 1, Command::CommandType::Get);
+  connectSocket(host, port, RobotCommand::CommandType::Cmd);
+  connectSocket(host, port + 1, RobotCommand::CommandType::Get);
 
   //  query = tcp::resolver::query(host, boost::lexical_cast<std::string>(port + 1));
   //  endpointIterator = resolver.resolve(query);
@@ -254,16 +254,16 @@ void Connector::cmdSocketFlusher()
   }
 }
 
-std::string Connector::sendCommand(const Command &command)
+std::string Connector::sendCommand(const RobotCommand &command)
 {
   tcp::socket *socket = NULL;
   std::timed_mutex *mutex = NULL;
-  if (command.getType() == Command::CommandType::Get)
+  if (command.getType() == RobotCommand::CommandType::Get)
   {
     socket = &socket_get_;
     mutex = &socket_get_mutex_;
   }
-  else if (command.getType() == Command::CommandType::Cmd)
+  else if (command.getType() == RobotCommand::CommandType::Cmd)
   {
     socket = &socket_cmd_;
     mutex = &socket_cmd_mutex_;
@@ -360,9 +360,9 @@ std::string Connector::sendCommand(const Command &command)
   }
 }
 
-void Connector::addCommand(CommandPtr command)
+void Connector::addCommand(RobotCommandPtr command)
 {
-  if (command->getType() == Command::CommandType::Cmd)
+  if (command->getType() == RobotCommand::CommandType::Cmd)
   {
     command_list_mutex_.lock();
     command_list_.push(command);
@@ -377,7 +377,7 @@ void Connector::clearCommands()
 {
   command_list_mutex_.lock();
   ROS_INFO_STREAM(ns_ << " Connector::clearCommands clearing " << command_list_.size() << " entries");
-  command_list_ = std::queue<CommandPtr>();
+  command_list_ = std::queue<RobotCommandPtr>();
   command_list_mutex_.unlock();
 }
 
@@ -414,7 +414,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       telnet_command_ptr->setCommandId(msg_cmd.command_id);
 
       // Standard Cmds get added to the queue
-      if (telnet_command_ptr->getType() == Command::CommandType::Cmd)
+      if (telnet_command_ptr->getType() == RobotCommand::CommandType::Cmd)
       {
         conn->addCommand(telnet_command_ptr);
       }
@@ -447,9 +447,9 @@ void Connector::getThread()
   ros::Rate rate(50);
 
   // I should use the command register to get these from the plugin.
-  Command get_joint_position(Command::CommandType::Get, "get joint position");
-  Command get_tool_frame(Command::CommandType::Get, "get tool frame");
-  Command get_version(Command::CommandType::Get, "get version");
+  RobotCommand get_joint_position(RobotCommand::CommandType::Get, "get joint position");
+  RobotCommand get_tool_frame(RobotCommand::CommandType::Get, "get tool frame");
+  RobotCommand get_version(RobotCommand::CommandType::Get, "get version");
 
   std::string response;
   std::vector<double> pos_real;
@@ -477,7 +477,7 @@ void Connector::getThread()
     if (ex.code() != boost::asio::error::operation_aborted)
     {
       // Relaunch the get socket/thread
-      std::thread(&Connector::connectSocket, this, host_, port_ + 1, Command::CommandType::Get).detach();
+      std::thread(&Connector::connectSocket, this, host_, port_ + 1, RobotCommand::CommandType::Get).detach();
       return;
     }
   }
@@ -508,7 +508,7 @@ void Connector::getThread()
       if (ex.code() != boost::asio::error::operation_aborted)
       {
         // Relaunch the get socket/thread
-        std::thread(&Connector::connectSocket, this, host_, port_ + 1, Command::CommandType::Get).detach();
+        std::thread(&Connector::connectSocket, this, host_, port_ + 1, RobotCommand::CommandType::Get).detach();
         return;
       }
     }
@@ -522,7 +522,7 @@ void Connector::cmdThread()
   ros::Rate rate(30);
   ROS_INFO_STREAM(ns_ << " Connector::cmdThread() starting");
 
-  CommandPtr cmd;
+  RobotCommandPtr cmd;
 
   flush_socket_cmd_ = true;
   cmdSocketFlusher();
@@ -591,7 +591,7 @@ void Connector::cmdThread()
           // An abort command will still clear it out.  Maybe a timer would be safer?
           // clearCommands();
 
-          std::thread(&Connector::connectSocket, this, host_, port_, Command::CommandType::Cmd).detach();
+          std::thread(&Connector::connectSocket, this, host_, port_, RobotCommand::CommandType::Cmd).detach();
 
           return;
         }

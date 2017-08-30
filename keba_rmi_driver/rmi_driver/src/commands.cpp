@@ -44,7 +44,7 @@ const robot_movement_interface::Command& CommandHandler::getSampleCommand() cons
   return sample_command_;
 }
 
-std::string Command::paramsToString(const std::vector<float>& floatVec, int precision)
+std::string RobotCommand::paramsToString(const std::vector<float>& floatVec, int precision)
 {
   if (floatVec.empty())
     return "";
@@ -64,7 +64,7 @@ std::string Command::paramsToString(const std::vector<float>& floatVec, int prec
   return out_str;
 }
 
-std::string Command::toString(bool append_newline) const
+std::string RobotCommand::toString(bool append_newline) const
 {
   std::ostringstream oss;
 
@@ -82,7 +82,7 @@ std::string Command::toString(bool append_newline) const
   return ret;
 }
 
-bool Command::checkResponse(std::string& response) const
+bool RobotCommand::checkResponse(std::string& response) const
 {
   if (response.compare("error") != 0)
     return true;
@@ -90,7 +90,7 @@ bool Command::checkResponse(std::string& response) const
     return false;
 }
 
-void Command::makeCommand(CommandType type, std::string command, std::string params, bool erase_params)
+void RobotCommand::makeCommand(CommandType type, std::string command, std::string params, bool erase_params)
 {
   type_ = type;
   if (erase_params)
@@ -102,7 +102,7 @@ void Command::makeCommand(CommandType type, std::string command, std::string par
     full_command_.emplace_back(command, params);
 }
 
-void Command::addParam(std::string param, std::string param_vals)
+void RobotCommand::addParam(std::string param, std::string param_vals)
 {
   if (full_command_.empty())
     full_command_[1] = std::make_pair(param, param_vals);
@@ -113,7 +113,7 @@ void Command::addParam(std::string param, std::string param_vals)
 // Eclipse has a fit every time I try to call resize(int) or construct the vector with a size,
 // even though it compiles fine, so I have no way to guarantee that the vector isn't empty.
 // So, I need to check at() and return a string, not a reference to one.
-std::string Command::getCommand() const
+std::string RobotCommand::getCommand() const
 {
   try
   {
@@ -125,22 +125,22 @@ std::string Command::getCommand() const
   }
 }
 
-Command::CommandType Command::getType() const
+RobotCommand::CommandType RobotCommand::getType() const
 {
   return type_;
 }
 
-void Command::setType(CommandType type)
+void RobotCommand::setType(CommandType type)
 {
   type_ = type;
 }
 
-int Command::getCommandId() const
+int RobotCommand::getCommandId() const
 {
   return command_id_;
 }
 
-void Command::setCommandId(int commandId)
+void RobotCommand::setCommandId(int commandId)
 {
   command_id_ = commandId;
 }
@@ -213,7 +213,7 @@ const CommandHandler* CommandRegister::findHandler(const robot_movement_interfac
   }
 }
 
-CommandPtr CommandHandler::processMsg(const robot_movement_interface::Command& cmd_msg) const
+RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Command& cmd_msg) const
 {
   if (!process_func_)
   {

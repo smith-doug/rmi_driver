@@ -54,7 +54,7 @@ namespace rmi_driver
  * "ptp : 1 2 3 4 5 6;"  A ptp move \n
  * "ptp : 1 2 3 4 5 6; speed : 100;" A ptp move with the speed parameter specified
  */
-class Command
+class RobotCommand
 {
 public:
   //! Each entry is stored as a pair<string, string>
@@ -63,36 +63,36 @@ public:
   //! The full command with all optional params is stored in a vector.  Entry [0] is the actual command.
   using FullCommand = std::vector<CommandEntry>;
 
-  /// Choose which socket to send over.  Currently only Cmd will do anything.  I'm not sure this will remain.
+  /// Choose which socket to send over.  Cmd will be added to the command queue.  Get will be sent immediately.
   enum CommandType
   {
     Get,  //!< Get Commands that should return almost immediately.  get joint position, get digital io, etc
     Cmd   //!< Cmd Commands that might take some time.  Moving, waiting on inputs, etc
   };
 
-  Command(CommandType type = CommandType::Cmd) : type_(type)
+  RobotCommand(CommandType type = CommandType::Cmd) : type_(type)
   {
     makeCommand(type, "", "");
   }
 
-  Command(CommandType type, const std::string& command, std::string params = "") : type_(type)
+  RobotCommand(CommandType type, const std::string& command, std::string params = "") : type_(type)
   {
     makeCommand(type, command, params);
   }
 
-  Command(CommandType type, const std::string& command, const std::vector<float>& floatVec) : type_(type)
+  RobotCommand(CommandType type, const std::string& command, const std::vector<float>& floatVec) : type_(type)
   {
-    makeCommand(type, command, Command::paramsToString(floatVec));
+    makeCommand(type, command, RobotCommand::paramsToString(floatVec));
   }
 
-  Command(const Command& other)
+  RobotCommand(const RobotCommand& other)
   {
     this->command_id_ = other.command_id_;
     this->full_command_ = other.full_command_;
     this->type_ = other.type_;
   }
 
-  Command(Command&& other)
+  RobotCommand(RobotCommand&& other)
     : full_command_(std::move(other.full_command_)), type_(other.type_), command_id_(other.command_id_)
   {
   }
@@ -108,7 +108,7 @@ public:
    */
   void makeCommand(CommandType type, std::string command, std::string command_vals, bool erase_params = false);
 
-  virtual ~Command()
+  virtual ~RobotCommand()
   {
     // std::cout << "Destroying: " << this->toString() << std::endl;
   }
@@ -189,14 +189,14 @@ protected:
   CommandType type_;
 };
 
-inline std::ostream& operator<<(std::ostream& o, const Command& cmd)
+inline std::ostream& operator<<(std::ostream& o, const RobotCommand& cmd)
 {
   return cmd.dump(o);
 }
 
 class CommandHandler;
 class CommandRegister;
-using CommandPtr = std::shared_ptr<Command>;
+using RobotCommandPtr = std::shared_ptr<RobotCommand>;
 
 /**
  * \brief Handle robot_movement_interface::Command and create Commands that are ready to send to the robot.
@@ -212,7 +212,7 @@ using CommandPtr = std::shared_ptr<Command>;
 class CommandHandler
 {
 public:
-  typedef std::function<CommandPtr(const robot_movement_interface::Command&)> CommandHandlerFunc;
+  using CommandHandlerFunc = std::function<RobotCommandPtr(const robot_movement_interface::Command&)>;
 
   CommandHandler() : handler_name_("Base CommandHandler")
   {
@@ -243,12 +243,22 @@ public:
   {
   }
 
+  /**
+   * \brief Create a new unique_ptr<CommandHandler> that holds an extended CommandHandler of type T
+   * @return a new unique_ptr<CommandHandler> pointing to T
+   */
   template <typename T>
   static std::unique_ptr<CommandHandler> createHandler()
   {
     return std::unique_ptr<CommandHandler>(new T);
   }
 
+  /**
+   * \brief Create a new unique_ptr<CommandHandler> that holds CommandHandler of subtype T.  Constructed with a lambda.
+   * @param sample_command The sample command to store.
+   * @param f The processMsg function
+   * @return a new unique_ptr<CommandHandler> pointing to T
+   */
   template <typename T = CommandHandler>
   static std::unique_ptr<CommandHandler> createHandler(const robot_movement_interface::Command& sample_command,
                                                        CommandHandler::CommandHandlerFunc f)
@@ -274,7 +284,7 @@ public:
    * @param cmd_msg The message received from the command_list topic
    * @return a new CommandPtr.  nullptr if processing the message failed.
    */
-  virtual CommandPtr processMsg(const robot_movement_interface::Command& cmd_msg) const;
+  virtual RobotCommandPtr processMsg(const robot_movement_interface::Command& cmd_msg) const;
 
   void setProcFunc(CommandHandlerFunc& f)
   {
@@ -309,12 +319,16 @@ public:
   }
 
 protected:
+  /// Pointer to the CommandRegister that owns this CommandHandler
   CommandRegister* command_register_ = nullptr;
 
+  /// The stored sample command
   robot_movement_interface::Command sample_command_;
 
+  /// The name of the handler.  Used for debug output.
   std::string handler_name_;
 
+  /// The function to call when constructed by a lambda.
   CommandHandlerFunc process_func_ = nullptr;
 };
 
@@ -357,7 +371,7 @@ public:
   virtual const std::string& getVersion() = 0;
 
   /**
-   * Add a CommandHandler.  This will std::move a handler into the vector.
+   * \brief Add a CommandHandler.  This will std::move a handler into the vector.
    *
    * @param handler rvalue reference to a handler.
    */
@@ -368,7 +382,10 @@ public:
   }
 
   /**
-   * Add a CommandHandler of type T.
+   * \brief Add a CommandHandler of type T.
+   *
+   * Example:
+   * addHandler<RobotCommandPtp>();
    */
   template <typename T>
   void addHandler()

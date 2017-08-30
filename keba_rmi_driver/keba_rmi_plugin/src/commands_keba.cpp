@@ -42,11 +42,11 @@ namespace keba_rmi_plugin
  * @param telnet_cmd [in,out] the telnet command to add the dyn entry to
  * @return true if a keba DYN entry was found
  */
-bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
-    telnet_cmd.addParam("dyn", Command::paramsToString(cmd_msg.velocity));
+    telnet_cmd.addParam("dyn", RobotCommand::paramsToString(cmd_msg.velocity));
     return true;
   }
   else
@@ -59,17 +59,17 @@ bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, Command &t
  * @param telnet_cmd
  * @return
  */
-bool processRosDyn(const robot_movement_interface::Command &cmd_msg, Command &telnet_cmd)
+bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
   bool ret = false;
   if (cmd_msg.velocity_type.compare("ROS") == 0)
   {
-    telnet_cmd.addParam("velros", Command::paramsToString(cmd_msg.velocity));
+    telnet_cmd.addParam("velros", RobotCommand::paramsToString(cmd_msg.velocity));
     ret = true;
   }
   if (cmd_msg.acceleration_type.compare("ROS") == 0)
   {
-    telnet_cmd.addParam("accros", Command::paramsToString(cmd_msg.acceleration));
+    telnet_cmd.addParam("accros", RobotCommand::paramsToString(cmd_msg.acceleration));
     ret = true;
   }
   return ret;
@@ -113,7 +113,7 @@ void KebaCommandRegister::registerCommands()
   cmd.command_type = "TEST";
 
   auto chtest = CommandHandler::createHandler(cmd, [](const robot_movement_interface::Command &cmd_msg) {
-    return std::make_shared<Command>(Command::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
+    return std::make_shared<RobotCommand>(RobotCommand::CommandType::Cmd, cmd_msg.command_type, cmd_msg.pose_type);
   });
 
   this->addHandler(std::move(chtest));
@@ -134,9 +134,9 @@ KebaCommandLin::KebaCommandLin()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
 
   std::string command_str = "lin " + boost::to_lower_copy(cmd_msg.pose_type);
 
@@ -163,7 +163,7 @@ CommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &c
     pose_temp[2] *= 1000.0;
   }
 
-  cmd_ptr->setCommand(command_str, Command::paramsToString(pose_temp));
+  cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
 
   // ROS joint isn't enough for a Lin.  Only look for a DYN.
   bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
@@ -183,10 +183,10 @@ KebaCommandPtp::KebaCommandPtp()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
   std::cout << "reg size: " << getCommandRegister()->joint_names_.size() << std::endl;
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
 
   std::string command_str = "ptp " + boost::to_lower_copy(cmd_msg.pose_type);
 
@@ -203,7 +203,7 @@ CommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &c
     pose_temp[2] *= 1000.0;
   }
 
-  cmd_ptr->setCommand(command_str, Command::paramsToString(pose_temp));
+  cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
 
   bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
 
@@ -228,9 +228,9 @@ KebaCommandDyn::KebaCommandDyn()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandDyn::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandDyn::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
   std::string command_str = "setting dyn";
   if (cmd_msg.velocity_type.compare("DYN") == 0)
   {
@@ -251,9 +251,9 @@ KebaCommandAbort::KebaCommandAbort()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandAbort::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandAbort::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Get);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Get);
   cmd_ptr->setCommand("abort", "");
   return cmd_ptr;
 }
@@ -269,11 +269,11 @@ KebaCommandSync::KebaCommandSync()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandSync::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandSync::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
 
-  cmd_ptr->setCommand("sync", Command::paramsToString(cmd_msg.pose));
+  cmd_ptr->setCommand("sync", RobotCommand::paramsToString(cmd_msg.pose));
   return cmd_ptr;
 }
 
@@ -287,9 +287,9 @@ KebaCommandWait::KebaCommandWait()
   sample_command_ = cmd;
 }
 
-CommandPtr KebaCommandWait::processMsg(const robot_movement_interface::Command &cmd_msg) const
+RobotCommandPtr KebaCommandWait::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  CommandPtr cmd_ptr = std::make_shared<KebaCommand>(Command::Command::CommandType::Cmd);
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
 
   std::string command_str = "wait " + boost::to_lower_copy(cmd_msg.pose_type);
   cmd_ptr->setCommand(command_str, "");

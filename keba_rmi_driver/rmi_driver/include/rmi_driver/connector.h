@@ -67,20 +67,20 @@ public:
 
   // bool connectCmd(std::string host, int port);
 
-  bool connectSocket(std::string host, int port, Command::CommandType cmd_type);
+  bool connectSocket(std::string host, int port, RobotCommand::CommandType cmd_type);
 
   /**
    * Sends a command.  It will choose the socket to used based on the command type.
    * @param command
    * @return the reply from the socket.
    */
-  std::string sendCommand(const Command& command);
+  std::string sendCommand(const RobotCommand& command);
 
   /**
    * Adds a command to the queue.  Currently only takes Cmd type
    * @param command
    */
-  void addCommand(CommandPtr command);
+  void addCommand(RobotCommandPtr command);
 
   void clearCommands();
 
@@ -159,7 +159,7 @@ protected:
   boost::asio::io_service& io_service_;
 
   /// Queue of all telnet commands to be sent by Connector::cmdThread().
-  std::queue<CommandPtr> command_list_;
+  std::queue<RobotCommandPtr> command_list_;
 
   /// Receives the robot_movement_interface/CommandList for this namespace
   ros::Subscriber command_list_sub_;
