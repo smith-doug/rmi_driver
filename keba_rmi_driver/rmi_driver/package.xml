@@ -3,6 +3,7 @@
   <name>rmi_driver</name>
   <version>1.0.0</version>
   <description>Keba generic Robot Movement Interface driver</description>
+  <author>Doug Smith</author>
   <maintainer email="dougkeba@gmail.com">Doug Smith</maintainer>
   <license>BSD</license>
 
