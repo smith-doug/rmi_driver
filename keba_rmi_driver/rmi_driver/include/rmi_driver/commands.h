@@ -338,7 +338,10 @@ inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
 }
 
 /**
- * This class contains all the registered command handlers.
+ * \brief This class contains all the registered command handlers.
+ *
+ * \detail You should override this class in your plugin.  Implement registerCommandHandlers and add all your custom
+ * CommandHandlers there.
  */
 class CommandRegister
 {

@@ -54,7 +54,8 @@
 using namespace rmi_driver;
 
 /**
- * @page KebaTelnetTypes Keba Telnet Types
+ *
+ * @page KebaTelnetTypes Keba RobotCommand Telnet Types
  * \tableofcontents
  * This section documents the actual string that are send to a Keba controller.\n
  * \ref Poses Types of poses\n
@@ -64,7 +65,7 @@ using namespace rmi_driver;
  * \section Poses
  * JOINTS: A list of joint positions in ROS units (radians, meters) \n
  * QUATERNION: A cartesian position with the orientation specified as a quaterniom. The form is "x y z w xx yy zz".  The
- * x/y/z coordinates are given in mm.  Ex: \n
+ * x/y/z coordinates are given in mm.  \n
  * EULER_INTRINSIC_ZYX: A cartesian position with the orientation in euler angles.  The form is "x y z zz, yy, zz'" The
  * x/y/z coordinates are in mm and rotations are in degrees.  @todo check if EULER_INTRINSIC_ZYX
  * is actually
@@ -75,9 +76,9 @@ using namespace rmi_driver;
  * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
  *
  *
- * @page KebaRmiTypes Keba RMI message types
+ * @page KebaRmiTypes Keba robot_movement_interface::Command formats
  * \tableofcontents
- * This section describes the robot_movement_interface::Command structures this plugin responds to.\n
+ * This section describes the shared robot_movement_interface::Command structures this plugin responds to.\n
  * \ref KebaRmiTypesPoses
  *
  * \ref KebaRmiTypesDynamics
@@ -151,7 +152,9 @@ public:
 };
 
 /**
- * \brief class that holds all of the registered commands and some joint information.
+ * \brief Class that holds all of the registered commands and some joint information.
+ *
+ *
  */
 class KebaCommandRegister : public CommandRegister
 {
@@ -175,11 +178,15 @@ public:
   std::vector<std::string> joint_names_;
 
 protected:
-  void registerCommands() override;
+  /// \brief Create and load all the CommandHandlers
+  void registerCommandHandlers() override;
 
+  /// Number of main joints.  Unused
   int num_main_joints_;
+  /// Number of aux joints.  Unused
   int num_aux_joints_;
 
+  /// Prevent commands from being registered again
   bool commands_registered_;
 };
 
@@ -212,8 +219,8 @@ protected:
  * \par Required:
  *   command_type: LIN\n
  *
- *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX.
- *   pose: sFor details see \link KebaRmiTypesPoses Accepted poses\endlink
+ *   pose_type: JOINTS|QUATERNION|EULER_INTRINSIC_ZYX.\n
+ *   pose: For details see \link KebaRmiTypesPoses Accepted poses\endlink
  *
  * \par Optional:
  * velocity_type: DYN|ROS.  For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink\n
@@ -298,11 +305,20 @@ public:
  *
  * This is the same as calling Dyn() on the pendant.  Only normal keba DYN is allowed.  ROS velocities aren't supported
  *
- * Required: \n
- *   command_type: DYN
- *   velocity_type: DYN
+ * \par Required: \n
+ *   command_type: DYN\n
+ *   velocity_type: DYN\n
  *   velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
  *    acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
+ *
+ * \par Examples:\n
+ * 1. Set a Dynamic\n
+ * \code
+ * command_type: 'DYN'
+ * velocity_type: DYN
+ * velocity: [100, 100, 100, 100, 150, 500, 500, 10000, 360, 900, 900, 3600]
+ * \endcode
+ * Command::toString(): "setting dyn : 100 100 100 100 150 500 500 500 10000 360 900 900 3600;"
  *
  */
 class KebaCommandDyn : public KebaCommandHandler
