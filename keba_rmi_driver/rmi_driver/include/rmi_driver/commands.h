@@ -426,7 +426,7 @@ protected:
   /**
      * Create commands and put them in the command_handlers_ vector.
      */
-  virtual void registerCommands() = 0;
+  virtual void registerCommandHandlers() = 0;
 
   CommandHandlerPtrVec command_handlers_;
 };

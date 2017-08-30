@@ -87,10 +87,10 @@ void KebaCommandRegister::initialize(const std::vector<std::string> &joints)
   num_main_joints_ = 6;
   num_aux_joints_ = 1;  //@todo figure this out
 
-  registerCommands();
+  registerCommandHandlers();
 }
 
-void KebaCommandRegister::registerCommands()
+void KebaCommandRegister::registerCommandHandlers()
 {
   if (commands_registered_)
     return;
