@@ -45,7 +45,7 @@ namespace util
  * @param precision max number of decimals
  * @return string representation of fval
  */
-std::string floatToStringNoTrailing(float fval, int precision);
+std::string floatToStringNoTrailing(float fval, int precision = 4);
 
 std::vector<double> stringToDoubleVec(const std::string& s);
 

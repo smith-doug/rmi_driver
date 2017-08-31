@@ -104,6 +104,10 @@ using namespace rmi_driver;
  * as the
  * velocity_type could lead to undesired behavior.  Used by the standard joint_trajectory_action.
  *
+ * \par blending_type:
+ * %/OVLREL: Relative overlapping.  A number between 0 and 200 [0-200]\n
+ * OVLSUPPOS: Superposition overlapping.  A number between 0 and 200 [0-200]\n
+ * OVLABS: Absolute overlapping.  5 numbers.  [posDist, oriDist, linAxDist, rotAxDist, vConst(boolean)\n
  *
  */
 
@@ -128,6 +132,7 @@ using namespace rmi_driver;
  * LIN KebaCommandLin\n
  * PTP KebaCommandPtp\n
  * DYN KebaCommandDyn\n
+ * OVL KebaCommandOvl\n
  * WAIT KebaCommandWait\n
  * SYNC KebaCommandSync\n
  */
@@ -169,7 +174,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.3");
+    static std::string version("0.0.4");
     return version;
   }
 
@@ -302,11 +307,13 @@ public:
 
 /**
  * \brief Set a Dyn for all future unspecified moves.
+ * @todo think about this.  Using pose_type to indicate which setting is awkward.
  *
  * This is the same as calling Dyn() on the pendant.  Only normal keba DYN is allowed.  ROS velocities aren't supported
  *
  * \par Required: \n
- *   command_type: DYN\n
+ *   command_type: SETTING\n
+ *   pose_type: DYN\n
  *   velocity_type: DYN\n
  *   velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
  *    acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
@@ -314,17 +321,57 @@ public:
  * \par Examples:\n
  * 1. Set a Dynamic\n
  * \code
- * command_type: 'DYN'
+ * command_type: 'SETTING'
+ * pose_type: DYN\n
  * velocity_type: DYN
  * velocity: [100, 100, 100, 100, 150, 500, 500, 10000, 360, 900, 900, 3600]
  * \endcode
- * Command::toString(): "setting dyn : 100 100 100 100 150 500 500 500 10000 360 900 900 3600;"
+ * Command::toString(): "setting dyn; dyn : 100 100 100 100 150 500 500 500 10000 360 900 900 3600;"
  *
  */
 class KebaCommandDyn : public KebaCommandHandler
 {
 public:
   KebaCommandDyn();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+/**
+ * \brief Set an Ovl for all future unspecified moves.
+ *
+ * \details This is the same as calling Ovl() on the pendant.  %/OVLREL, OVLSUPPOS, and OVLABS are supported.
+ *
+ * \par Required:\n
+ * command_type: SETTING\n
+ * pose_type: OVL\n
+ * blending_type : %|OVLABS|OVLREL|OVLSUPPOS\n
+ * blending:  See \link KebaRmiTypesDynamics Accepted dynamics \endlink \n
+ *
+ * \par Examples:\n
+ * 1. Set an OVLREL
+ * \code
+ * command_type: 'SETTING'
+ * pose_type: OVL
+ * blending_type: OVLREL
+ * blending: [100]
+ * \endcode
+ * Command::toString(): "setting ovl;ovlrel 100;"\n
+ *
+ * 2. Set an OVLABS with vConst off\n
+ * \code
+ * command_type: 'SETTING'
+ * pose_type: OVL
+ * blending_type: OVLABS
+ * blending: [10, 360, 1000, 360, 0]
+ * \endcode
+ * Command::toString(): "setting ovl;ovlabs : 10 360 1000 360 0;"
+ *
+ */
+class KebaCommandOvl : public KebaCommandHandler
+{
+public:
+  KebaCommandOvl();
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };

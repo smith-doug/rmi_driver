@@ -53,6 +53,37 @@ bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, RobotComma
     return false;
 }
 
+bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
+{
+  auto blending_type = boost::to_lower_copy(cmd_msg.blending_type);
+
+  auto blending = cmd_msg.blending;
+
+  //% == OVLREL for convenience.
+  if (boost::iequals(blending_type, "%"))
+    blending_type = "OVLREL";
+
+  // These 2 types both have 1 parameters, a % from 0-200.
+  if (boost::iequals(cmd_msg.blending_type, "OVLREL") || boost::iequals(cmd_msg.blending_type, "OVLSUPPOS"))
+  {
+    if (blending.size() != 1)
+      return false;  // Maybe I should throw
+
+    blending[0] = std::round(blending[0]);
+    int ovl = std::lround(blending[0]);
+    if (ovl < 0 || ovl > 200)
+      return false;
+  }
+  else if (boost::iequals(cmd_msg.blending_type, "OVLABS"))
+  {
+    // Check stuff.
+  }
+
+  telnet_cmd.addParam(boost::to_lower_copy(blending_type), RobotCommand::paramsToString(blending));
+
+  return true;
+}
+
 /**
  * Check for velo/accel types to be ROS  @todo should I require both?
  * @param cmd_msg
@@ -102,6 +133,7 @@ void KebaCommandRegister::registerCommandHandlers()
 
   // Settings
   this->addHandler<KebaCommandDyn>();
+  this->addHandler<KebaCommandOvl>();
 
   // Other
   this->addHandler<KebaCommandAbort>();
@@ -240,6 +272,34 @@ RobotCommandPtr KebaCommandDyn::processMsg(const robot_movement_interface::Comma
   cmd_ptr->setCommand(command_str, "");
 
   return cmd_ptr;
+}
+
+KebaCommandOvl::KebaCommandOvl()
+{
+  handler_name_ = "KebaCommandOvl";
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "SETTING";
+  cmd.pose_type = "OVL";
+  cmd.blending_type = "%|OVLABS|OVLREL|OVLSUPPOS";
+
+  sample_command_ = cmd;
+}
+
+RobotCommandPtr KebaCommandOvl::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
+  std::string command_str = "setting ovl";
+
+  if (processKebaOvl(cmd_msg, *cmd_ptr))
+  {
+    cmd_ptr->setCommand(command_str, "");
+    return cmd_ptr;
+  }
+  else
+  {
+    return nullptr;
+  }
 }
 
 KebaCommandAbort::KebaCommandAbort()
