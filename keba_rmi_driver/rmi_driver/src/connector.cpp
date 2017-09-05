@@ -363,15 +363,14 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
   {
     std::string command_str = "";
     std::string command_params = "";
-
     std::ostringstream oss;
 
+    // Find the appropriate handler
     auto handler = cmd_register->findHandler(msg_cmd);
 
     if (handler)
     {
       ROS_INFO_STREAM(ns_ << " Found cmd handler: " << handler->getName());
-      // Command telnet_command;
 
       // Create a new CommandPtr with the found handler
       auto telnet_command_ptr = handler->processMsg(msg_cmd);
@@ -381,6 +380,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
         continue;
       }
 
+      // Set the RobotCommand's id to the id of the message for feedback later
       telnet_command_ptr->setCommandId(msg_cmd.command_id);
 
       // Standard Cmds get added to the queue
@@ -388,7 +388,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       {
         conn->addCommand(telnet_command_ptr);
       }
-      else
+      else  // A Get was received as part of a CommandList.
       {
         ROS_INFO_STREAM(ns_ << " Got a high priority command via a message: " << telnet_command_ptr->getCommand());
 
@@ -412,14 +412,45 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
   return true;
 }
 
+RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type, const std::string &pose_type)
+{
+  robot_movement_interface::Command rmi_cmd;
+  rmi_cmd.command_type = command_type;
+  rmi_cmd.pose_type = pose_type;
+
+  // Find the handler for the given command and pose type
+  auto get_handler = cmd_register_->findHandler(rmi_cmd);
+  if (!get_handler)
+  {
+    ROS_ERROR_STREAM(ns_ << " Failed to get handler for " << command_type << " " << pose_type);
+    return nullptr;
+  }
+
+  // Process the message to make a RobotCommand
+  auto robot_cmd = get_handler->processMsg(rmi_cmd);
+  if (!robot_cmd)
+  {
+    ROS_ERROR_STREAM(ns_ << "Failed to get a RobotCommand for " << command_type << " " << pose_type);
+  }
+  return robot_cmd;
+}
+
 void Connector::getThread()
 {
   ros::Rate rate(50);
 
-  // I should use the command register to get these from the plugin.
-  RobotCommand get_joint_position(RobotCommand::CommandType::Get, "get joint position");
-  RobotCommand get_tool_frame(RobotCommand::CommandType::Get, "get tool frame");
-  RobotCommand get_version(RobotCommand::CommandType::Get, "get version");
+  // Fetch the required RobotCommands from the plugin.
+  auto get_joint_position = findGetCommandHandler("GET", "JOINT_POSITION");
+  auto get_version = findGetCommandHandler("GET", "VERSION");
+  auto get_tool_frame = findGetCommandHandler("GET", "TOOL_FRAME");
+
+  if (!get_joint_position || !get_version || !get_tool_frame)
+  {
+    /// @todo make a nice link to a section of docs
+    ROS_ERROR_STREAM("One of the getThread handlers failed to be found.  Your plugin MUST implement these!");
+
+    return;
+  }
 
   std::string response;
   std::vector<double> pos_real;
@@ -427,7 +458,7 @@ void Connector::getThread()
   // Check the version string
   try
   {
-    response = sendCommand(get_version);
+    response = sendCommand(*get_version);
     if (response.compare(cmd_register_->getVersion()) != 0)
     {
       ROS_ERROR_STREAM(ns_ << " WARNING!  The version returned by the robot does NOT match the version of the active "
@@ -456,11 +487,11 @@ void Connector::getThread()
   {
     try
     {
-      response = sendCommand(get_joint_position);
+      response = sendCommand(*get_joint_position);
 
       pos_real = util::stringToDoubleVec(response);
 
-      response = sendCommand(get_tool_frame);
+      response = sendCommand(*get_tool_frame);
 
       last_joint_state_.header.stamp = ros::Time::now();
       last_joint_state_.name = joint_names_;
@@ -537,6 +568,7 @@ void Connector::cmdThread()
           result.result_code = 1;
         }
 
+        // Command was sent and responded to in some way.  Lock n' pop.
         command_list_mutex_.lock();
         if (command_list_.size() > 0)
           command_list_.pop();
@@ -552,8 +584,8 @@ void Connector::cmdThread()
       catch (const boost::system::system_error &ex)
       {
         ROS_INFO_STREAM(ns_ << " Connector::cmdThread exception: " << ex.what());
-        // code 125 is
 
+        // If the error is cause by anything other than a cancel, reconnect
         if (ex.code() != boost::asio::error::operation_aborted)
         {
           // Removing clearCommands() actually allows the robot to continue if the socket is lost due to a plc restart

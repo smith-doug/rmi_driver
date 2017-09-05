@@ -147,6 +147,17 @@ protected:
 
   void getThread();
 
+  /**
+   * \brief Used by getThread() to create the required RobotCommands for the cyclic updated.
+   *
+   * @todo Think about this.  Maybe a special command handler type that returns the appropriate message (JointState,
+   * etc) should be required.
+   * @param command_type Should be GET
+   * @param pose_type Currently JOINT_POSITION, TOOL_FRAME, VERSION
+   * @return a RobotCommandPtr for specified command and pose type.
+   */
+  RobotCommandPtr findGetCommandHandler(const std::string& command_type, const std::string& pose_type);
+
   std::string ns_;  ///< Namespace of this connection
 
   /// Socket used for motion commands that may block.  Default port 30000
@@ -187,10 +198,12 @@ protected:
   std::thread get_thread_;
   std::thread cmd_thread_;
 
+  /// The last known joint state.  Set by getThead() and aggregated by the Driver.
   sensor_msgs::JointState last_joint_state_;
 
   std::vector<std::string> joint_names_;
 
+  /// The CommandRegister that was loaded by the plugin
   CommandRegisterPtr cmd_register_;
 
   ///\brief Used to read and consume and messages sent after a cancel.

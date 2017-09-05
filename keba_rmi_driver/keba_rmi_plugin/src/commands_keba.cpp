@@ -126,8 +126,10 @@ void KebaCommandRegister::registerCommandHandlers()
   if (commands_registered_)
     return;
 
-  // Motion commands
+  // Add the required Connector::getThread handler
+  this->addHandler<KebaCommandGet>();
 
+  // Motion commands
   this->addHandler<KebaCommandPtp>();
   this->addHandler<KebaCommandLin>();
 
@@ -151,6 +153,35 @@ void KebaCommandRegister::registerCommandHandlers()
   this->addHandler(std::move(chtest));
 
   commands_registered_ = true;
+}
+
+KebaCommandGet::KebaCommandGet()
+{
+  handler_name_ = "KebaCommandGet";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "GET";
+  cmd.pose_type = "JOINT_POSITION|TOOL_FRAME|VERSION";
+
+  sample_command_ = cmd;
+}
+
+RobotCommandPtr KebaCommandGet::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  std::string cmd_str = "get ";
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Get);
+  if (boost::iequals("JOINT_POSITION", cmd_msg.pose_type))
+    cmd_str += "joint position";
+  else if (boost::iequals("TOOL_FRAME", cmd_msg.pose_type))
+    cmd_str += "tool frame";
+  else if (boost::iequals("VERSION", cmd_msg.pose_type))
+    cmd_str += "version";
+  else
+    return nullptr;
+
+  cmd_ptr->setCommand(cmd_str, "");
+  return cmd_ptr;
 }
 
 KebaCommandLin::KebaCommandLin()

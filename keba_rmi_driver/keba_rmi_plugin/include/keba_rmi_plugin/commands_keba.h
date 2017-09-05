@@ -219,6 +219,22 @@ protected:
 };
 
 /**
+ * \brief Special command handler used by Connector::getThread()
+ *
+ * \details This handler implements the standard gets.  @todo define these!\n
+ * Currently this is \n
+ * command: GET\n
+ * pose_type: JOINT_POSITION, TOOL_FRAME, VERSION\n
+ */
+class KebaCommandGet : public KebaCommandHandler
+{
+public:
+  KebaCommandGet();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+/**
  * \brief Linear move to Joint or Cartesian positions
  *
  * \par Required:
