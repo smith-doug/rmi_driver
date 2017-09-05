@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Doug Smith
+ * Copyright (c) 2017, Doug Smith, KEBA Corp
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
