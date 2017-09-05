@@ -84,7 +84,7 @@ using namespace rmi_driver;
  * \ref KebaRmiTypesDynamics
  *
  * \section KebaRmiTypesPoses Pose types and values
- * \par pose_type: \n
+ * \par pose_type:
  * QUATERNION:  A cartesian position with position values and orientation both in
  * ROS units (meters, quaternion).  [x, y, z, rw, rx, ry, rz].\n
  * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation represented by a
@@ -222,9 +222,15 @@ protected:
  * \brief Special command handler used by Connector::getThread()
  *
  * \details This handler implements the standard gets.  @todo define these!\n
- * Currently this is \n
- * command: GET\n
+ * \par Required:
+ * command_type: GET\n
  * pose_type: JOINT_POSITION, TOOL_FRAME, VERSION\n
+ *
+ *
+ * Command::toString will produce one of the following:\n
+ * "get joint position;"\n
+ * "get tool frame;"\n"
+ * "get version;"
  */
 class KebaCommandGet : public KebaCommandHandler
 {
@@ -246,7 +252,7 @@ public:
  * \par Optional:
  * velocity_type: DYN|ROS.  For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink\n
  *
- * \par Examples:\n
+ * \par Examples:
  * 1. Linear move to a joint position with no speed specified.\n
  *
  * \code
@@ -280,19 +286,19 @@ public:
 /**
  * \brief PTP moves to Joint or Cartesian positons
  *
- * \par Required:\n
+ * \par Required:
  *  command_type: PTP\n
  *  pose_type   : JOINTS|QUATERNION|EULER_INTRINSIC_ZYX\n
  *  pose: For details see \link KebaRmiTypesPoses Accepted poses\endlink\n
  *
- *  \par Optional:\n
+ *  \par Optional:
  *  velocity_type: DYN|ROS\n
  *  velocity: For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink \n\n
  *
  *  acceleration_type: ROS  (Acceleration must be empty if using DYN.  The entire Dynamic is specified in velocty.)\n
  *  acceleration: Empty if using DYN|For details see \link KebaRmiTypesDynamics Accepted dynamics \endlink \n
  *
- * \par Examples:\n
+ * \par Examples:
  * 1. PTP move to a joint position with no speed specified.\n
  *
  * \code
@@ -327,14 +333,14 @@ public:
  *
  * This is the same as calling Dyn() on the pendant.  Only normal keba DYN is allowed.  ROS velocities aren't supported
  *
- * \par Required: \n
+ * \par Required:
  *   command_type: SETTING\n
  *   pose_type: DYN\n
  *   velocity_type: DYN\n
  *   velocity: [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
  *    acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
  *
- * \par Examples:\n
+ * \par Examples:
  * 1. Set a Dynamic\n
  * \code
  * command_type: 'SETTING'
@@ -358,13 +364,13 @@ public:
  *
  * \details This is the same as calling Ovl() on the pendant.  %/OVLREL, OVLSUPPOS, and OVLABS are supported.
  *
- * \par Required:\n
+ * \par Required:
  * command_type: SETTING\n
  * pose_type: OVL\n
  * blending_type : %|OVLABS|OVLREL|OVLSUPPOS\n
  * blending:  See \link KebaRmiTypesDynamics Accepted dynamics \endlink \n
  *
- * \par Examples:\n
+ * \par Examples:
  * 1. Set an OVLREL
  * \code
  * command_type: 'SETTING'

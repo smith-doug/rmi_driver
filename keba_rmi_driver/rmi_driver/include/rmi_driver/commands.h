@@ -48,7 +48,9 @@ namespace rmi_driver
  * create the actual string to the robot.  << is overridden for easier stream console output.
  *
  * Default string format:
+ * \code
  * <command>[ : <values>]; [\<param>[: <values>];]
+ * \endcode
  *
  * Examples: \n
  * "ptp : 1 2 3 4 5 6;"  A ptp move \n
@@ -340,7 +342,7 @@ inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
 /**
  * \brief This class contains all the registered command handlers.
  *
- * \detail You should override this class in your plugin.  Implement registerCommandHandlers and add all your custom
+ * \details You should override this class in your plugin.  Implement registerCommandHandlers and add all your custom
  * CommandHandlers there.
  */
 class CommandRegister

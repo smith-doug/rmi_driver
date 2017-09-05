@@ -71,7 +71,7 @@ bool usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
 /**
  * \brief \copybrief usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
  *
- * \detail Checks that the sample is not empty and for exact equality.
+ * \details Checks that the sample is not empty and for exact equality.
  */
 bool usedAndNotEqual(const std::string& sample, const std::string& msg);
 
