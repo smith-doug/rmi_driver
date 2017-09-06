@@ -57,23 +57,47 @@ using namespace rmi_driver;
  *
  * @page KebaTelnetTypes Keba RobotCommand Telnet Types
  * \tableofcontents
- * This section documents the actual string that are send to a Keba controller.\n
+ * This section documents the actual strings that are send to a Keba controller.\n
+ * \ref Moves Types of moves\n
  * \ref Poses Types of poses\n
- * \ref Dynamics Types of dynamics
+ * \ref Dynamics Types of dynamics\n
+ * \ref ExamplesKebaTelnetTypes\n
  *
+ *
+ * \section Moves
+ * lin: Linear move.  Calls the Lin() macro.\n
+ * ptp: Point to point move.  Calls the PTP() macro.\n
  *
  * \section Poses
- * JOINTS: A list of joint positions in ROS units (radians, meters) \n
- * QUATERNION: A cartesian position with the orientation specified as a quaterniom. The form is "x y z w xx yy zz".  The
+ * joints: A list of joint positions in ROS units (radians, meters).  See trajectory_msgs/JointTrajectoryPoint \n
+ * quaternion: A cartesian position with the orientation specified as a quaterniom. The form is "x y z w xx yy zz".  The
  * x/y/z coordinates are given in mm.  \n
- * EULER_INTRINSIC_ZYX: A cartesian position with the orientation in euler angles.  The form is "x y z zz, yy, zz'" The
+ * euler_intrinsic_zyx: A cartesian position with the orientation in euler angles.  The form is "x y z zz, yy, zz'" The
  * x/y/z coordinates are in mm and rotations are in degrees.  @todo check if EULER_INTRINSIC_ZYX
  * is actually
  * the type keba uses.  There are so many ways to specify them like ZYZ, XYZ, etc
  *
  * \section Dynamics
- * Dyn: A normal Keba dynamic.  [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
- * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]
+ * dyn: A normal Keba dynamic.  [velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->),
+ * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]\n
+ * velros/accros: ROS velocity/accelerations.  Only usable with PTP motion.  See trajectory_msgs/JointTrajectoryPoint.\n
+ *
+ * \section ExamplesKebaTelnetTypes Examples
+ * A PTP move to a joint position with ROS accel and velocity.
+ * \code
+ * ptp joints : 1 2 3 4 5 6;velros : 0.1 0.2 0.3 0.4 0.5 0.6;accros : 1.1 1.2 1.3 1.4 1.5 1.6;
+ * \endcode
+ *
+ * A Linear move to a joint position with Keba dynamic
+ * \code
+ * lin joints : 1 -2.1 -1.3 -1.4 1.5 0 -0.3;dyn : 100 100 100 100 500 1000 1000 10000 1000 10000 10000 100000;
+ * \endcode
+ *
+ * A PTP move to a Quaternion with Keba dynamic
+ * \code
+ * ptp quaternion : 500 -600 365 0 0 1 0;dyn : 10 100 100 100 50 1000 1000 10000 1000 10000 10000 100000;
+ * \endcode
+ *
  *
  *
  * @page KebaRmiTypes Keba robot_movement_interface::Command formats
