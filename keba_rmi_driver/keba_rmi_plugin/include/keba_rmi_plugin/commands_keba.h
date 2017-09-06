@@ -162,6 +162,17 @@ using namespace rmi_driver;
  */
 namespace keba_rmi_plugin
 {
+class KebaException : public std::runtime_error
+{
+public:
+  explicit KebaException(const std::string &str) : std::runtime_error(str)
+  {
+  }
+  explicit KebaException(const char *str) : std::runtime_error(str)
+  {
+  }
+};
+
 /**
  * \brief A Keba Telnet Command.  Currently no different than the base.
  */

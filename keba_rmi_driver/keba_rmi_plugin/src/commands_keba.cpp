@@ -106,6 +106,64 @@ bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotComman
   return ret;
 }
 
+/**
+ * \brief Process any Aux joint values
+ *
+ * @todo Think about this.  I don't like this mixing of ros/keba values for a position but can't think of a better way
+ * to handle it right now.
+ *
+ * \details Look for entries matching the format "aux#:###" like "aux1:1234".  The value is directly set as the aux
+ * value without any conversion.  The units for the value must match the units on the PLC (degrees, mm).
+ * @param cmd_msg
+ * @param telnet_cmd
+ * @return True if there was some aux value
+ */
+bool processKebaAux(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
+{
+  bool ret = false;
+  std::vector<float> aux_values;
+
+  auto param_strings = cmd_msg.additional_parameters;
+
+  for (auto &&str_param : param_strings)
+  {
+    // Look for aux
+    if (boost::istarts_with(str_param, "aux"))
+    {
+      ret = true;
+      std::vector<std::string> str_split;
+
+      // Split it at the :
+      boost::split(str_split, str_param, boost::is_any_of(":"), boost::token_compress_on);
+
+      if (str_split.size() != 2)  // There should be 2 strings from the split
+      {
+        throw KebaException("keba_rmi_plugin::processKebaAux() failed: Size of split was wrong in: " + str_param);
+      }
+
+      for (auto &&str : str_split)  // Clean it up
+      {
+        boost::trim(str);
+        boost::to_lower(str);
+      }
+
+      try  // Make sure the value is actually a number
+      {
+        boost::lexical_cast<double>(str_split[1]);
+      }
+      catch (const boost::bad_lexical_cast &ex)
+      {
+        throw KebaException("keba_rmi_plugin::processKebaAux() failed: lexical_cast failed:  " +
+                            std::string(ex.what()));
+      }
+
+      telnet_cmd.addParam(str_split[0], str_split[1]);
+    }
+  }
+
+  return ret;
+}
+
 KebaCommandRegister::KebaCommandRegister() : commands_registered_(0), num_aux_joints_(0), num_main_joints_(0)
 {
   // registerCommands();
@@ -224,6 +282,16 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
     pose_temp[0] *= 1000.0;
     pose_temp[1] *= 1000.0;
     pose_temp[2] *= 1000.0;
+
+    try  // Check for aux values
+    {
+      processKebaAux(cmd_msg, *cmd_ptr);
+    }
+    catch (const std::exception &ex)
+    {
+      ROS_ERROR_STREAM("KebaCommandLin::processMsg processKebaAux failed: " << ex.what());
+      return nullptr;
+    }
   }
 
   cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
@@ -264,6 +332,7 @@ RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Comma
     pose_temp[0] *= 1000.0;
     pose_temp[1] *= 1000.0;
     pose_temp[2] *= 1000.0;
+    processKebaAux(cmd_msg, *cmd_ptr);
   }
 
   cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
