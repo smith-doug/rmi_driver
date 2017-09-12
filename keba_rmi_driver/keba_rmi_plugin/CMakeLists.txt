@@ -124,6 +124,7 @@ include_directories(include
 add_library(keba_rmi_plugin
   src/keba_rmi_plugin.cpp
   src/commands_keba.cpp
+  src/keba_util.cpp
 )
 
 target_link_libraries(keba_rmi_plugin ${catkin_LIBRARIES} )
