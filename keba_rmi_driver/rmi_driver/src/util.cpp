@@ -100,7 +100,7 @@ bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* ent
       return false;
 
     if (entry_index)
-      *entry_index++;
+      (*entry_index)++;
   }
 
   // A sample was given but no match was found.
