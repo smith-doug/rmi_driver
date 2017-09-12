@@ -356,15 +356,17 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
   auto conn = this;
   auto cmd_register = this->getCommandRegister();
 
+  ROS_INFO_STREAM(ns_ << " Received a new command_list of size: " << msg.commands.size());
+
+  // Temporary vector to hold processed commands in.  This allows me to abort and not add any commands if 1 in the list
+  // was bad.
+  std::vector<RobotCommandPtr> command_vect;
+
   if (msg.replace_previous_commands)
     conn->clearCommands();
 
   for (auto &&msg_cmd : msg.commands)
   {
-    std::string command_str = "";
-    std::string command_params = "";
-    std::ostringstream oss;
-
     // Find the appropriate handler
     auto handler = cmd_register->findHandler(msg_cmd);
 
@@ -376,8 +378,8 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       auto telnet_command_ptr = handler->processMsg(msg_cmd);
       if (!telnet_command_ptr)
       {
-        ROS_WARN_STREAM(ns_ << " Connector::commandListCb got a null telnet_command_ptr");
-        continue;
+        ROS_ERROR_STREAM(ns_ << " Connector::commandListCb got a null telnet_command_ptr");
+        goto error_abort;
       }
 
       // Set the RobotCommand's id to the id of the message for feedback later
@@ -386,7 +388,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       // Standard Cmds get added to the queue
       if (telnet_command_ptr->getType() == RobotCommand::CommandType::Cmd)
       {
-        conn->addCommand(telnet_command_ptr);
+        command_vect.push_back(telnet_command_ptr);
       }
       else  // A Get was received as part of a CommandList.
       {
@@ -403,12 +405,29 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       }
       continue;
     }
-    else
+    else  // if (!handler)
     {
-      std::cout << "Failed to find cmd handler\n";
+      ROS_ERROR_STREAM(ns_ << " Failed to find cmd handler for: " << msg_cmd);
+
+      /// @todo If I make an ABORT message mandatory, I could use that to actually make the robot stop.
+      if (abort_on_fail_to_find_)
+      {
+        goto error_abort;
+      }
     }
   }
 
+  // We made it here without errors so add all the commands to the list.
+  for (auto &&cmd : command_vect)
+  {
+    this->addCommand(cmd);
+  }
+  return true;
+
+error_abort:
+  ROS_ERROR_STREAM(ns_ << " Not adding any commands from this list and clearing any existing commands!");
+  command_vect.clear();
+  this->clearCommands();
   return true;
 }
 

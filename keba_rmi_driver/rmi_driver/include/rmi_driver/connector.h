@@ -212,6 +212,8 @@ protected:
   bool flush_socket_cmd_ = false;
 
   boost::asio::streambuf socket_cmd_flush_buff_;
+
+  bool abort_on_fail_to_find_ = true;  /// @todo Will all robot types have an ABORT command?
 };
 
 }  // namespace rmi_driver
