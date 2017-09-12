@@ -382,8 +382,9 @@ public:
    */
   void addHandler(std::unique_ptr<CommandHandler>&& handler)
   {
-    handler->setCommandRegister(this);
     command_handlers_.push_back(std::move(handler));
+    command_handlers_.back()->setCommandRegister(this);
+    command_handlers_.back()->initialize();
   }
 
   /**
@@ -398,6 +399,7 @@ public:
     // emplace will handle all of the stuff to create a unique_ptr
     command_handlers_.emplace_back(new T);
     command_handlers_.back()->setCommandRegister(this);
+    command_handlers_.back()->initialize();
   }
 
   /**
@@ -408,6 +410,7 @@ public:
   {
     command_handlers_.emplace_back(new CommandHandler(handler));
     command_handlers_.back()->setCommandRegister(this);
+    command_handlers_.back()->initialize();
   }
 
   /**

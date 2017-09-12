@@ -44,8 +44,15 @@ namespace keba_rmi_plugin
  */
 bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
-  if (cmd_msg.velocity_type.compare("DYN") == 0)
+  if (boost::iequals(cmd_msg.velocity_type, "DYN"))
   {
+    if (cmd_msg.velocity.size() != 12)
+    {
+      std::ostringstream oss;
+      oss << "keba_rmi_driver::processKebaDyn failed, dyn expects 12 entries but got " << cmd_msg.velocity.size();
+      throw KebaException(oss.str());
+    }
+
     telnet_cmd.addParam("dyn", RobotCommand::paramsToString(cmd_msg.velocity));
     return true;
   }
@@ -244,15 +251,20 @@ RobotCommandPtr KebaCommandGet::processMsg(const robot_movement_interface::Comma
 
 KebaCommandLin::KebaCommandLin()
 {
+}
+
+void KebaCommandLin::initialize()
+{
   handler_name_ = "KebaCommandLin";
 
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
-  // cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
 
   sample_command_ = cmd;
+  auto num_joints = getCommandRegister()->joint_names_.size();
+  sample_command_.pose = { 7, 6, (float)num_joints };
 }
 
 RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Command &cmd_msg) const
@@ -297,7 +309,15 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
   cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
 
   // ROS joint isn't enough for a Lin.  Only look for a DYN.
-  bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+  try
+  {
+    bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+  }
+  catch (const std::exception &ex)
+  {
+    ROS_ERROR_STREAM("KebaCommandLin::processMsg processKebaDyn failed: " << ex.what());
+    return nullptr;
+  }
 
   return cmd_ptr;
 }
@@ -308,10 +328,15 @@ KebaCommandPtp::KebaCommandPtp()
 
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
-  cmd.pose_type = "JOINTS|QUATERNION|EULER_INTRINSIC_ZYX";
-  // cmd.pose = { 0, 1, 2, 3, 4, 5, 6 };
+  cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
 
   sample_command_ = cmd;
+}
+
+void KebaCommandPtp::initialize()
+{
+  auto num_joints = getCommandRegister()->joint_names_.size();
+  sample_command_.pose = { 7, 6, (float)num_joints };
 }
 
 RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
@@ -337,12 +362,19 @@ RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Comma
 
   cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
 
-  bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
-
-  if (!had_a_keba_dyn)
+  try
   {
-    // Joint velo/accel is good enough for a PTP move
-    processRosDyn(cmd_msg, *cmd_ptr);
+    bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+    if (!had_a_keba_dyn)
+    {
+      // Joint velo/accel is good enough for a PTP move
+      processRosDyn(cmd_msg, *cmd_ptr);
+    }
+  }
+  catch (const std::exception &ex)
+  {
+    ROS_ERROR_STREAM("KebaCommandPtp::processMsg processKebaDyn failed: " << ex.what());
+    return nullptr;
   }
 
   return cmd_ptr;

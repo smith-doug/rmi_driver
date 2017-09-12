@@ -315,6 +315,8 @@ class KebaCommandLin : public KebaCommandHandler
 public:
   KebaCommandLin();
 
+  void initialize() override;
+
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
@@ -358,6 +360,8 @@ class KebaCommandPtp : public KebaCommandHandler
 {
 public:
   KebaCommandPtp();
+
+  void initialize() override;
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
