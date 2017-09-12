@@ -157,21 +157,47 @@ bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg
   int idx = 0;
   // Check strings for usage and equality
   // Check vectors for usage and length
+
   if (util::usedAndNotEqual(sample_command_.command_type, cmd_msg.command_type))
     return false;
 
   if (util::usedAndNotEqual(sample_command_.pose_reference, cmd_msg.pose_reference))
     return false;
 
+  // pose_type/pose
   if (util::usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type, &idx))
     return false;
-
   if (util::usedAndNotEqualIdx(idx, sample_command_.pose, cmd_msg.pose))
     return false;
-  //  if (util::usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
-  //    return false;
 
-  if (util::usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type))
+  // Velocity
+  if (util::usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type, &idx))
+    return false;
+  if (util::usedAndNotEqualIdx(idx, sample_command_.velocity, cmd_msg.velocity))
+    return false;
+
+  // Acceleration
+  if (util::usedAndNotEqual(sample_command_.acceleration_type, cmd_msg.acceleration_type, &idx))
+    return false;
+  if (util::usedAndNotEqualIdx(idx, sample_command_.acceleration, cmd_msg.acceleration))
+    return false;
+
+  // Force
+  if (util::usedAndNotEqual(sample_command_.force_threshold_type, cmd_msg.force_threshold_type, &idx))
+    return false;
+  if (util::usedAndNotEqualIdx(idx, sample_command_.force_threshold, cmd_msg.force_threshold))
+    return false;
+
+  // Effort
+  if (util::usedAndNotEqual(sample_command_.effort_type, cmd_msg.effort_type, &idx))
+    return false;
+  if (util::usedAndNotEqualIdx(idx, sample_command_.effort, cmd_msg.effort))
+    return false;
+
+  // Blending
+  if (util::usedAndNotEqual(sample_command_.blending_type, cmd_msg.blending_type, &idx))
+    return false;
+  if (util::usedAndNotEqualIdx(idx, sample_command_.blending, cmd_msg.blending))
     return false;
 
   return true;  // If it got this far it's a match
