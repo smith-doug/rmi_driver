@@ -154,6 +154,7 @@ CommandHandler::CommandHandler(const robot_movement_interface::Command& sample_c
 
 bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg)
 {
+  int idx = 0;
   // Check strings for usage and equality
   // Check vectors for usage and length
   if (util::usedAndNotEqual(sample_command_.command_type, cmd_msg.command_type))
@@ -162,11 +163,13 @@ bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg
   if (util::usedAndNotEqual(sample_command_.pose_reference, cmd_msg.pose_reference))
     return false;
 
-  if (util::usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type))
+  if (util::usedAndNotEqual(sample_command_.pose_type, cmd_msg.pose_type, &idx))
     return false;
 
-  if (util::usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
+  if (util::usedAndNotEqualIdx(idx, sample_command_.pose, cmd_msg.pose))
     return false;
+  //  if (util::usedAndNotEqual(sample_command_.pose, cmd_msg.pose))
+  //    return false;
 
   if (util::usedAndNotEqual(sample_command_.velocity_type, cmd_msg.velocity_type))
     return false;

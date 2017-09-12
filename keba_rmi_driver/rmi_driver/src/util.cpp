@@ -38,10 +38,12 @@ namespace util
 {
 std::string floatToStringNoTrailing(float fval, int precision)
 {
+  // Convert the value to a string with fixed precision
   std::ostringstream oss;
   oss << std::setprecision(precision) << std::fixed;
   oss << fval;
   auto str = oss.str();
+  // Remove extra trailing 0s or .
   boost::trim_right_if(str, boost::is_any_of("0"));
   boost::trim_right_if(str, boost::is_any_of("."));
 
@@ -53,15 +55,33 @@ std::vector<double> stringToDoubleVec(const std::string& s)
   std::vector<double> doubleVec;
   std::vector<std::string> strVec;
 
+  // Split the string at spaces into a vector of strings
   boost::split(strVec, s, boost::is_any_of(" "), boost::token_compress_on);
 
+  // Insert the double value of each entry
   std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec),
                  [](const std::string& val) { return boost::lexical_cast<double>(val); });
 
   return doubleVec;
 }
 
-bool usedAndNotEqual(const std::string& sample, const std::string& msg)
+bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const std::vector<float>& msg)
+{
+  // Check if the sample has anything
+  if (sample.size() == 0)
+    return false;
+
+  // An invalid index was given.
+  if (entry_index >= sample.size() || entry_index < 0)
+    return true;
+
+  // Get the value stored in sample[entry_index] and compare it with the size of msg
+  auto expected_size = std::lround(sample[entry_index]);
+
+  return msg.size() != expected_size;
+}
+
+bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* entry_index)
 {
   if (sample.length() <= 0)
     return false;
@@ -69,13 +89,23 @@ bool usedAndNotEqual(const std::string& sample, const std::string& msg)
   boost::char_separator<char> sep("|");
   boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
 
+  if (entry_index)
+    *entry_index = 0;
+
   // Eclipse complains about auto&& with a tokenizer?
   for (const std::string& entry : tok)
   {
     // Found an entry that matches.
     if (entry.compare(msg) == 0)
       return false;
+
+    if (entry_index)
+      *entry_index++;
   }
+
+  // A sample was given but no match was found.
+  if (entry_index)
+    *entry_index = 0;
   return true;
 }
 

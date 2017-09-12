@@ -241,6 +241,13 @@ public:
    */
   CommandHandler(const robot_movement_interface::Command& sample_command, CommandHandlerFunc f);
 
+  /**
+   * \brief Finish initializing any sample parameters that were not set up in the constructor.
+   *
+   * \details This is automatically called by CommandRegister::addHandler.  setCommandRegister will have already been
+   * called so you can use info from the CommandRegister.  This is useful if you need to add checks based on the number
+   * of joints.
+   */
   virtual void initialize()
   {
   }

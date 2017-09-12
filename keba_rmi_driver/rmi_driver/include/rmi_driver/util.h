@@ -47,10 +47,15 @@ namespace util
  */
 std::string floatToStringNoTrailing(float fval, int precision = 4);
 
+/**
+ * Convert a string of numbers separated by spaces into a vector of doubles.
+ * @param s string of numbers.  "1 2 3.53 56.563"
+ * @return Vector of doubles
+ */
 std::vector<double> stringToDoubleVec(const std::string& s);
 
 ///@{
-/**
+/*
  * \brief Check if the sample is used, then check if msg matches sample.
  *
  * \details Checks that the sample vector is not empty, then checks if the size of the 2 vectors is equal.
@@ -62,18 +67,37 @@ std::vector<double> stringToDoubleVec(const std::string& s);
  * @param msg The value from a message to check.
  * @return True if sample is used and not equal to msg.  This indicates a failure and the handler does not match.
  */
-template <typename T>
-bool usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
-{
-  return sample.size() > 0 && sample.size() != msg.size();
-}
+// template <typename T>
+// bool usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
+//{
+//  return sample.size() > 0 && sample.size() != msg.size();
+//}
 
 /**
- * \brief \copybrief usedAndNotEqual(const std::vector<T>& sample, const std::vector<T>& msg)
+ * \brief Check if a vector is used and if the number of entries matches the number stored in the same at position
+ * entry_index.
  *
- * \details Checks that the sample is not empty and for exact equality.
+ * This will check if sample.size() > 0 and lround(sample[entry_index]) == msg.size().
+ * @param entry_index Index of sample to check.
+ * @param sample Stored sample vector
+ * @param msg vector from the message
+ * @return True if sample is used and the size is not equal.  This indicates a failure and the handler does not match.
  */
-bool usedAndNotEqual(const std::string& sample, const std::string& msg);
+bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const std::vector<float>& msg);
+
+/**
+ * \brief Check if the sample is used, then check if msg matches sample.  Works with multiple sample entries.
+ *
+ * \details This will first check if the length of sample is > 0 to indicate that it is used.  It will then compare the
+ * value/values in sample with msg.  Multiple sample values can be entered by separating them with | .  Like
+ * "JOINTS|QUATERNION|XYZ".  If a pointer to entry_index is provided, it will give the index of the entry that was
+ * found.
+ * @param sample Stored sample.  Can be 1 entry like "JOINTS" or multiple entries like "JOINTS|QUATERNION"
+ * @param msg The received value
+ * @param entry_index Optional.  Store the index of the entry that was found.
+ * @return True if the sample
+ */
+bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* entry_index = 0);
 
 ///@}
 
