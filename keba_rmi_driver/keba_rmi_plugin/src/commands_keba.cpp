@@ -457,7 +457,7 @@ KebaCommandSync::KebaCommandSync()
   robot_movement_interface::Command cmd;
   cmd.command_type = "SYNC";
   cmd.pose_type = "SYNC_NUM";
-  cmd.pose = { 0 };
+  cmd.pose = { 1 };
   sample_command_ = cmd;
 }
 
