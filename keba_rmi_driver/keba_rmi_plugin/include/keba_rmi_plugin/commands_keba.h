@@ -209,7 +209,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.4");
+    static std::string version("0.0.5");
     return version;
   }
 
@@ -227,7 +227,7 @@ protected:
   int num_aux_joints_;
 
   /// Prevent commands from being registered again
-  bool commands_registered_;
+  bool commands_registered_ = false;
 };
 
 /**
@@ -433,6 +433,14 @@ class KebaCommandOvl : public KebaCommandHandler
 {
 public:
   KebaCommandOvl();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+class KebaCommandSetting : public KebaCommandHandler
+{
+public:
+  KebaCommandSetting();
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };

@@ -64,8 +64,9 @@ void KebaCommandRegister::registerCommandHandlers()
   this->addHandler<KebaCommandLin>();
 
   // Settings
-  this->addHandler<KebaCommandDyn>();
-  this->addHandler<KebaCommandOvl>();
+  // this->addHandler<KebaCommandDyn>();
+  // this->addHandler<KebaCommandOvl>();
+  this->addHandler<KebaCommandSetting>();
 
   // Other
   this->addHandler<KebaCommandAbort>();
@@ -206,7 +207,6 @@ void KebaCommandPtp::initialize()
 
 RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
-  std::cout << "reg size: " << getCommandRegister()->joint_names_.size() << std::endl;
   RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
 
   std::string command_str = "ptp " + boost::to_lower_copy(cmd_msg.pose_type);
@@ -291,6 +291,54 @@ RobotCommandPtr KebaCommandOvl::processMsg(const robot_movement_interface::Comma
   if (processKebaOvl(cmd_msg, *cmd_ptr))
   {
     cmd_ptr->setCommand(command_str, "");
+    return cmd_ptr;
+  }
+  else
+  {
+    return nullptr;
+  }
+}
+
+KebaCommandSetting::KebaCommandSetting()
+{
+  handler_name_ = "KebaCommandSetting";
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "SETTING";
+  // cmd.pose_type = "OVL";
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
+
+  cmd.blending = { 0, 1, 1, 1, 5 };
+
+  cmd.velocity_type = "|DYN";
+  cmd.velocity = { 0, 12 };
+
+  sample_command_ = cmd;
+}
+
+RobotCommandPtr KebaCommandSetting::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
+  std::string command_str = "setting";
+
+  bool has_dyn = false;
+  bool has_ovl = false;
+
+  cmd_ptr->setCommand(command_str, "");
+
+  try
+  {
+    has_ovl = processKebaOvl(cmd_msg, *cmd_ptr);
+    has_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+  }
+  catch (const std::exception &ex)
+  {
+    ROS_ERROR_STREAM("KebaCommandSetting::processMsg failed: " << ex.what());
+    return nullptr;
+  }
+
+  if (has_ovl || has_dyn)
+  {
     return cmd_ptr;
   }
   else
