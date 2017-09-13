@@ -83,14 +83,14 @@ bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const
 
 bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* entry_index)
 {
+  if (entry_index)
+    *entry_index = 0;
+
   if (sample.length() <= 0)
     return false;
 
-  boost::char_separator<char> sep("|");
+  boost::char_separator<char> sep("|", "", boost::keep_empty_tokens);
   boost::tokenizer<boost::char_separator<char>, std::string::const_iterator, std::string> tok(sample, sep);
-
-  if (entry_index)
-    *entry_index = 0;
 
   // Eclipse complains about auto&& with a tokenizer?
   for (const std::string& entry : tok)
