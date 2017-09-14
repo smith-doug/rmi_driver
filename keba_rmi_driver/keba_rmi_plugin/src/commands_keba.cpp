@@ -245,69 +245,14 @@ RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Comma
   return cmd_ptr;
 }
 
-KebaCommandDyn::KebaCommandDyn()
-{
-  handler_name_ = "KebaCommandDyn";
-
-  robot_movement_interface::Command cmd;
-  cmd.command_type = "SETTING";
-  cmd.pose_type = "DYN";
-  cmd.velocity_type = "DYN";
-
-  sample_command_ = cmd;
-}
-
-RobotCommandPtr KebaCommandDyn::processMsg(const robot_movement_interface::Command &cmd_msg) const
-{
-  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
-  std::string command_str = "setting dyn";
-  if (cmd_msg.velocity_type.compare("DYN") == 0)
-  {
-    processKebaDyn(cmd_msg, *cmd_ptr);
-  }
-
-  cmd_ptr->setCommand(command_str, "");
-
-  return cmd_ptr;
-}
-
-KebaCommandOvl::KebaCommandOvl()
-{
-  handler_name_ = "KebaCommandOvl";
-
-  robot_movement_interface::Command cmd;
-  cmd.command_type = "SETTING";
-  cmd.pose_type = "OVL";
-  cmd.blending_type = "%|OVLABS|OVLREL|OVLSUPPOS";
-
-  sample_command_ = cmd;
-}
-
-RobotCommandPtr KebaCommandOvl::processMsg(const robot_movement_interface::Command &cmd_msg) const
-{
-  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
-  std::string command_str = "setting ovl";
-
-  if (processKebaOvl(cmd_msg, *cmd_ptr))
-  {
-    cmd_ptr->setCommand(command_str, "");
-    return cmd_ptr;
-  }
-  else
-  {
-    return nullptr;
-  }
-}
-
 KebaCommandSetting::KebaCommandSetting()
 {
   handler_name_ = "KebaCommandSetting";
 
   robot_movement_interface::Command cmd;
-  cmd.command_type = "SETTING";
-  // cmd.pose_type = "OVL";
-  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
 
+  // blending and dyn are both optional
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
   cmd.blending = { 0, 1, 1, 1, 5 };
 
   cmd.velocity_type = "|DYN";
@@ -337,6 +282,7 @@ RobotCommandPtr KebaCommandSetting::processMsg(const robot_movement_interface::C
     return nullptr;
   }
 
+  // Something has to be set or the msg isn't worth sending
   if (has_ovl || has_dyn)
   {
     return cmd_ptr;
