@@ -84,10 +84,7 @@ std::string RobotCommand::toString(bool append_newline) const
 
 bool RobotCommand::checkResponse(std::string& response) const
 {
-  if (response.compare("error") != 0)
-    return true;
-  else
-    return false;
+  return !boost::istarts_with(response, "error");
 }
 
 void RobotCommand::makeCommand(CommandType type, std::string command, std::string params, bool erase_params)
@@ -209,20 +206,44 @@ std::ostream& CommandHandler::dump(std::ostream& o) const
 
   if (sample_command_.command_type.length() > 0)
     o << "command_type:" << sample_command_.command_type << std::endl;
-
   if (sample_command_.pose_reference.length() > 0)
     o << "pose_reference:" << sample_command_.pose_reference << std::endl;
+
+  // Pose
   if (sample_command_.pose_type.length() > 0)
     o << "pose_type:" << sample_command_.pose_type << std::endl;
+  if (sample_command_.pose.size() > 0)
+    o << "pose (size):" << sample_command_.pose.size() << std::endl;
 
+  // Velocity
   if (sample_command_.velocity_type.length() > 0)
     o << "velocity_type:" << sample_command_.velocity_type << std::endl;
-
   if (sample_command_.velocity.size() > 0)
     o << "velocity (size):" << sample_command_.velocity.size() << std::endl;
 
-  if (sample_command_.pose.size() > 0)
-    o << "pose (size):" << sample_command_.pose.size() << std::endl;
+  // Acceleration
+  if (sample_command_.acceleration_type.length() > 0)
+    o << "velocity_type:" << sample_command_.acceleration_type << std::endl;
+  if (sample_command_.acceleration.size() > 0)
+    o << "velocity (size):" << sample_command_.acceleration.size() << std::endl;
+
+  // force threshold
+  if (sample_command_.force_threshold_type.length() > 0)
+    o << "force_threshold_type:" << sample_command_.force_threshold_type << std::endl;
+  if (sample_command_.force_threshold.size() > 0)
+    o << "force_threshold (size):" << sample_command_.force_threshold.size() << std::endl;
+
+  // effort
+  if (sample_command_.effort_type.length() > 0)
+    o << "effort_type:" << sample_command_.effort_type << std::endl;
+  if (sample_command_.effort.size() > 0)
+    o << "effort (size):" << sample_command_.effort.size() << std::endl;
+
+  // blending
+  if (sample_command_.blending_type.length() > 0)
+    o << "blending_type:" << sample_command_.blending_type << std::endl;
+  if (sample_command_.blending.size() > 0)
+    o << "blending (size):" << sample_command_.blending.size() << std::endl;
 
   return o;
 }

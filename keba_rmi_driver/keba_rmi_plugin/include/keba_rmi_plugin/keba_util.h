@@ -76,6 +76,8 @@ bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotComman
  */
 bool processKebaAux(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd);
 
+// bool processKebaPose(const robot_movement_interface::Command &cmd_msg, std::string &pose_value_str);
+
 }  // namespace keba_rmi_plugin
 
 #endif /* INCLUDE_KEBA_RMI_PLUGIN_KEBA_UTIL_H_ */

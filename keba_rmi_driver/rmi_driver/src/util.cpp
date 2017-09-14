@@ -67,12 +67,20 @@ std::vector<double> stringToDoubleVec(const std::string& s)
 
 bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const std::vector<float>& msg)
 {
+  // If there is a message then there must be a valid index
+  // @todo This seems safer, but then it's not "ignoring" the entry.
+  //  if (msg.size() > 0)
+  //  {
+  //    if (entry_index < 0 || entry_index >= sample.size())
+  //      return true;
+  //  }
+
   // Check if the sample has anything
   if (sample.size() == 0)
     return false;
 
-  // An invalid index was given.
-  if (entry_index >= sample.size() || entry_index < 0)
+  // Make sure the index is valid
+  if (entry_index < 0 || entry_index >= sample.size())
     return true;
 
   // Get the value stored in sample[entry_index] and compare it with the size of msg
@@ -105,7 +113,8 @@ bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* ent
 
   // A sample was given but no match was found.
   if (entry_index)
-    *entry_index = 0;
+    *entry_index = -1;  // Redundant since commandhandler matching will stop after the 1st fail?
+
   return true;
 }
 

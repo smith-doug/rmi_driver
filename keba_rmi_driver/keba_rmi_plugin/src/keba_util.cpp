@@ -100,6 +100,7 @@ bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotComman
   return ret;
 }
 
+// Process any Aux joint values
 bool processKebaAux(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
   bool ret = false;

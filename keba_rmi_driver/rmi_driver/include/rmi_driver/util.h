@@ -50,7 +50,7 @@ std::string floatToStringNoTrailing(float fval, int precision = 4);
 /**
  * Convert a string of numbers separated by spaces into a vector of doubles.
  * @param s string of numbers.  "1 2 3.53 56.563"
- * @return Vector of doubles
+ * @return Vector of doubles {1, 2, 3.53, 56.563}
  */
 std::vector<double> stringToDoubleVec(const std::string& s);
 

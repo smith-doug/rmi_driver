@@ -41,20 +41,19 @@ namespace rmi_driver
 /**
  * \brief Commands that will be sent to the robot controller as strings.
  *
- * @todo come up with a better name.  It's confusing since there is already robot_movement_interface/Command
- *
  * Commands contain a list of pairs of strings.  The pairs represent a command/parameters with optional values.  At
  * command string (with optional values) is required.  Additional parameter pairs can be added.  toString is used to
  * create the actual string to the robot.  << is overridden for easier stream console output.
  *
  * Default string format:
  * \code
- * <command>[ : <values>]; [\<param>[: <values>];]
+ * <command>[ : <values>]; [<param>[: <values>];]
  * \endcode
  *
  * Examples: \n
  * "ptp : 1 2 3 4 5 6;"  A ptp move \n
- * "ptp : 1 2 3 4 5 6; speed : 100;" A ptp move with the speed parameter specified
+ * "ptp : 1 2 3 4 5 6; speed : 100;" A ptp move with the speed parameter specified \n
+ * "setting; speed : 100; overlap : 100;" A setting command that will set both the speed and overlap
  */
 class RobotCommand
 {
@@ -137,6 +136,8 @@ public:
   /**
    * \brief Prepare the string to send to the robot.
    *
+   * See RobotCommand for the default format.
+   *
    * @todo rethink this now that option params can be entered.  Or just make it virtual and leave it for someone else to
    * think about!
    * @return The full, formatted string that will be send to the robot
@@ -144,7 +145,7 @@ public:
   virtual std::string toString(bool append_newline = true) const;
 
   /**
-   * Check the reponse of a command.  By default it just checks if the response is "error".
+   * Check the response of a command.  By default it just checks if the response is "error".
    *
    * @param response The string returned by the robot
    * @return True if the response is OK
@@ -365,10 +366,6 @@ public:
   {
   }
 
-  //  virtual void initialize()
-  //  {
-  //  }
-
   /**
    * @todo this should be used like the v2 industrial client's joint map to support multiple robots
    *
@@ -439,10 +436,13 @@ public:
 
 protected:
   /**
-     * Create commands and put them in the command_handlers_ vector.
-     */
+   * \brief Use addHandler to create and add new CommandHandlers to this register.
+   *
+   *
+   */
   virtual void registerCommandHandlers() = 0;
 
+  /// Vector of all registered command handlers
   CommandHandlerPtrVec command_handlers_;
 };
 
