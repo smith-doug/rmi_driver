@@ -120,6 +120,11 @@ using namespace rmi_driver;
  * DYN: A full Keba dynamic.  This specifies both the velocity and accelerations.  [velAxis(0..100->), accAxis, decAxis,
  * jerkAxis, vel(mm/s->),
  * acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri]\n
+ * Example:
+ * \code
+ * velocity_type: DYN
+   velocity: [100.0, 100.0, 100.0, 100.0, 50.0, 1000.0, 1000.0, 10000.0, 1000.0, 10000.0, 10000.0, 100000.0]
+ * \endcode
  * ROS: ROS style speeds for each joint.  Cannot be used with Lin moves.  Using this without also specifying ROS as the
  * acceleration_type could lead to undesired behavior.  Used by the standard joint_trajectory_action.
  *
@@ -129,9 +134,18 @@ using namespace rmi_driver;
  * velocity_type could lead to undesired behavior.  Used by the standard joint_trajectory_action.
  *
  * \par blending_type:
- * %/OVLREL: Relative overlapping.  A number between 0 and 200 [0-200]\n
+ * % or OVLREL: Relative overlapping.  A number between 0 and 200 [0-200]\n
  * OVLSUPPOS: Superposition overlapping.  A number between 0 and 200 [0-200]\n
+ * Example:
+ * \code
+ *  blending_type: 'OVLREL'
+    blending: [50]
+ * \endcode
  * OVLABS: Absolute overlapping.  5 numbers.  [posDist, oriDist, linAxDist, rotAxDist, vConst(boolean)\n
+ * \code
+ * blending_type: 'OVLABS'
+   blending: [10, 360, 1000, 360, 0]
+ * \endcode
  *
  */
 
@@ -437,6 +451,61 @@ public:
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+/**
+ * \brief Calls functions in Kairo Settings category.  Currently Dyn, Ovl
+ *
+ * This handler is used to call functions found in the Settings category.  You can specify settings in individual
+ * messages or combine them.  You must specify at least 1.
+ *
+ * See \link KebaRmiTypesDynamics Keba Dynamic Types\endlink for more details on the types supported by Dyn and Ovl.
+ *
+ * \par Required:
+ * command_type: SETTING
+ *
+ *
+ * \par Dynamics:
+ * Set a Dyn for all future unspecified moves.  This is the same as calling Dyn() on the pendant.  ROS velocities aren't
+ * supported.   \n
+ * Required:\n
+ * velocity_type: DYN\n
+ * velocity: See \link KebaRmiTypesDynamics Keba Dynamic Types.\endlink
+ *
+ * \par Overlap:
+ * Set an Ovl for all future unspecified moves.  This is the same as calling Ovl() on the pendant.  %/OVLREL, OVLSUPPOS,
+ * and OVLABS are supported.\n
+ * Required:\n
+ * blending_type: %|OVLREL|OVLSUPPOS|OVLABS\n
+ * blending: See \link KebaRmiTypesDynamics Keba Dynamic Types\endlink
+ *
+ *
+ * \par Examples:
+ * 1. Set a Dynamic\n
+ * \code
+ * command_type: 'SETTING'
+ * velocity_type: DYN
+ * velocity: [100, 100, 100, 100, 150, 500, 500, 10000, 360, 900, 900, 3600]
+ * \endcode
+ * Command::toString(): "setting; dyn : 100 100 100 100 150 500 500 500 10000 360 900 900 3600;"
+ *
+ * 2. Set an overlap\n
+ * \code
+ * command_type: 'SETTING'
+ * blending_type: 'OVLABS'
+ * blending: [10, 360, 1000, 360, 0]
+ * \endcode
+ * Command::toString(): "setting;ovlabs : 10 360 1000 360 0;"
+ *
+ * 3. Set both a Dynamic and Overlap\n
+ * \code
+ * command_type: 'SETTING'
+ * velocity_type: DYN
+ * velocity: [100, 100, 100, 100, 150, 500, 500, 10000, 360, 900, 900, 3600]
+ * blending_type: 'OVLABS'
+ * blending: [10, 360, 1000, 360, 0]
+ * \endcode
+ * Command::toString(): "setting;ovlabs : 10 360 1000 360 0;dyn : 100 100 100 100 150 10000 10000 1000000 10000 10000
+ * 10000 100000;"
+ */
 class KebaCommandSetting : public KebaCommandHandler
 {
 public:
