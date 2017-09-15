@@ -169,8 +169,7 @@ using namespace rmi_driver;
  * Available commands:\n
  * LIN KebaCommandLin\n
  * PTP KebaCommandPtp\n
- * DYN KebaCommandDyn\n
- * OVL KebaCommandOvl\n
+ * SETTING KebaCommandSetting\n
  * WAIT KebaCommandWait\n
  * SYNC KebaCommandSync\n
  */
@@ -395,14 +394,14 @@ public:
  * \par Dynamics:
  * Set a Dyn for all future unspecified moves.  This is the same as calling Dyn() on the pendant.  ROS velocities aren't
  * supported.   \n
- * Required:\n
+ * \par Required if setting a dynamic:\n
  * velocity_type: DYN\n
  * velocity: See \link KebaRmiTypesDynamics Keba Dynamic Types.\endlink
  *
  * \par Overlap:
  * Set an Ovl for all future unspecified moves.  This is the same as calling Ovl() on the pendant.  %/OVLREL, OVLSUPPOS,
  * and OVLABS are supported.\n
- * Required:\n
+ * Required if setting an overlap:\n
  * blending_type: %|OVLREL|OVLSUPPOS|OVLABS\n
  * blending: See \link KebaRmiTypesDynamics Keba Dynamic Types\endlink
  *
@@ -443,6 +442,22 @@ public:
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+/**
+ * \brief Stops the robot and clears any remaining path.
+ *
+ * This handler will trigger the AbortMonitor function.  It is sent over the Get channel to immediately stop the robot.
+ *
+ *
+ * \warning Abort should always be called by itself with replace_previous_commands = True.  Not setting
+ * replace_previous_commands
+ * could lead to undesired behavior.
+ *
+ * \par Required:
+ * command_type: ABORT
+ *
+ * Command::toString(): "abort;"
+ *
+ */
 class KebaCommandAbort : public KebaCommandHandler
 {
 public:

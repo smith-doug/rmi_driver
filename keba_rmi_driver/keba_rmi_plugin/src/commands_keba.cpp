@@ -64,8 +64,6 @@ void KebaCommandRegister::registerCommandHandlers()
   this->addHandler<KebaCommandLin>();
 
   // Settings
-  // this->addHandler<KebaCommandDyn>();
-  // this->addHandler<KebaCommandOvl>();
   this->addHandler<KebaCommandSetting>();
 
   // Other
