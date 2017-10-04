@@ -30,7 +30,7 @@ from trajectory_msgs.msg import JointTrajectory
 from robot_movement_interface.msg import *
 from sensor_msgs.msg	 import JointState
 
-conf_joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint', 'rail_to_base']
+conf_joint_names = ['rob2_shoulder_pan_joint', 'rob2_shoulder_lift_joint', 'rob2_elbow_joint', 'rob2_wrist_1_joint', 'rob2_wrist_2_joint', 'rob2_wrist_3_joint']
 lock = thread.allocate_lock()
 joint_states = JointState()
 
@@ -82,9 +82,9 @@ class MoveItAction(object):
 
 	# Action initialisation
 	def __init__(self, name):
-		self.publisher = rospy.Publisher('command_list',CommandList)
+		self.publisher = rospy.Publisher('/rob2/command_list',CommandList)
 		self._action_name = name
-		self._as = actionlib.SimpleActionServer(self._action_name, FollowJointTrajectoryAction, execute_cb=self.execute_cb, auto_start = False)
+		self._as = actionlib.SimpleActionServer('/rob2/ur_joint_trajectory_action', FollowJointTrajectoryAction, execute_cb=self.execute_cb, auto_start = False)
 		self._as.start()
 
 	# Action callback
@@ -114,12 +114,16 @@ class MoveItAction(object):
 			command.pose = point.positions
 			command.blending_type = ''
 			#command.blending = [10
-			command.velocity_type = '%'
+			command.velocity_type = 'ROS'
 			command.velocity = point.velocities
 			if goal.trajectory.points.index(point) == len(goal.trajectory.points) - 1:
 				command.blending = [0.0]
 			else:
 				command.blending = [conf_blending]
+				
+			command.acceleration_type = 'ROS'
+			command.acceleration = point.accelerations
+			
 			command.additional_values = [point.time_from_start.to_sec() - last_point.time_from_start.to_sec()]
 
 			trajectory.commands.append(command)	
@@ -161,7 +165,7 @@ class MoveItAction(object):
 		# ---------------------------------------
 
 if __name__ == '__main__':
-	rospy.init_node('ur_joint_trajectory_action')
+	rospy.init_node('ur_joint_trajectory_action2')
 	rospy.Subscriber('joint_states', JointState, joint_states_callback)
 	MoveItAction(rospy.get_name())
 	rospy.spin()
