@@ -55,6 +55,9 @@ bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, RobotComma
 // Check for overlaps and add them to params if found
 bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
+  if (cmd_msg.blending_type.length() < 1)
+    return false;
+
   auto blending_type = boost::to_lower_copy(cmd_msg.blending_type);
 
   auto blending = cmd_msg.blending;
@@ -77,6 +80,10 @@ bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotComma
   else if (boost::iequals(cmd_msg.blending_type, "OVLABS"))
   {
     // Check stuff.
+  }
+  else
+  {
+    return false;
   }
 
   telnet_cmd.addParam(boost::to_lower_copy(blending_type), RobotCommand::paramsToString(blending));

@@ -249,6 +249,8 @@ KebaCommandSetting::KebaCommandSetting()
 
   robot_movement_interface::Command cmd;
 
+  cmd.command_type = "SETTING";
+
   // blending and dyn are both optional
   cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
   cmd.blending = { 0, 1, 1, 1, 5 };
