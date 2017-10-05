@@ -145,6 +145,7 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
   {
     // Check if the pose size is smaller than the number of joints
     // This should probably be if != but I have too many test bags that have more joints
+    // @todo change this now that I have the python tester
     if (cmd_msg.pose.size() < cmd_register->joint_names_.size())
     {
       ROS_ERROR_STREAM("Invalid KebaCommandLin message: cmd_msg.pose.size() " << cmd_msg.pose.size()
@@ -172,10 +173,13 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
 
   cmd_ptr->setCommand(command_str, RobotCommand::paramsToString(pose_temp));
 
-  // ROS joint isn't enough for a Lin.  Only look for a DYN.
   try
   {
-    bool had_a_keba_dyn = processKebaDyn(cmd_msg, *cmd_ptr);
+    // ROS joint isn't enough for a Lin.  Only look for a DYN.
+    processKebaDyn(cmd_msg, *cmd_ptr);
+
+    // Process any overlapping
+    processKebaOvl(cmd_msg, *cmd_ptr);
   }
   catch (const std::exception &ex)
   {
@@ -233,6 +237,9 @@ RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Comma
       // Joint velo/accel is good enough for a PTP move
       processRosDyn(cmd_msg, *cmd_ptr);
     }
+
+    // Process any overlapping
+    processKebaOvl(cmd_msg, *cmd_ptr);
   }
   catch (const std::exception &ex)
   {
