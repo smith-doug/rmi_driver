@@ -33,10 +33,93 @@
 # This can be used to more easily test the supported commands.
 # You should use 'git update-index --skip-worktree' on this file if you want to change it.
 
-import rospy
+#import rospy
 import keba_rmi
 
 from keba_rmi import *
+
+#===============================================================================
+# Global kairo variables (_globalvars.tid)
+#===============================================================================
+
+# settings
+dFast = DYNAMIC([100, 100, 100, 100, 500, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
+dMedium = DYNAMIC([50, 50, 50, 50, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
+dSlow = DYNAMIC([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
+
+os200 = OVLSUPPOS(200)
+os0 = OVLSUPPOS(0)
+or200 = OVLREL(200)
+oa10 = OVLABS([10, 360, 10, 10, 0])
+
+# Positions
+apHome = RmiPosJoints([0.0, -2.0999999046325684, -1.2999999523162842, -1.399999976158142, 1.5, 0.0, -0.30000001192092896])
+qPos1 = RmiPosQuaternion([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
+qPos2 = RmiPosQuaternion([0.5, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
+
+# The robot
+rob = keba_rmi.default_rob
+
+
+#===============================================================================
+# Programs
+#===============================================================================
+
+
+def move_square_generic():
+    '''
+    Move the robot in a square.  You can change ovlToUse/dynToUse to test.  Uses the more generic function names. 
+    '''
+
+    ovlToUse = oa10
+    dynToUse = dMedium
+
+    qSquare1 = RmiPosQuaternion([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare2 = RmiPosQuaternion([0.6, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare3 = RmiPosQuaternion([0.6, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare4 = RmiPosQuaternion([0.3, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+
+    rob.ProgStart()
+
+    rob.Settings(dMedium, os200)    # Dyn(dMedium) and Ovl(os200)
+    rob.MoveJ(apHome)  # PTP(apHome)
+
+    rob.MoveJ(qSquare1, dynToUse, ovlToUse)  # PTP(qSquare1, dynToUse, ovlToUse)
+    rob.MoveL(qSquare2, dynToUse, ovlToUse)  # Lin(qSquare2, dynToUse, ovlToUse)
+    rob.MoveL(qSquare3, dynToUse, ovlToUse)  # Lin(qSquare3, dynToUse, ovlToUse)
+    rob.MoveL(qSquare4, dynToUse, ovlToUse)  # Lin(qSquare4, dynToUse, ovlToUse)
+    rob.MoveL(qSquare1, dynToUse, ovlToUse)  # Lin(qSquare1, dynToUse, ovlToUse)
+
+    rob.ProgRun()
+
+
+def move_square():
+    '''
+    Move the robot in a square.  You can change ovlToUse/dynToUse to test.
+    '''
+
+    ovlToUse = oa10
+    dynToUse = dMedium
+
+    qSquare1 = QUATPOS([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare2 = QUATPOS([0.6, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare3 = QUATPOS([0.6, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare4 = QUATPOS([0.3, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+
+    rob.ProgStart()
+
+    Dyn(dMedium)
+    Ovl(os200)
+
+    PTP(apHome)  # PTP(apHome)
+
+    PTP(qSquare1, dynToUse, ovlToUse)  # PTP(qSquare1, dynToUse, ovlToUse)
+    Lin(qSquare2, dynToUse, ovlToUse)  # Lin(qSquare2, dynToUse, ovlToUse)
+    Lin(qSquare3, dynToUse, ovlToUse)  # Lin(qSquare3, dynToUse, ovlToUse)
+    Lin(qSquare4, dynToUse, ovlToUse)  # Lin(qSquare4, dynToUse, ovlToUse)
+    Lin(qSquare1, dynToUse, ovlToUse)  # Lin(qSquare1, dynToUse, ovlToUse)
+
+    rob.ProgRun()
 
 
 if __name__ == '__main__':
@@ -45,33 +128,4 @@ if __name__ == '__main__':
 
     rospy.logout('Starting rmi python commander')
 
-    rob = keba_rmi.RobotPost()
-
-    # settings
-    dFast = keba_rmi.RmiDyn([100, 100, 100, 100, 500, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
-    dMedium = RmiDyn([50, 50, 50, 50, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
-    dSlow = keba_rmi.RmiDyn([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
-
-    os200 = RmiOvlSuppos(200)
-    os0 = RmiOvlSuppos(0)
-
-    # Positions
-    apHome = RmiPosJoints([0.0, -2.0999999046325684, -1.2999999523162842, -1.399999976158142, 1.5, 0.0, -0.30000001192092896])
-    qPos1 = RmiPosQuaternion([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
-
-    # Program
-    rob.ProgStart()
-
-    rob.Settings(dMedium, os200)
-    rob.MoveJ(apHome)
-    rob.MoveJ(qPos1)
-
-    rob.Settings(overlap=os0)
-    rob.MoveJ(keba_rmi.RmiPosJoints([1.0, -1.1, -1.3, -1.4, 1.5, 0, -0.3]))
-
-    rob.MoveL(qPos1, dMedium)
-
-    rob.ProgRun()
-
-    # Give the topic a chance to publish
-    # rospy.sleep(2)
+    move_square()

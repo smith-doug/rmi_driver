@@ -31,16 +31,19 @@
 
 
 # This started as an implementation of the robodk processor but it wasn't flexible enough.
+# See the global define section at the bottom for Kairo compatibility
 
 # Todo: Stuff.  This was made in a couple hours.
 from robot_movement_interface import msg as rmi_msg
 import rospy
-
+import functools
 
 # ----------------------------------------------------
 
 
 # Positions
+
+
 class RmiPos(object):
     def __init__(self, pose, pose_type='', aux_values=None):
         ':type aux_values: list[str]'
@@ -125,7 +128,7 @@ class RmiOvlSuppos(RmiBlending):
 
 class RmiOvlAbs(RmiBlending):
     def __init__(self, blending):
-        'type blending: list[int]'
+        'type blending: list[float]'
         RmiBlending.__init__(self, blending, 'OVLABS')
 
 
@@ -261,3 +264,46 @@ class RobotPost(object):
             overlap.SetCmd(cmd)
 
         self.cmd_list.commands.append(cmd)
+
+
+#===============================================================================
+# Global defines for Kairo look and feel
+#===============================================================================
+default_rob = RobotPost()
+
+# Positions
+CARTPOS = RmiPosEulerZyx  # ([x, y, z, a, b, c], aux_values=None)
+QUATPOS = RmiPosQuaternion  # ([x, y, z, rw, rx, ry, rz], aux_values=None)
+AXISPOS = RmiPosJoints  # ([a1, a2, ...], aux_values=None)
+
+#Dynamics and Overlaps
+OVLABS = RmiOvlAbs  # ([posDist, oriDist, linAxDist, rotAxDist, vConst(boolean)])
+OVLSUPPOS = RmiOvlSuppos  # (ovl %)
+OVLREL = RmiOvlRel  # (ovl %)
+DYNAMIC = RmiDyn  # ([velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->), acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri])
+
+# Commands
+Lin = default_rob.MoveL  # (pose, dynamic=None, overlap=None)
+PTP = default_rob.MoveJ  # (pose, dynamic=None, overlap=None)
+Settings = default_rob.Settings  # (dynamic=None, overlap=None)
+
+
+def Dyn(dynamic):
+    '''
+    calls Dyn
+    :param dynamic: the dynamic
+    :type dynamic: RmiDyn
+    '''
+    default_rob.Settings(dynamic=dynamic)
+
+
+def Ovl(overlap):
+    '''
+    calls Ovl
+    :param overlap: OVERLAP_
+    :type overlap: RmiBlending
+    '''
+    default_rob.Settings(overlap=overlap)
+
+
+#------------------------------------------------------------------------------
