@@ -222,7 +222,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.5");
+    static std::string version("0.0.6");
     return version;
   }
 
