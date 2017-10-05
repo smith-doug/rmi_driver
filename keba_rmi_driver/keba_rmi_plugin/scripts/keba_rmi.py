@@ -30,12 +30,11 @@
 #  */
 
 
-# This started as an implementation of the robodk processor but it wasn't flexible enough.  
+# This started as an implementation of the robodk processor but it wasn't flexible enough.
 
 # Todo: Stuff.  This was made in a couple hours.
 from robot_movement_interface import msg as rmi_msg
 import rospy
-
 
 
 # ----------------------------------------------------
@@ -47,194 +46,206 @@ class RmiPos(object):
         ':type aux_values: list[str]'
         self.pose = pose
         self.pose_type = pose_type
-        
+
         self.aux_values = []
         if aux_values is not None:
             self.aux_values = aux_values
-    
+
     def SetCmd(self, cmd):
         ':param rmi_msg.Command cmd:'
         # assert isinstance(cmd, Command)
         cmd.pose = self.pose
         cmd.pose_type = self.pose_type
-        
+
         for aux in self.aux_values:
-            cmd.additional_parameters.append(aux)   
-        
-        
-        
-            
+            cmd.additional_parameters.append(aux)
+
+
 class RmiPosJoints(RmiPos):
-    def __init__(self, pose):        
+    def __init__(self, pose):
         # Joint positions don't have aux values
         super(RmiPosJoints, self).__init__(pose, 'JOINTS')
 
+
 class RmiPosQuaternion(RmiPos):
-    def __init__(self, pose, aux_values=None):                
+    def __init__(self, pose, aux_values=None):
         super(RmiPosQuaternion, self).__init__(pose, 'QUATERNION', aux_values)
 
-        
-class RmiPosEulerZyx(RmiPos):
-    def __init__(self, pose, aux_values=None):        
-        super(RmiPosEulerZyx, self).__init__(pose, 'EULER_INTRINSIC_ZYX', aux_values)
-        
-        
 
-        
-        
+class RmiPosEulerZyx(RmiPos):
+    def __init__(self, pose, aux_values=None):
+        super(RmiPosEulerZyx, self).__init__(pose, 'EULER_INTRINSIC_ZYX', aux_values)
+
+
 # Dynamics
+
 class RmiVelo(object):
     def __init__(self, velocity, velocity_type):
         self.velocity = velocity
         self.velocity_type = velocity_type
-        
+
     def SetCmd(self, cmd):
-        assert(isinstance(cmd, rmi_msg.Command))       
-        
-        
+        ':param rmi_msg.Command cmd:'
+        #assert(isinstance(cmd, rmi_msg.Command))
+
+
 class RmiDyn(RmiVelo):
     def __init__(self, dynamic):
         super(RmiDyn, self).__init__(dynamic, 'DYN')
-        
+
     def SetCmd(self, cmd):
         RmiVelo.SetCmd(self, cmd)
         cmd.velocity_type = self.velocity_type
         cmd.velocity = self.velocity
-        
-        
-        
+
+
 # Overlapping
 class RmiBlending(object):
     def __init__(self, blending, blending_type):
         self.blending_type = blending_type
         self.blending = blending
-        
+
+
 class RmiOvlRel(RmiBlending):
     def __init__(self, percent):
         ':type percent: int'
-        RmiBlending.__init__(self, [percent], 'OVLREL')        
+        RmiBlending.__init__(self, [percent], 'OVLREL')
 
-        
+
 class RmiOvlSuppos(RmiBlending):
     def __init__(self, percent):
         ':type percent: int'
         RmiBlending.__init__(self, [percent], 'OVLSUPPOS')
-        
+
+
 class RmiOvlAbs(RmiBlending):
     def __init__(self, blending):
         'type blending: list[int]'
         RmiBlending.__init__(self, blending, 'OBLABS')
 
-# ----------------------------------------------------    
+# ----------------------------------------------------
 # Object class that handles the robot instructions/syntax
-class RobotPost(object):    
-    
-    def __init__(self, topic='command_list'):        
-        
-        self.num_commands = 0  # Incremented at the start of every method that adds a command.  If it doesn't match the cmd_list.commands len there was a problem.
-        
+
+
+class RobotPost(object):
+
+    def __init__(self, topic_command='command_list', topic_result='command_result'):
+
+        # Incremented at the start of every method that adds a command.  If it doesn't match the cmd_list.commands len there was a problem.
+        self.num_commands = 0
+        self.num_results = 0
+
         self.cmd_list = rmi_msg.CommandList()
-        
-        self.pub = rospy.Publisher(topic, rmi_msg.CommandList, latch=True, queue_size=10)
-        
-    def ProgStart(self):   
+
+        self.pub = rospy.Publisher(topic_command, rmi_msg.CommandList, latch=True, queue_size=10)
+
+        self.sub = rospy.Subscriber(topic_result, rmi_msg.Result, callback=self.CommandResultCb)
+
+    def CommandResultCb(self, data):
+        ':type data: rmi_msg.Result'
+
+        res_str = 'OK(0)'
+        if data.result_code != 0:
+            res_str = 'ERROR(' + str(data.result_code) + '), ' + data.additional_information
+
+        rospy.logout('Result ' + str(self.num_results) + ': ' + res_str)
+        self.num_results += 1
+
+    def ProgStart(self):
         self.cmd_list = rmi_msg.CommandList()
-        
+        self.num_commands = 0
+
     def ProgRun(self):
         """Publish the command list"""
-      
+
+        self.num_results = 0
+
         assert(self.num_commands == len(self.cmd_list.commands))
         rospy.logout('Publishing a CommandList with ' + str(len(self.cmd_list.commands)) + ' commands')
+
+        for cmd_num, cmd in enumerate(self.cmd_list.commands):  # : :type cmd: rmi_msg.Command
+            rospy.logout('Command ' + str(cmd_num) + ': ' + cmd.command_type)
+
         self.pub.publish(self.cmd_list)
-        
-    
-        
+
+        while(self.num_results != self.num_commands and not rospy.is_shutdown()):
+            rospy.sleep(0.5)
+
+        rospy.logout('ProgRun exiting')
+
     def MoveJ(self, pose, dynamic=None, overlap=None):
         ':type pose: RmiPos'
         ':type dynamic: RmiVelo'
         ':type overlap: RmiBlending'
         ':type additional: RmiAdditionalParams'
-        
+
         """PTP moves
         
         """
-        
+
         self.num_commands += 1
-      
-        
-        cmd = rmi_msg.Command()        
+
+        cmd = rmi_msg.Command()
         cmd.command_type = "PTP"
-        
+
         if(isinstance(pose, RmiPos)):
             cmd.pose_type = pose.pose_type
-            cmd.pose = pose.pose                      
-        
-        if(isinstance(dynamic, RmiVelo)):     
-                 
+            cmd.pose = pose.pose
+
+        if(isinstance(dynamic, RmiVelo)):
+
             cmd.velocity = dynamic.velocity
             cmd.velocity_type = dynamic.velocity_type
-            
-        
-            
+
         if(len(cmd.pose_type) < 1):
             assert(False)
         else:
             self.cmd_list.commands.append(cmd)
-        
-        
-                    
+
     def MoveL(self, pose, dynamic=None, overlap=None):
-        ':param RmiPos pose:'
-        
+        ':type pose: RmiPos'
+        ':type dynamic: RmiVelo'
         """
         Lin moves
         """
- 
+
         self.num_commands += 1
-        
-        cmd = rmi_msg.Command()        
+
+        cmd = rmi_msg.Command()
         cmd.command_type = "LIN"
-        
+
         if(isinstance(pose, RmiPos)):
-            # cmd.pose_type = pose.pose_type
-            # cmd.pose = pose.pose
             pose.SetCmd(cmd)
-                                  
-                                  
-        
-        if(isinstance(dynamic, RmiVelo)):           
+
+        if isinstance(dynamic, RmiVelo):
+
             cmd.velocity = dynamic.velocity
-            cmd.velocity_type = dynamic.velocity_type    
-            
+            cmd.velocity_type = dynamic.velocity_type
+
         if(len(cmd.pose_type) < 1):
             pass
         else:
             self.cmd_list.commands.append(cmd)
-        
-    
+
     def Settings(self, dynamic=None, overlap=None):
         ':type dynamic: RmiVelo'
         ':type overlap: RmiBlending'
-        
+
         self.num_commands += 1
-        
+
         # Give me something
         assert(dynamic is not None or overlap is not None)
-        
-        cmd = rmi_msg.Command()  
+
+        cmd = rmi_msg.Command()
         cmd.command_type = "SETTING"
-        
+
         if(dynamic is not None):
             assert(isinstance(dynamic, RmiVelo))
             dynamic.SetCmd(cmd)
-            
-        
+
         if(overlap is not None):
             assert(isinstance(overlap, RmiBlending))
             cmd.blending = overlap.blending
             cmd.blending_type = overlap.blending_type
-            
-            
+
         self.cmd_list.commands.append(cmd)
-    
-        

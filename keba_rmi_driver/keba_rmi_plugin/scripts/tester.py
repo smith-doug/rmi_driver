@@ -30,64 +30,48 @@
 #  */
 
 
-#This can be used to more easily test the supported commands.
-#You should use 'git update-index --skip-worktree' on this file if you want to change it.
+# This can be used to more easily test the supported commands.
+# You should use 'git update-index --skip-worktree' on this file if you want to change it.
 
 import rospy
 import keba_rmi
 
 from keba_rmi import *
 
-   
-   
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
 
-    rospy.init_node('talker', anonymous=True)  
-    
+    rospy.init_node('talker', anonymous=True)
+
     rospy.logout('Starting rmi python commander')
-    
-    
+
     rob = keba_rmi.RobotPost()
-    
-    
-    #settings
+
+    # settings
     dFast = keba_rmi.RmiDyn([100, 100, 100, 100, 500, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
     dMedium = RmiDyn([50, 50, 50, 50, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
     dSlow = keba_rmi.RmiDyn([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
-    
-    os200 = RmiOvlSuppos(200)       
+
+    os200 = RmiOvlSuppos(200)
     os0 = RmiOvlSuppos(0)
-   
-    
-    #Positions
-    apHome = RmiPosJoints([0.0, -2.0999999046325684, -1.2999999523162842, -1.399999976158142, 1.5, 0.0, -0.30000001192092896])    
+
+    # Positions
+    apHome = RmiPosJoints([0.0, -2.0999999046325684, -1.2999999523162842, -1.399999976158142, 1.5, 0.0, -0.30000001192092896])
     qPos1 = RmiPosQuaternion([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
-    
-    
-    #Program    
+
+    # Program
     rob.ProgStart()
-    
+
     rob.Settings(dMedium, os200)
-    rob.MoveJ(apHome)    
+    rob.MoveJ(apHome)
     rob.MoveJ(qPos1)
-   
+
     rob.Settings(overlap=os0)
-    rob.MoveJ(keba_rmi.RmiPosJoints([1.0, -1.1, -1.3, -1.4, 1.5, 0, -0.3]))    
-    
-    
+    rob.MoveJ(keba_rmi.RmiPosJoints([1.0, -1.1, -1.3, -1.4, 1.5, 0, -0.3]))
+
     rob.MoveL(qPos1, dMedium)
-    
+
     rob.ProgRun()
-    
-    
-    #Give the topic a chance to publish
-    rospy.sleep(2)
-    
 
-
-
-
-
-
-
+    # Give the topic a chance to publish
+    # rospy.sleep(2)
