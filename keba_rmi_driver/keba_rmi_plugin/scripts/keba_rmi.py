@@ -265,6 +265,20 @@ class RobotPost(object):
 
         self.cmd_list.commands.append(cmd)
 
+    def WaitIsFinished(self):
+        '''
+        Call WaitIsFinished()
+        '''
+
+        self.num_commands += 1
+
+        cmd = rmi_msg.Command()
+        cmd.command_type = 'WAIT'
+        cmd.pose_type = 'IS_FINISHED'
+
+        self.cmd_list.commands.append(cmd)
+
+
 
 #===============================================================================
 # Global defines for Kairo look and feel
@@ -286,6 +300,8 @@ DYNAMIC = RmiDyn  # ([velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->)
 Lin = default_rob.MoveL  # (pose, dynamic=None, overlap=None)
 PTP = default_rob.MoveJ  # (pose, dynamic=None, overlap=None)
 Settings = default_rob.Settings  # (dynamic=None, overlap=None)
+
+WaitIsFinished = default_rob.WaitIsFinished
 
 
 def Dyn(dynamic):

@@ -117,6 +117,7 @@ def move_square():
     Lin(qSquare2, dynToUse, ovlToUse)  # Lin(qSquare2, dynToUse, ovlToUse)
     Lin(qSquare3, dynToUse, ovlToUse)  # Lin(qSquare3, dynToUse, ovlToUse)
     Lin(qSquare4, dynToUse, ovlToUse)  # Lin(qSquare4, dynToUse, ovlToUse)
+    WaitIsFinished()
     Lin(qSquare1, dynToUse, ovlToUse)  # Lin(qSquare1, dynToUse, ovlToUse)
 
     rob.ProgRun()
