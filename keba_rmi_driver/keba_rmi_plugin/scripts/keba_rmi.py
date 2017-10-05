@@ -126,7 +126,8 @@ class RmiOvlSuppos(RmiBlending):
 class RmiOvlAbs(RmiBlending):
     def __init__(self, blending):
         'type blending: list[int]'
-        RmiBlending.__init__(self, blending, 'OBLABS')
+        RmiBlending.__init__(self, blending, 'OVLABS')
+
 
 # ----------------------------------------------------
 # Object class that handles the robot instructions/syntax
