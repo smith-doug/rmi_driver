@@ -58,7 +58,7 @@ public:
   void addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
                      CommandRegisterPtr commands, CmhLoaderPtr cmh_loader);
 
-  void addConnection(DriverConfig::ConnectionConfig con_cfg);
+  // void addConnection(ConnectionConfig con_cfg);
 
   void publishJointState();
 

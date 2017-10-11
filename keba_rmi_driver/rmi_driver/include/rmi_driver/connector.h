@@ -30,9 +30,6 @@
 #ifndef INCLUDE_CONNECTOR_H_
 #define INCLUDE_CONNECTOR_H_
 
-#include <iiwa_driver/StringCommand.h>
-#include <industrial_utils/param_utils.h>
-#include <industrial_utils/utils.h>
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
 

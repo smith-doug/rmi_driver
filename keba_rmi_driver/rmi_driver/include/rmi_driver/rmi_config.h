@@ -27,12 +27,53 @@
  *      Author: Doug Smith
  */
 
+/*
+ * The code for handling XmlRpcValues is based on code from industrial_core/industrial_utils.  The license for that
+ * project is as follows:
+ * */
+
+/*
+* Software License Agreement (BSD License)
+*
+* Copyright (c) 2012, Southwest Research Institute
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*       * Redistributions of source code must retain the above copyright
+*       notice, this list of conditions and the following disclaimer.
+*       * Redistributions in binary form must reproduce the above copyright
+*       notice, this list of conditions and the following disclaimer in the
+*       documentation and/or other materials provided with the distribution.
+*       * Neither the name of the Southwest Research Institute, nor the names
+*       of its contributors may be used to endorse or promote products derived
+*       from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/**
+ * \brief Load configuration data from yaml files.
+ *
+ * Note: XmlRpc loading code is based on code from the industrial_core/industrial_utils project.
+ */
+
 #ifndef INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
 #define INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
 
 #include <XmlRpcValue.h>
-#include <XmlRpcValue.h>
-#include <industrial_utils/param_utils.h>
+
 #include <ros/ros.h>
 #include <map>
 #include <string>
@@ -40,27 +81,35 @@
 
 namespace rmi_driver
 {
+class ConnectionConfig
+{
+public:
+  ConnectionConfig()
+  {
+  }
+
+  int connection_ = 0;                  /// Connection number (currently unused)
+  std::string ns_;                      /// Namespace for this connection
+  std::string ip_address_;              /// IP of this connection
+  int port_ = 0;                        /// Port number of this connection
+  std::string rmi_plugin_package_;      /// Package name the plugin lives in
+  std::string rmi_plugin_lookup_name_;  /// The actual class name that is exported
+  std::vector<std::string> joints_;     /// List of joints
+
+  /**
+   * \brief Load the settings for this connection
+   *
+   * Based on industrial_utils
+   *
+   * @param value The TypeStruct data for this connection
+   * @return True if OK
+   */
+  bool parse(XmlRpc::XmlRpcValue &value);
+};
+
 class DriverConfig
 {
 public:
-  class ConnectionConfig
-  {
-  public:
-    ConnectionConfig()
-    {
-    }
-
-    int connection_ = 0;
-    std::string ns_;
-    std::string ip_address_;
-    int port_ = 0;
-    std::string rmi_plugin_package_;
-    std::string rmi_plugin_lookup_name_;
-    std::vector<std::string> joints_;
-
-    bool parse(XmlRpc::XmlRpcValue &value);
-  };
-
   DriverConfig() : publishing_rate_(30)
   {
   }
@@ -86,17 +135,29 @@ public:
   }
 
   /**
-   * This is terrible but I can't get it to load structured data like controller_joint_map right now.
+   * \brief load the yaml file parameters.  Loads the global parameters then each connection.
    * @param nh
    */
   void loadConfig(ros::NodeHandle &nh);
 
-  std::vector<ConnectionConfig> connections_;
+  std::vector<ConnectionConfig> connections_;  /// All the connections
 
   int publishing_rate_;
 };
 
-bool getListParamRmi(const std::string param_name, std::vector<DriverConfig::ConnectionConfig> &list_param);
+/**
+ * \brief Gets parameter list as vector of strings
+ *
+ * Original from industrial_utils
+ *
+ * \param value contents of parameter value
+ * \param list_param populated with parameter value(s)
+ *
+ * \return true if parameter
+ */
+bool getListParam(XmlRpc::XmlRpcValue rpc_list, std::vector<std::string> &list_param);
+
+bool getListParamRmi(const std::string param_name, std::vector<ConnectionConfig> &list_param);
 
 }  // namespace rmi_driver
 

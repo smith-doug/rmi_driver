@@ -44,10 +44,6 @@ Driver::Driver() : work_(io_service_)
 
 void Driver::start()
 {
-  // Hardcoded to 2 connections for now
-
-  // Get the config for the connection.  Should be a loop in the future.
-
   for (auto &&con_cfg : config_.connections_)
   {
     ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);

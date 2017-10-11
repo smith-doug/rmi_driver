@@ -1,4 +1,4 @@
-/*#include "industrial_utils/param_utils.h"
+/*
  * Copyright (c) 2017, Doug Smith
  * All rights reserved.
  *
@@ -32,7 +32,7 @@
 
 namespace rmi_driver
 {
-bool getListParamRmi(const std::string param_name, std::vector<DriverConfig::ConnectionConfig>& list_param)
+bool getListParamRmi(const std::string param_name, std::vector<ConnectionConfig>& list_param)
 {
   XmlRpc::XmlRpcValue rpc_list;
 
@@ -52,7 +52,7 @@ bool getListParamRmi(const std::string param_name, std::vector<DriverConfig::Con
 
   for (int i = 0; i < rpc_list.size(); ++i)
   {
-    DriverConfig::ConnectionConfig map;
+    ConnectionConfig map;
     if (!map.parse(rpc_list[i]))
     {
       ROS_ERROR_STREAM("Failed to parse parameter: " << param_name << "[" << i << "]");
@@ -72,36 +72,23 @@ void DriverConfig::loadConfig(ros::NodeHandle& nh)
   // Load "global" params first
   loadParam(nh, "/rmi_driver/publish_rate", publishing_rate_, 30);
 
-  // Load connection specific params
-  //  ConnectionConfig cfg;
-  //
-  //  loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
-  //
-  //  loadParam(nh, "/rmi_driver/connection/port", cfg.port_, 30000);
-  //
-  //  loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
-  //
-  //  loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_, "keba_rmi_plugin::"
-  //                                                                                              "KebaCommandRegister");
-  //
-  //  connections_.push_back(cfg);
-
+  // Load the connections
   std::string config_name = "rmi_driver_map";
-  bool sadas = getListParamRmi(config_name, connections_);
+  getListParamRmi(config_name, connections_);
   return;
 }
-bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
+bool ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
 {
   if (value.getType() != XmlRpc::XmlRpcValue::TypeStruct)
   {
-    ROS_ERROR("JointGroupMap not struct type");
+    ROS_ERROR("ConnectionConfig not struct type");
     return false;
   }
 
   std::string key = "connection";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeInt))
   {
-    ROS_ERROR("JointGroupMap 'group' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->connection_ = static_cast<int>(value[key]);
@@ -109,7 +96,7 @@ bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
   key = "ns";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeString))
   {
-    ROS_ERROR("JointGroupMap 'ns' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->ns_ = static_cast<std::string>(value[key]);
@@ -117,7 +104,7 @@ bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
   key = "ip_address";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeString))
   {
-    ROS_ERROR("JointGroupMap 'ns' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->ip_address_ = static_cast<std::string>(value[key]);
@@ -125,7 +112,7 @@ bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
   key = "port";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeInt))
   {
-    ROS_ERROR("JointGroupMap 'group' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->port_ = static_cast<int>(value[key]);
@@ -133,7 +120,7 @@ bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
   key = "rmi_plugin_package";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeString))
   {
-    ROS_ERROR("JointGroupMap 'ns' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->rmi_plugin_package_ = static_cast<std::string>(value[key]);
@@ -141,16 +128,41 @@ bool DriverConfig::ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
   key = "rmi_plugin_lookup_name";
   if (!value.hasMember(key) || (value[key].getType() != XmlRpc::XmlRpcValue::TypeString))
   {
-    ROS_ERROR("JointGroupMap 'ns' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
   }
   this->rmi_plugin_lookup_name_ = static_cast<std::string>(value[key]);
 
   key = "joints";
-  if (!value.hasMember(key) || !industrial_utils::param::getListParam(value[key], this->joints_))
+  if (!value.hasMember(key) || !getListParam(value[key], this->joints_))
   {
-    ROS_ERROR("JointGroupMap 'joints' field missing or invalid type");
+    ROS_ERROR_STREAM("ConnectionConfig '" << key << "'field missing or invalid type");
     return false;
+  }
+
+  return true;
+}
+
+bool getListParam(XmlRpc::XmlRpcValue rpc_list, std::vector<std::string>& list_param)
+{
+  list_param.clear();
+
+  if (rpc_list.getType() != XmlRpc::XmlRpcValue::TypeArray)
+  {
+    ROS_ERROR("parameter not of list type");
+    return false;
+  }
+
+  for (int i = 0; i < rpc_list.size(); ++i)
+  {
+    if (rpc_list[i].getType() != XmlRpc::XmlRpcValue::TypeString)
+    {
+      ROS_ERROR_STREAM("List item " << i << " not of string type");
+      return false;
+    }
+
+    ROS_DEBUG_STREAM("Adding " << rpc_list[i] << " to list parameter");
+    list_param.push_back(static_cast<std::string>(rpc_list[i]));
   }
 
   return true;
