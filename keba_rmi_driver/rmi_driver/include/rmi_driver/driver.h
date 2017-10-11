@@ -35,8 +35,7 @@
 
 #include "rmi_driver/commands.h"
 #include "rmi_driver/connector.h"
-
-//#include "rmi_driver/commands_keba.h"
+#include "rmi_driver/rmi_config.h"
 
 #include <robot_movement_interface/CommandList.h>
 #include <robot_movement_interface/Result.h>
@@ -49,78 +48,6 @@
 
 namespace rmi_driver
 {
-class DriverConfig
-{
-public:
-  class ConnectionConfig
-  {
-  public:
-    ConnectionConfig()
-    {
-    }
-
-    std::string ip_address_;
-    int port_ = 0;
-    std::string rmi_plugin_package_;
-    std::string rmi_plugin_lookup_name_;
-    std::vector<std::string> joints_;
-  };
-
-  DriverConfig() : publishing_rate_(30)
-  {
-  }
-
-  // Force template deduction to be a string and not a char[] when passed a "" string
-  template <typename T>
-  struct identity
-  {
-    typedef T type;
-  };
-
-  template <typename T>
-  void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
-  {
-    std::ostringstream oss;
-    bool loadOk = nh.param<T>(key, val, def);
-    if (loadOk)
-      oss << "Loaded param: " << key << ".  Value: " << val;
-    else
-      oss << "Failed to load: " << key << ". Using default value: " << def;
-
-    ROS_INFO_STREAM(oss.str());
-  }
-
-  /**
-   * This is terrible but I can't get it to load structured data like controller_joint_map right now.
-   * @param nh
-   */
-  void loadConfig(ros::NodeHandle &nh)
-  {
-    ROS_INFO_STREAM(__func__ << " loading");
-
-    // Load "global" params first
-    loadParam(nh, "/rmi_driver/publish_rate", publishing_rate_, 30);
-
-    // Load connection specific params
-    ConnectionConfig cfg;
-
-    loadParam(nh, "/rmi_driver/connection/ip_address", cfg.ip_address_, "192.168.100.100");
-
-    loadParam(nh, "/rmi_driver/connection/port", cfg.port_, 30000);
-
-    loadParam(nh, "/rmi_driver/connection/rmi_plugin_package", cfg.rmi_plugin_package_, "keba_rmi_plugin");
-
-    loadParam(nh, "/rmi_driver/connection/rmi_plugin_lookup_name", cfg.rmi_plugin_lookup_name_, "keba_rmi_plugin::"
-                                                                                                "KebaCommandRegister");
-
-    connections_.push_back(cfg);
-  }
-
-  std::vector<ConnectionConfig> connections_;
-
-  int publishing_rate_;
-};
-
 class Driver
 {
 public:
@@ -128,8 +55,10 @@ public:
 
   void start();
 
-  void addConnection(std::string ns, std::string host, int port, CommandRegisterPtr commands,
-                     std::vector<std::string> joint_names);
+  void addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
+                     CommandRegisterPtr commands, CmhLoaderPtr cmh_loader);
+
+  // void addConnection(ConnectionConfig con_cfg);
 
   void publishJointState();
 
@@ -138,7 +67,7 @@ public:
   DriverConfig config_;
 
 protected:
-  std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
+  // std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
 
   ros::NodeHandle nh_;
 
@@ -151,7 +80,7 @@ protected:
   boost::asio::io_service io_service_;
   boost::asio::io_service::work work_;
 
-  ros::Subscriber command_list_sub_;
+  // ros::Subscriber command_list_sub_;
 
   ros::Publisher joint_state_publisher_;
 
@@ -163,6 +92,7 @@ protected:
 
   // std::shared_ptr<CommandRegister> cmd_register_;
 };
+
 }  // namespace rmi_driver
 
 #endif /* INCLUDE_DRIVER_H_ */

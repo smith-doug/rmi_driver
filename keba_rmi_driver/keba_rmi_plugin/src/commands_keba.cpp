@@ -122,7 +122,6 @@ void KebaCommandLin::initialize()
   handler_name_ = "KebaCommandLin";
 
   robot_movement_interface::Command cmd;
-  cmd = robot_movement_interface::Command();
   cmd.command_type = "LIN";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
 

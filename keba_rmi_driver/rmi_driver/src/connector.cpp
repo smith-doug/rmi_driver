@@ -40,7 +40,7 @@ namespace rmi_driver
 using namespace boost::asio::ip;
 
 Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::string host, int port,
-                     StringVec joint_names, CommandRegisterPtr cmd_register)
+                     StringVec joint_names, CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader)
   : ns_(ns)
   , io_service_(io_service)
   , socket_cmd_(io_service)
@@ -49,6 +49,8 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   , port_(port)
   , cmd_register_(cmd_register)
   , nh_(ns)
+  , cmh_loader_(cmh_loader)
+
 {
   joint_names_ = joint_names;
 

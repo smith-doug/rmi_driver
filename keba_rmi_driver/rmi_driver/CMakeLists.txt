@@ -13,10 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
 	sensor_msgs
 	tf
 	message_generation
-	control_msgs
-  iiwa_driver
-	robot_movement_interface
-  industrial_utils
+	control_msgs  
+	robot_movement_interface  
   pluginlib 
 )
 
@@ -47,10 +45,8 @@ catkin_package(
         roscpp
         rospy
         sensor_msgs
-        tf
-        iiwa_driver
-		    robot_movement_interface
-        industrial_utils
+        tf        
+		    robot_movement_interface        
         pluginlib 
     DEPENDS Boost
     LIBRARIES rmi_driver
@@ -69,6 +65,7 @@ set(SRC_FILES src/commands.cpp
               src/connector.cpp
               src/driver.cpp
               src/util.cpp
+              src/rmi_config.cpp
   )
 
 add_library(rmi_driver ${SRC_FILES})

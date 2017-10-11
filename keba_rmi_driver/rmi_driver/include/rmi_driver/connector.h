@@ -30,9 +30,6 @@
 #ifndef INCLUDE_CONNECTOR_H_
 #define INCLUDE_CONNECTOR_H_
 
-#include <iiwa_driver/StringCommand.h>
-#include <industrial_utils/param_utils.h>
-#include <industrial_utils/utils.h>
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
 
@@ -41,6 +38,7 @@
 
 #include <sensor_msgs/JointState.h>
 
+#include <pluginlib/class_loader.h>
 #include <boost/asio.hpp>
 #include <chrono>
 #include <future>
@@ -51,18 +49,34 @@
 #include <thread>
 
 #include <robot_movement_interface/CommandList.h>
+#include "rmi_driver/rmi_config.h"
 
 namespace rmi_driver
 {
+using CmhLoader = pluginlib::ClassLoader<CommandRegister>;
+using CmhLoaderPtr = std::shared_ptr<pluginlib::ClassLoader<CommandRegister>>;
 class Connector
 {
   typedef std::vector<std::string> StringVec;
 
 public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
-            CommandRegisterPtr cmd_register);
+            CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader);
 
+  /**
+   * \brief Starts the asynchronous connect methods
+   * @return always true
+   */
   bool connect();
+
+  /**
+   * \brief Starts the asynchronous connect methods
+   *
+   * This method was originally synchronous and would return the success of the connection.
+   * @param host The ip address
+   * @param port The port
+   * @return Always true
+   */
   bool connect(std::string host, int port);
 
   // bool connectCmd(std::string host, int port);
@@ -205,6 +219,9 @@ protected:
 
   /// The CommandRegister that was loaded by the plugin
   CommandRegisterPtr cmd_register_;
+
+  /// "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
+  CmhLoaderPtr cmh_loader_;
 
   ///\brief Used to read and consume and messages sent after a cancel.
   ///

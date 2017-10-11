@@ -19,9 +19,7 @@
   <depend>tf</depend>
   <depend>control_msgs</depend>
   <depend>trajectory_msgs</depend>
-  <depend>robot_movement_interface</depend>
-  <depend>iiwa_driver</depend>
-  <depend>industrial_utils</depend>
+  <depend>robot_movement_interface</depend>  
   <depend>pluginlib</depend>
 
   <build_depend>message_generation</build_depend>

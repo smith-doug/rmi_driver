@@ -44,77 +44,58 @@ Driver::Driver() : work_(io_service_)
 
 void Driver::start()
 {
-  // Hardcoded to 1 connection for now
-
-  // Get the config for the connection.  Should be a loop in the future.
-  auto &con_cfg = config_.connections_[0];
-
-  // Load the specified plugin.  This should be done in the individual connection in the future.
-  ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
-  cmh_loader_.reset(new pluginlib::ClassLoader<CommandRegister>(con_cfg.rmi_plugin_package_, "rmi_driver::"
-                                                                                             "CommandRegister"));
-  try
+  ROS_INFO_STREAM("There are " << config_.connections_.size() << " connections");
+  for (auto &&con_cfg : config_.connections_)
   {
-    // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
-    CommandRegisterPtr cmd_register = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-
-    std::vector<std::string> joint_names{ "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
-    cmd_register->initialize(joint_names);
-    // cmd_register->registerCommands();
-
-    ROS_INFO_STREAM("Loaded the plugin successfully");
-
-    // Display some info about the loaded plugin
-    ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
-    for (auto &cmh : cmd_register->handlers())
+    ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
+    try
     {
-      ROS_INFO_STREAM(*cmh);
+      // Will be stored in the Connector.  Making it here to keep Plugin loading stuff out of Connector.
+      CmhLoaderPtr cmh_loader(new CmhLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
+                                                                         "CommandRegister"));
+
+      // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
+      CommandRegisterPtr cmd_register = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+      cmd_register->initialize(con_cfg.joints_);
+      ROS_INFO_STREAM("Loaded the plugin successfully");
+
+      // Display some info about the loaded plugin
+      ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
+      for (auto &cmh : cmd_register->handlers())
+      {
+        ROS_INFO_STREAM(*cmh);
+      }
+
+      // Add the connection from the current config
+      this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_register, cmh_loader);
     }
-
-    // Add the connection from the current config
-
-    this->addConnection("/", con_cfg.ip_address_, con_cfg.port_, cmd_register, joint_names);
-
-    CommandRegisterPtr cmd_register2 = cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-    // cmd_register2->registerCommands();
-
-    // Add a second hardcoded connection for now
-    joint_names = { "rob2_shoulder_pan_joint", "rob2_shoulder_lift_joint", "rob2_elbow_joint",
-                    "rob2_wrist_1_joint",      "rob2_wrist_2_joint",       "rob2_wrist_3_joint" };
-    cmd_register2->initialize(joint_names);
-
-    this->addConnection("/rob2", con_cfg.ip_address_, 30002, cmd_register2, joint_names);
-  }
-  catch (pluginlib::PluginlibException &ex)
-  {
-    ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
+    catch (pluginlib::PluginlibException &ex)
+    {
+      ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
+    }
   }
 
   // Create ros publishers and subscribers
   joint_state_publisher_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
   // command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
-  // Publish joint states.  @todo aggregate multiple robots
+  // Publish joint states.  Will aggregate multiple robots.
   pub_thread_ = std::thread(&Driver::publishJointState, this);
 
   return;
 }
 
-void Driver::addConnection(std::string ns, std::string host, int port, CommandRegisterPtr commands,
-                           std::vector<std::string> joint_names)
+void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
+                           CommandRegisterPtr commands, CmhLoaderPtr cmh_loader)
 {
   conn_num_++;
 
-  //  std::vector<std::string> joint_names {"shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-  //                                        "wrist_2_joint", "wrist_3_joint", "rail_to_base"};
-
-  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands);
+  // Make a new Connector and add it
+  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands, cmh_loader);
   conn_map_.emplace(conn_num_, shared);
 
   auto &conn = conn_map_.at(conn_num_);
   conn->connect();
-  // conn.connect(host, port);
 }
 
 void Driver::publishJointState()
