@@ -32,40 +32,7 @@
 
 namespace rmi_driver
 {
-bool getListParamRmi(const std::string param_name, std::vector<ConnectionConfig>& list_param)
-{
-  XmlRpc::XmlRpcValue rpc_list;
-
-  list_param.clear();  // clear out return value
-
-  if (!ros::param::get(param_name, rpc_list))
-  {
-    ROS_ERROR_STREAM("Failed to get parameter: " << param_name);
-    return false;
-  }
-
-  if (rpc_list.getType() != XmlRpc::XmlRpcValue::TypeArray)
-  {
-    ROS_ERROR_STREAM("Parameter: " << param_name << " not of list type");
-    return false;
-  }
-
-  for (int i = 0; i < rpc_list.size(); ++i)
-  {
-    ConnectionConfig map;
-    if (!map.parse(rpc_list[i]))
-    {
-      ROS_ERROR_STREAM("Failed to parse parameter: " << param_name << "[" << i << "]");
-      return false;
-    }
-
-    list_param.push_back(map);
-  }
-
-  return true;
-}
-
-void DriverConfig::loadConfig(ros::NodeHandle& nh)
+bool DriverConfig::loadConfig(ros::NodeHandle& nh)
 {
   ROS_INFO_STREAM(__func__ << " loading");
 
@@ -74,9 +41,9 @@ void DriverConfig::loadConfig(ros::NodeHandle& nh)
 
   // Load the connections
   std::string config_name = "rmi_driver_map";
-  getListParamRmi(config_name, connections_);
-  return;
+  return getListParam(config_name, connections_);
 }
+
 bool ConnectionConfig::parse(XmlRpc::XmlRpcValue& value)
 {
   if (value.getType() != XmlRpc::XmlRpcValue::TypeStruct)
@@ -163,6 +130,39 @@ bool getListParam(XmlRpc::XmlRpcValue rpc_list, std::vector<std::string>& list_p
 
     ROS_DEBUG_STREAM("Adding " << rpc_list[i] << " to list parameter");
     list_param.push_back(static_cast<std::string>(rpc_list[i]));
+  }
+
+  return true;
+}
+
+bool getListParam(const std::string param_name, std::vector<ConnectionConfig>& list_param)
+{
+  XmlRpc::XmlRpcValue rpc_list;
+
+  list_param.clear();  // clear out return value
+
+  if (!ros::param::get(param_name, rpc_list))
+  {
+    ROS_ERROR_STREAM("Failed to get parameter: " << param_name);
+    return false;
+  }
+
+  if (rpc_list.getType() != XmlRpc::XmlRpcValue::TypeArray)
+  {
+    ROS_ERROR_STREAM("Parameter: " << param_name << " not of list type");
+    return false;
+  }
+
+  for (int i = 0; i < rpc_list.size(); ++i)
+  {
+    ConnectionConfig map;
+    if (!map.parse(rpc_list[i]))
+    {
+      ROS_ERROR_STREAM("Failed to parse parameter: " << param_name << "[" << i << "]");
+      return false;
+    }
+
+    list_param.push_back(map);
   }
 
   return true;

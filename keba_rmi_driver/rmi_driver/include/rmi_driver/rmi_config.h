@@ -136,9 +136,10 @@ public:
 
   /**
    * \brief load the yaml file parameters.  Loads the global parameters then each connection.
-   * @param nh
+   * @param nh The driver node
+   * @return True if all the configs loaded ok
    */
-  void loadConfig(ros::NodeHandle &nh);
+  bool loadConfig(ros::NodeHandle &nh);
 
   std::vector<ConnectionConfig> connections_;  /// All the connections
 
@@ -157,7 +158,16 @@ public:
  */
 bool getListParam(XmlRpc::XmlRpcValue rpc_list, std::vector<std::string> &list_param);
 
-bool getListParamRmi(const std::string param_name, std::vector<ConnectionConfig> &list_param);
+/**
+ * \brief Loads all of the ConnectionConfigs
+ *
+ * Original from industrial_utils
+ *
+ * @param param_name Name of the root element
+ * @param list_param Vector of the ConnectionConfigs
+ * @return True if ok
+ */
+bool getListParam(const std::string param_name, std::vector<ConnectionConfig> &list_param);
 
 }  // namespace rmi_driver
 

@@ -63,7 +63,20 @@ public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
             CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader);
 
+  /**
+   * \brief Starts the asynchronous connect methods
+   * @return always true
+   */
   bool connect();
+
+  /**
+   * \brief Starts the asynchronous connect methods
+   *
+   * This method was originally synchronous and would return the success of the connection.
+   * @param host The ip address
+   * @param port The port
+   * @return Always true
+   */
   bool connect(std::string host, int port);
 
   // bool connectCmd(std::string host, int port);

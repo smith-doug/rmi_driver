@@ -67,7 +67,7 @@ public:
   DriverConfig config_;
 
 protected:
-  std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
+  // std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
 
   ros::NodeHandle nh_;
 
@@ -80,7 +80,7 @@ protected:
   boost::asio::io_service io_service_;
   boost::asio::io_service::work work_;
 
-  ros::Subscriber command_list_sub_;
+  // ros::Subscriber command_list_sub_;
 
   ros::Publisher joint_state_publisher_;
 
