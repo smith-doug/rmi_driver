@@ -69,6 +69,7 @@ set(SRC_FILES src/commands.cpp
               src/connector.cpp
               src/driver.cpp
               src/util.cpp
+              src/rmi_config.cpp
   )
 
 add_library(rmi_driver ${SRC_FILES})

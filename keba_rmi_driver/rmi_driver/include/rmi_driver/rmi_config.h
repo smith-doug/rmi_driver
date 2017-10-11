@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) 2017, Doug Smith
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ *  Created on: Oct 11, 2017
+ *      Author: Doug Smith
+ */
+
+#ifndef INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
+#define INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
+
+#include <XmlRpcValue.h>
+#include <XmlRpcValue.h>
+#include <industrial_utils/param_utils.h>
+#include <ros/ros.h>
+#include <map>
+#include <string>
+#include <vector>
+
+namespace rmi_driver
+{
+class DriverConfig
+{
+public:
+  class ConnectionConfig
+  {
+  public:
+    ConnectionConfig()
+    {
+    }
+
+    int connection_ = 0;
+    std::string ns_;
+    std::string ip_address_;
+    int port_ = 0;
+    std::string rmi_plugin_package_;
+    std::string rmi_plugin_lookup_name_;
+    std::vector<std::string> joints_;
+
+    bool parse(XmlRpc::XmlRpcValue &value);
+  };
+
+  DriverConfig() : publishing_rate_(30)
+  {
+  }
+
+  // Force template deduction to be a string and not a char[] when passed a "" string
+  template <typename T>
+  struct identity
+  {
+    typedef T type;
+  };
+
+  template <typename T>
+  void loadParam(ros::NodeHandle &nh, const std::string &key, T &val, const typename identity<T>::type &def)
+  {
+    std::ostringstream oss;
+    bool loadOk = nh.param<T>(key, val, def);
+    if (loadOk)
+      oss << "Loaded param: " << key << ".  Value: " << val;
+    else
+      oss << "Failed to load: " << key << ". Using default value: " << def;
+
+    ROS_INFO_STREAM(oss.str());
+  }
+
+  /**
+   * This is terrible but I can't get it to load structured data like controller_joint_map right now.
+   * @param nh
+   */
+  void loadConfig(ros::NodeHandle &nh);
+
+  std::vector<ConnectionConfig> connections_;
+
+  int publishing_rate_;
+};
+
+bool getListParamRmi(const std::string param_name, std::vector<DriverConfig::ConnectionConfig> &list_param);
+
+}  // namespace rmi_driver
+
+#endif /* INCLUDE_RMI_DRIVER_RMI_CONFIG_H_ */
