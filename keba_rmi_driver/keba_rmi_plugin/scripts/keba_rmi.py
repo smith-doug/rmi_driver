@@ -45,8 +45,22 @@ import functools
 
 
 class RmiPos(object):
+    '''
+
+    '''
+
     def __init__(self, pose, pose_type='', aux_values=None):
-        ':type aux_values: list[str]'
+        '''
+        A position
+
+        :param pose: Position values
+        :type pose: list[float]
+        :param pose_type: 
+        :type pose_type: str
+        :param aux_values:
+        :type aux_values: list[str]        
+        '''
+
         self.pose = pose
         self.pose_type = pose_type
 
@@ -55,7 +69,12 @@ class RmiPos(object):
             self.aux_values = aux_values
 
     def SetCmd(self, cmd):
-        ':param rmi_msg.Command cmd:'
+        '''
+        Update cmd with the data in this pose
+        :param cmd: The Command to update
+        :type cmd: rmi_msg.Command
+        '''
+
         # assert isinstance(cmd, Command)
         cmd.pose = self.pose
         cmd.pose_type = self.pose_type
@@ -158,11 +177,14 @@ class RobotPost(object):
         '''
 
         res_str = 'OK(0)'
-        if data.result_code != 0:
+        log_func = rospy.logout  # info by default
+
+        if data.result_code != 0:  # some kind of error
             res_str = 'ERROR(' + str(data.result_code) + '), ' + data.additional_information
+            log_func = rospy.logerr  # log to error
             self.num_results = self.num_commands  # Bail out immediately
 
-        rospy.logout('Result ' + str(self.num_results) + ': ' + res_str)
+        log_func('Result ' + str(data.command_id) + ': ' + res_str)
         self.num_results += 1
 
     def ProgStart(self):
@@ -187,6 +209,18 @@ class RobotPost(object):
 
         rospy.logout('ProgRun exiting')
 
+    def AddCommand(self, cmd):
+        '''
+        Add a command.  It will set command_id to self.num_commands and then increment self.num_commands.  
+        :param cmd: The command to add
+        :type cmd: rmi_msg.Command
+        '''
+
+        cmd.command_id = self.num_commands
+        self.cmd_list.commands.append(cmd)
+
+        self.num_commands += 1
+
     def MoveJ(self, pose, dynamic=None, overlap=None):
         '''
         PTP moves
@@ -198,7 +232,7 @@ class RobotPost(object):
         :type overlap: RmiBlending
         '''
 
-        self.num_commands += 1
+        #self.num_commands += 1
 
         cmd = rmi_msg.Command()
         cmd.command_type = "PTP"
@@ -215,7 +249,8 @@ class RobotPost(object):
         if(len(cmd.pose_type) < 1):
             assert(False)
         else:
-            self.cmd_list.commands.append(cmd)
+            self.AddCommand(cmd)
+            # self.cmd_list.commands.append(cmd)
 
     def MoveL(self, pose, dynamic=None, overlap=None):
         '''
@@ -228,7 +263,7 @@ class RobotPost(object):
         :type overlap: RmiBlending
         '''
 
-        self.num_commands += 1
+        #self.num_commands += 1
 
         cmd = rmi_msg.Command()
         cmd.command_type = "LIN"
@@ -245,13 +280,14 @@ class RobotPost(object):
         if(len(cmd.pose_type) < 1):
             pass
         else:
-            self.cmd_list.commands.append(cmd)
+            self.AddCommand(cmd)
+            # self.cmd_list.commands.append(cmd)
 
     def Settings(self, dynamic=None, overlap=None):
         '@type dynamic: RmiVelo'
         '@type overlap: RmiBlending'
 
-        self.num_commands += 1
+        #self.num_commands += 1
 
         # Give me something
         assert(dynamic is not None or overlap is not None)
@@ -265,20 +301,22 @@ class RobotPost(object):
         if isinstance(overlap, RmiBlending):
             overlap.SetCmd(cmd)
 
-        self.cmd_list.commands.append(cmd)
+        self.AddCommand(cmd)
+        # self.cmd_list.commands.append(cmd)
 
     def WaitIsFinished(self):
         '''
         Call WaitIsFinished()
         '''
 
-        self.num_commands += 1
+        #self.num_commands += 1
 
         cmd = rmi_msg.Command()
         cmd.command_type = 'WAIT'
         cmd.pose_type = 'IS_FINISHED'
 
-        self.cmd_list.commands.append(cmd)
+        self.AddCommand(cmd)
+        # self.cmd_list.commands.append(cmd)
 
 
 
