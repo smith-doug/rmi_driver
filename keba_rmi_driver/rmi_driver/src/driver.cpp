@@ -115,6 +115,9 @@ void Driver::publishJointState()
       stateFull.header = lastState.header;
       stateFull.position.insert(stateFull.position.end(), lastState.position.begin(), lastState.position.end());
       stateFull.name.insert(stateFull.name.end(), lastState.name.begin(), lastState.name.end());
+
+      // Publish the individual state topics for this connection (tool_frame)
+      conn.second->publishState();
     }
 
     joint_state_publisher_.publish(stateFull);

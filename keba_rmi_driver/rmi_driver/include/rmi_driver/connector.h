@@ -154,6 +154,13 @@ public:
    */
   void cmdSocketFlusher();
 
+  /**
+   * \brief Publish any non-aggregated state messages like tool_frame.
+   *
+   * I already have a publishing thread in Driver.  No real need to make another.
+   */
+  void publishState();
+
 protected:
   void commandThread();
 
@@ -204,6 +211,8 @@ protected:
   ros::Subscriber command_list_sub_;
   /// Publishes the robot_movement_interface/Result for this namespace
   ros::Publisher command_result_pub_;
+  /// Publishes the robot_movement_interface::EulerFrame for this namespace
+  ros::Publisher tool_frame_pub_;
   /// NodeHandle for this namespace
   ros::NodeHandle nh_;
 
@@ -214,6 +223,9 @@ protected:
 
   /// The last known joint state.  Set by getThead() and aggregated by the Driver.
   sensor_msgs::JointState last_joint_state_;
+
+  /// The last known tool frame.  Published by publishState(), called from Driver.
+  robot_movement_interface::EulerFrame last_tool_frame_;
 
   std::vector<std::string> joint_names_;
 
