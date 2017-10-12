@@ -34,9 +34,14 @@
 # You should use 'git update-index --skip-worktree' on this file if you want to change it.
 
 #import rospy
+import argparse
 import keba_rmi
+import copy
+import threading
+
 
 from keba_rmi import *
+
 
 #===============================================================================
 # Global kairo variables (_globalvars.tid)
@@ -50,15 +55,17 @@ dSlow = DYNAMIC([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100
 os200 = OVLSUPPOS(200)
 os0 = OVLSUPPOS(0)
 or200 = OVLREL(200)
-oa10 = OVLABS([10, 360, 10, 10, 0])
+oa10 = OVLABS([10, 360, 40, 3, 0])
 
 # Positions
-apHome = RmiPosJoints([0.0, -2.0999999046325684, -1.2999999523162842, -1.399999976158142, 1.5, 0.0, -0.30000001192092896])
+apHome = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000, -0.300])
+apHomeRob2 = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000])
 qPos1 = RmiPosQuaternion([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
 qPos2 = RmiPosQuaternion([0.5, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-100'])
 
-# The robot
+# The robots
 rob = keba_rmi.default_rob
+rob2 = keba_rmi.RobotPost('rob2/command_list', 'rob2/command_result')
 
 
 #===============================================================================
@@ -108,25 +115,101 @@ def move_square():
 
     rob.ProgStart()
 
-    Dyn(dMedium)
-    Ovl(os200)
+    # Begin KAIRO commands.  These will be changed into
+    # robot_movement_interface Commands and published to the /command_list topic
 
-    PTP(apHome)  # PTP(apHome)
+    Dyn(dFast)
+    Ovl(oa10)
 
-    PTP(qSquare1, dynToUse, ovlToUse)  # PTP(qSquare1, dynToUse, ovlToUse)
-    Lin(qSquare2, dynToUse, ovlToUse)  # Lin(qSquare2, dynToUse, ovlToUse)
-    Lin(qSquare3, dynToUse, ovlToUse)  # Lin(qSquare3, dynToUse, ovlToUse)
-    Lin(qSquare4, dynToUse, ovlToUse)  # Lin(qSquare4, dynToUse, ovlToUse)
+    PTP(apHome)
+
+    PTP(qSquare1, dynToUse, ovlToUse)
+    Lin(qSquare2, dynToUse, ovlToUse)
+    Lin(qSquare3, dynToUse, ovlToUse)
+    Lin(qSquare4, dynToUse, ovlToUse)
     WaitIsFinished()
-    Lin(qSquare1, dynToUse, ovlToUse)  # Lin(qSquare1, dynToUse, ovlToUse)
+    Lin(qSquare1, dynToUse, ovlToUse)
 
     rob.ProgRun()
+
+
+def do_something():
+
+    rob2.ProgStart()
+
+    rob2.Settings(dFast, oa10)
+    rob2.MoveJ(apHomeRob2)
+    rob2.ProgRun()
+
+    rob.ProgStart()
+    Dyn(dFast)
+    Ovl(oa10)
+
+    apHomeTemp = RmiPosJoints([2.9502, -0.9177, -1.347, -2.5049, 0.7632, 3.512, -0.3])
+    PTP(apHomeTemp)
+    rob.ProgRun()
+
+
+def do_settings():
+
+    rob.ProgStart()
+    Dyn(dFast)
+    rob.ProgRun()
+
+
+def home_rob1():
+    rob.ProgStart()
+    PTP(apHome, dFast)
+    rob.ProgRun()
+
+
+def home_rob2():
+    rob2.ProgStart()
+    rob2.MoveJ(apHomeRob2, dynamic=dFast)
+    rob2.ProgRun()
+
+
+def home_both():
+    t1 = threading.Thread(target=home_rob1)
+    t2 = threading.Thread(target=home_rob2)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+
+function_map = {
+    'move_square': move_square,
+    'do_settings': do_settings,
+    'do_something': do_something,
+    'home_rob1': home_rob1,
+    'home_rob2': home_rob2,
+    'home_both': home_both
+
+}
+
+parser = argparse.ArgumentParser(description='Python tester.')
+parser.add_argument('command', nargs='?', choices=function_map.keys())
 
 
 if __name__ == '__main__':
 
     rospy.init_node('talker', anonymous=True)
-
     rospy.logout('Starting rmi python commander')
 
-    move_square()
+    args = parser.parse_args()
+    cmd = args.command
+    if cmd is not None:
+        if cmd in function_map:
+            func = function_map[args.command]
+            func()
+        else:
+            rospy.logout('command "' + cmd + '" does not exist')
+    else:
+        print "Missing argument"
+        # home_both()
+
+    # do_settings()
+
+
+#------------------------------------------------------------------------------

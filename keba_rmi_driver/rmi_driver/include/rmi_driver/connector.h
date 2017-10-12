@@ -162,11 +162,29 @@ public:
   void publishState();
 
 protected:
-  void commandThread();
+  // void commandThread();
 
   void cmdThread();
 
   void getThread();
+
+  /**
+   * \brief Publish a robot_movement_interface/Result to the command_result topic.
+   *
+   * The header timestamp will be set to ros::Time::now() before sending.
+   *
+   * @param command_id id number of the current command
+   * @param result_code 0 == OK
+   * @param additional_information Any additional message
+   */
+  void publishRmiResult(int command_id = 0, int result_code = 0, std::string additional_information = "") const;
+
+  /**
+   * \brief Publish a robot_movement_interface/Result to the command_result topic.
+   *
+   * @param result The complete message to send.
+   */
+  void publishRmiResult(const robot_movement_interface::Result& result) const;
 
   /**
    * \brief Used by getThread() to create the required RobotCommands for the cyclic updated.

@@ -140,7 +140,8 @@ class RobotPost(object):
 
     def __init__(self, topic_command='command_list', topic_result='command_result'):
 
-        # Incremented at the start of every method that adds a command.  If it doesn't match the cmd_list.commands len there was a problem.
+        # Incremented at the start of every method that adds a command.  If it
+        # doesn't match the cmd_list.commands len there was a problem.
         self.num_commands = 0
         self.num_results = 0
 
@@ -159,6 +160,7 @@ class RobotPost(object):
         res_str = 'OK(0)'
         if data.result_code != 0:
             res_str = 'ERROR(' + str(data.result_code) + '), ' + data.additional_information
+            self.num_results = self.num_commands  # Bail out immediately
 
         rospy.logout('Result ' + str(self.num_results) + ': ' + res_str)
         self.num_results += 1
@@ -180,7 +182,7 @@ class RobotPost(object):
 
         self.pub.publish(self.cmd_list)
 
-        while(self.num_results != self.num_commands and not rospy.is_shutdown()):
+        while(self.num_results < self.num_commands and not rospy.is_shutdown()):
             rospy.sleep(0.5)
 
         rospy.logout('ProgRun exiting')
@@ -294,7 +296,8 @@ AXISPOS = RmiPosJoints  # ([a1, a2, ...], aux_values=None)
 OVLABS = RmiOvlAbs  # ([posDist, oriDist, linAxDist, rotAxDist, vConst(boolean)])
 OVLSUPPOS = RmiOvlSuppos  # (ovl %)
 OVLREL = RmiOvlRel  # (ovl %)
-DYNAMIC = RmiDyn  # ([velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->), acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri])
+# ([velAxis(0..100->), accAxis, decAxis, jerkAxis, vel(mm/s->), acc, dec, jerk, velOri(deg/s->), accOri, decOri, jerkOri])
+DYNAMIC = RmiDyn
 
 # Commands
 Lin = default_rob.MoveL  # (pose, dynamic=None, overlap=None)
