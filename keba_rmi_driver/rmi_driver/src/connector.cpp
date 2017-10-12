@@ -128,6 +128,7 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
   std::thread *thread;
   boost::asio::ip::tcp::socket *sock;
+
   if (cmd_type == RobotCommand::CommandType::Cmd)
   {
     thread = &cmd_thread_;
@@ -145,27 +146,31 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
   boost::asio::async_connect(
       *sock, endpointIterator,
       [this, host, local_port, cmd_type](const boost::system::error_code &ec, tcp::resolver::iterator i) {
+
+        std::string con_type = "NOT SET";
+        if (cmd_type == RobotCommand::CommandType::Cmd)
+          con_type = "Cmd";
+        else if (cmd_type == RobotCommand::CommandType::Get)
+          con_type = "Get";
+
         if (ec)
         {
-          ROS_INFO_STREAM(ns_ << " Ec was set " << ec.message());
+          ROS_INFO_STREAM(ns_ << " Socket(" << con_type << ") Ec was set " << ec.message());
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
         }
         else
         {
-          std::string con_type;
           if (cmd_type == RobotCommand::CommandType::Cmd)
           {
-            con_type = "Cmd";
             cmd_thread_ = std::thread(&Connector::cmdThread, this);
           }
           else if (cmd_type == RobotCommand::CommandType::Get)
           {
-            con_type = "Get";
             get_thread_ = std::thread(&Connector::getThread, this);
           }
 
-          ROS_INFO_STREAM(ns_ << " Async " << con_type << " established to " << host << ":" << local_port);
+          ROS_INFO_STREAM(ns_ << " Async Socket(" << con_type << ") established to " << host << ":" << local_port);
         }
 
       });
