@@ -418,6 +418,8 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
     {
       ROS_ERROR_STREAM(ns_ << " Failed to find cmd handler for: " << msg_cmd);
 
+      // Send a failure response
+      publishRmiResult(msg_cmd.command_id, 1, "Failed to find cmd handler");
       /// @todo If I make an ABORT message mandatory, I could use that to actually make the robot stop.
       if (abort_on_fail_to_find_)
       {
@@ -438,6 +440,22 @@ error_abort:
   command_vect.clear();
   this->clearCommands();
   return true;
+}
+
+void Connector::publishRmiResult(int command_id, int result_code, std::string additional_information) const
+{
+  robot_movement_interface::Result result;
+  result.command_id = command_id;
+  result.result_code = result_code;
+  result.additional_information = additional_information;
+  result.header.stamp = ros::Time::now();
+
+  command_result_pub_.publish(result);
+}
+
+void Connector::publishRmiResult(const robot_movement_interface::Result &result) const
+{
+  command_result_pub_.publish(result);
 }
 
 RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type, const std::string &pose_type)
