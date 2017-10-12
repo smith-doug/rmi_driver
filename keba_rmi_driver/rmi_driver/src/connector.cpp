@@ -56,6 +56,8 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
 
   command_result_pub_ = nh_.advertise<robot_movement_interface::Result>("command_result", 30);
   command_list_sub_ = nh_.subscribe("command_list", 1, &Connector::subCB_CommandList, this);
+
+  tool_frame_pub_ = nh_.advertise<robot_movement_interface::EulerFrame>("tool_frame", 30);
 }
 
 bool Connector::connect()
@@ -126,6 +128,7 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
   std::thread *thread;
   boost::asio::ip::tcp::socket *sock;
+
   if (cmd_type == RobotCommand::CommandType::Cmd)
   {
     thread = &cmd_thread_;
@@ -143,27 +146,31 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
   boost::asio::async_connect(
       *sock, endpointIterator,
       [this, host, local_port, cmd_type](const boost::system::error_code &ec, tcp::resolver::iterator i) {
+
+        std::string con_type = "NOT SET";
+        if (cmd_type == RobotCommand::CommandType::Cmd)
+          con_type = "Cmd";
+        else if (cmd_type == RobotCommand::CommandType::Get)
+          con_type = "Get";
+
         if (ec)
         {
-          ROS_INFO_STREAM(ns_ << " Ec was set " << ec.message());
+          ROS_INFO_STREAM(ns_ << " Socket(" << con_type << ") Ec was set " << ec.message());
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
         }
         else
         {
-          std::string con_type;
           if (cmd_type == RobotCommand::CommandType::Cmd)
           {
-            con_type = "Cmd";
             cmd_thread_ = std::thread(&Connector::cmdThread, this);
           }
           else if (cmd_type == RobotCommand::CommandType::Get)
           {
-            con_type = "Get";
             get_thread_ = std::thread(&Connector::getThread, this);
           }
 
-          ROS_INFO_STREAM(ns_ << " Async " << con_type << " established to " << host << ":" << local_port);
+          ROS_INFO_STREAM(ns_ << " Async Socket(" << con_type << ") established to " << host << ":" << local_port);
         }
 
       });
@@ -508,19 +515,34 @@ void Connector::getThread()
   {
     try
     {
+      // Get the joint positions
       response = sendCommand(*get_joint_position);
-
       pos_real = util::stringToDoubleVec(response);
-
-      response = sendCommand(*get_tool_frame);
 
       last_joint_state_.header.stamp = ros::Time::now();
       last_joint_state_.name = joint_names_;
       last_joint_state_.position = pos_real;
+
+      // Get the tool frame in euler zyx
+      response = sendCommand(*get_tool_frame);
+      pos_real = util::stringToDoubleVec(response);
+      if (pos_real.size() != 6)
+      {
+        ROS_ERROR_STREAM(ns_ << " ERROR: Connector::getThread GET TOOL_FRAME size wrong!  Expected 6, got "
+                             << pos_real.size() << ".  Raw msg: " << response);
+        continue;
+      }
+
+      last_tool_frame_.x = pos_real[0];
+      last_tool_frame_.y = pos_real[1];
+      last_tool_frame_.z = pos_real[2];
+      last_tool_frame_.alpha = pos_real[3];
+      last_tool_frame_.beta = pos_real[4];
+      last_tool_frame_.gamma = pos_real[5];
     }
     catch (const boost::bad_lexical_cast &)
     {
-      ROS_ERROR_STREAM("Unable to parse joint positions");
+      ROS_ERROR_STREAM(ns_ << " Connector::getThread: Unable to parse Get response: " << response);
       continue;
     }
     catch (const boost::system::system_error &ex)
@@ -625,6 +647,11 @@ void Connector::cmdThread()
       rate.sleep();
     }
   }
+}
+
+void Connector::publishState()
+{
+  tool_frame_pub_.publish(last_tool_frame_);
 }
 
 }  // namespace rmi_driver
