@@ -103,7 +103,7 @@ RobotCommandPtr KebaCommandGet::processMsg(const robot_movement_interface::Comma
   if (boost::iequals("JOINT_POSITION", cmd_msg.pose_type))
     cmd_str += "joint position";
   else if (boost::iequals("TOOL_FRAME", cmd_msg.pose_type))
-    cmd_str += "tool frame";
+    cmd_str += "tool frame ros";
   else if (boost::iequals("VERSION", cmd_msg.pose_type))
     cmd_str += "version";
   else
