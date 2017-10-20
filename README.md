@@ -1,6 +1,6 @@
 # rmi_driver
 
-This is an attempt to create a more generic and reusable driver for the robot_movement_interface.  The communication between ROS and the robot is similar to the iiwa_driver's telnet interface, but can be modified and extended with plugins.
+This is an attempt to create a more generic and reusable driver for the [robot_movement_interface](https://github.com/ros-industrial/robot_movement_interface).  The communication between ROS and the robot is similar to the iiwa_driver's telnet interface, but can be modified and extended with plugins.
 
 @todo this is getting really long.  How many details should be included vs. just saying "read the doxygen"?  Some standard moves should also be created.  It will defeat the purpose of a robot-independent interface if something as simple as executing a PTP is totally different for every robot.  Fancy commands that take advantage of a specific robot's features for move types are great, but there should be some bare minimum baseline.
 
@@ -30,7 +30,7 @@ It consists of:
 **Driver:**  
 This class loads plugins, creates connections, and publishes aggregate topics.
 
-- @todo loading parameters from a config file.  Each robot has a connection entry that contains:
+- Multiple robots can be defined in a yaml file.  Each robot has a connection entry that contains:  
     + namespace
     + ip/base port    
     + package name of the plugin
