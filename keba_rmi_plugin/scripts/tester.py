@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+# PYTHON_ARGCOMPLETE_OK
 
 # /*
 #  * Copyright (c) 2017, Doug Smith, KEBA Corp
@@ -42,6 +43,13 @@ import threading
 
 from keba_rmi import *
 
+argcomplete_available = False
+try:
+    import argcomplete
+    argcomplete_available = True
+except ImportError:
+    pass
+
 
 #===============================================================================
 # Global kairo variables (_globalvars.tid)
@@ -55,7 +63,7 @@ dSlow = DYNAMIC([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100
 os200 = OVLSUPPOS(200)
 os0 = OVLSUPPOS(0)
 or200 = OVLREL(200)
-oa10 = OVLABS([10, 360, 40, 3, 0])
+oa10 = OVLABS([20, 360, 40, 3, 0])
 
 # Positions
 apHome = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000, -0.300])
@@ -109,8 +117,8 @@ def move_square():
     dynToUse = dMedium
 
     qSquare1 = QUATPOS([0.3, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
-    qSquare2 = QUATPOS([0.6, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-300'])
-    qSquare3 = QUATPOS([0.6, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
+    qSquare2 = QUATPOS([0.6, -0.6, 0.365, 0, 0, 1, 0], ['aux1:-200'])
+    qSquare3 = QUATPOS([0.6, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-100'])
     qSquare4 = QUATPOS([0.3, -0.3, 0.365, 0, 0, 1, 0], ['aux1:-300'])
 
     rob.ProgStart()
@@ -137,7 +145,11 @@ def do_something():
 
     rob2.ProgStart()
 
+    apTemp = RmiPosJoints([1.0000, -1.100, -1.300, -1.400, 1.5000, 1.0000])
+
     rob2.Settings(dFast, oa10)
+    rob2.MoveJ(apHomeRob2)
+    rob2.MoveJ(apTemp)
     rob2.MoveJ(apHomeRob2)
     rob2.ProgRun()
 
@@ -146,6 +158,7 @@ def do_something():
     Ovl(oa10)
 
     apHomeTemp = RmiPosJoints([2.9502, -0.9177, -1.347, -2.5049, 0.7632, 3.512, -0.3])
+    PTP(apHome)
     PTP(apHomeTemp)
     rob.ProgRun()
 
@@ -154,16 +167,22 @@ def do_settings():
 
     rob.ProgStart()
     Dyn(dFast)
+    Ovl(oa10)
     rob.ProgRun()
+
+    rob2.ProgStart()
+    rob2.Settings(dFast, oa10)
+    rob2.ProgRun()
 
 
 def home_rob1():
     rob.ProgStart()
-    PTP(apHome, dFast)
+    PTP(apHomeRob2, dFast)
     rob.ProgRun()
 
 
 def home_rob2():
+    print 'asfsa'
     rob2.ProgStart()
     rob2.MoveJ(apHomeRob2, dynamic=dFast)
     rob2.ProgRun()
@@ -178,19 +197,53 @@ def home_both():
     t2.join()
 
 
+def cause_error():
+
+    apBad = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000, -0.300])
+    apBad.pose.append(42)  # Make the pose too long (8 axes)
+
+    rob.ProgStart()
+    PTP(apHome, dFast)
+    PTP(apBad)
+    PTP(apHome, dFast)
+    rob.ProgRun()
+
+
+def rob2_do_stuff():
+    rob2.ProgStart()
+
+    ap0 = RmiPosJoints([1.0000, -1.100, -1.300, -1.400, 1.5000, 0.0000])
+    ap1 = RmiPosJoints([1.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000])
+
+    qp0 = RmiPosQuaternion([0.4515, 0.1684, 0.4100, 0.0000, 0.0000, 1.0000, 0.0000])
+    qp1 = RmiPosQuaternion([0.2920, -0.000, 0.4100, 0.0000, 0.0000, 1.0000, 0.0000])
+
+    rob2.MoveJ(RmiPosJoints([1.0000, -1.100, -1.300, -1.400, 1.5000, 0.0000]))
+    rob2.MoveJ(apHomeRob2)
+    rob2.ProgRun()
+
+
 function_map = {
     'move_square': move_square,
     'do_settings': do_settings,
     'do_something': do_something,
     'home_rob1': home_rob1,
     'home_rob2': home_rob2,
-    'home_both': home_both
+    'home_both': home_both,
+    'cause_error': cause_error,
+    'rob2_do_stuff': rob2_do_stuff, 
 
 }
 
 parser = argparse.ArgumentParser(description='Python tester.')
-parser.add_argument('command', nargs='?', choices=function_map.keys())
 
+func_names = list(function_map.keys())
+func_names.sort()
+
+parser.add_argument('command', nargs='?', choices=func_names)
+
+if argcomplete_available:
+    argcomplete.autocomplete(parser)
 
 if __name__ == '__main__':
 
