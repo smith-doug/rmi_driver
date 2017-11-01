@@ -541,6 +541,13 @@ void Connector::getThread()
       last_joint_state_.name = joint_names_;
       last_joint_state_.position = pos_real;
 
+      if (last_joint_state_.name.size() != last_joint_state_.position.size())
+      {
+        ROS_ERROR_STREAM_THROTTLE(
+            1, ns_ << " ERROR: Connector::getThread number of positions received(" << last_joint_state_.position.size()
+                   << ") doesn't match number of configured joints(" << last_joint_state_.name.size() << ")!");
+      }
+
       // Get the tool frame in euler zyx
       response = sendCommand(*get_tool_frame);
       pos_real = util::stringToDoubleVec(response);
