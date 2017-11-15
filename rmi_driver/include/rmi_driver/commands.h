@@ -279,6 +279,7 @@ public:
   /**
    * \brief Checks if the values specified in the sample_command match those in cmd_msg.
    * \details Strings are checked for equality.  Vectors are checked for length.
+   * @todo == probably isn't the operator to use here.  It's not checking "equality" it's just checking if it's a match.
    *
    * @param cmd_msg The message received from the command_list topic
    * @return True if it's a match

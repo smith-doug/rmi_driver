@@ -81,8 +81,6 @@ public:
 
   // bool connectCmd(std::string host, int port);
 
-  bool connectSocket(std::string host, int port, RobotCommand::CommandType cmd_type);
-
   /**
    * Sends a command.  It will choose the socket to used based on the command type.
    * @param command
@@ -108,7 +106,9 @@ public:
    *
    * if replace_previous_commands is set, it will clear the queue.
    * It will search through the registered command handlers for each message in the CommandList.
-   * If a handler is found, the handler will create a rmi_driver::Command (@todo come up with a better name).
+   * If a handler is found, the handler will create a rmi_driver::RobotCommand and store it.  If the entire CommandList
+   * is processed successfully, the commands will be added to command_list_ so that cmdThread can send them to the
+   * robot.
    *
    * For a normal Cmd type, it will add it to the queue to be sent later.
    * For a high priority Get type, it will clear the queue, then
@@ -144,10 +144,13 @@ public:
   }
 
   /**
+   * \brief Consume any messages received at strange times on the Cmd socket.
+   *
    * This will run and consume any erroneous messages sent by the controller after a cancel.
    * This can happen if
    * 1. A motion command like PTP is sent while the PLC is set to stop at a breakpoint.
-   * 2. An ABORT command is issued.  The socket timer will abort, indicating that it didn't get a response.
+   * 2. An ABORT command is issued.  The socket timer will abort, indicating that it didn't get a response.  The robot
+   * may return a "done" for the previous command.
    * 3. The PLC is unpaused and it sends a "done" or whatever.
    * Without this function running, the next async_read would return immediately with the contents of an old message,
    * and it would be "off by one" forever.
@@ -157,16 +160,31 @@ public:
   /**
    * \brief Publish any non-aggregated state messages like tool_frame.
    *
-   * I already have a publishing thread in Driver.  No real need to make another.
+   * I already have a publishing thread in Driver.  No real need to make another.  The Driver will call this directly.
    */
   void publishState();
 
 protected:
-  // void commandThread();
-
+  /**
+   *
+   */
   void cmdThread();
 
   void getThread();
+
+  /**
+     * \brief Asynchronously connect to a robot and launch the proper Cmd/Get thread.
+     *
+     * This method will attempt to async_connect to the robot.  If it fails, it will try again.  When it succeeds, it
+     * will launch the appropriate Get/Cmd thread.  If this is being called from the Get/Set thread, it must be launched
+     * in a separate, detached thread.  It will attempt to join() the get/set thread before relaunching, to give it a
+     * chance to return.
+     * @param host The ip address
+     * @param port The port
+     * @param cmd_type Get/Set
+     * @return
+     */
+  bool connectSocket(std::string host, int port, RobotCommand::CommandType cmd_type);
 
   /**
    * \brief Publish a robot_movement_interface/Result to the command_result topic.

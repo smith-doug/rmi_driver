@@ -54,6 +54,21 @@ std::string floatToStringNoTrailing(float fval, int precision = 4);
  */
 std::vector<double> stringToDoubleVec(const std::string& s);
 
+template <typename T>
+std::string vecToString(const std::vector<T>& vec)
+{
+  std::ostringstream oss;
+  oss << "{";
+  if (!vec.empty())
+  {
+    std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<T>(oss, ", "));
+    oss << vec.back();
+  }
+  oss << "}";
+
+  return oss.str();
+}
+
 ///@{
 /*
  * \brief Check if the sample is used, then check if msg matches sample.
