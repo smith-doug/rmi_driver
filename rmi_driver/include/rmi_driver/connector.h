@@ -55,6 +55,14 @@ namespace rmi_driver
 {
 using CmhLoader = pluginlib::ClassLoader<CommandRegister>;
 using CmhLoaderPtr = std::shared_ptr<pluginlib::ClassLoader<CommandRegister>>;
+
+/**
+ * \brief The connection to a robot.
+ *
+ * This class handles the actual socket connections to the robot and processing of messages.  It will listen for
+ * robot_movement_interface::CommandList messages, use the plugin provided by Driver to process them into RobotMessages,
+ * send them to the robot, and await responses.
+ */
 class Connector
 {
   typedef std::vector<std::string> StringVec;
@@ -79,11 +87,11 @@ public:
    */
   bool connect(std::string host, int port);
 
-  // bool connectCmd(std::string host, int port);
-
   /**
-   * Sends a command.  It will choose the socket to used based on the command type.
-   * @param command
+   * \brief Sends a command.
+   *
+   * It will choose the socket to used based on the command type.
+   * @param command a rmi_driver::RobotCommand to send
    * @return the reply from the socket.
    */
   std::string sendCommand(const RobotCommand& command);
@@ -94,6 +102,11 @@ public:
    */
   void addCommand(RobotCommandPtr command);
 
+  /**
+   * \brief Erase the command queue.
+   *
+   * This does NOT abort commands that are already executing on the robot.
+   */
   void clearCommands();
 
   void subCB_CommandList(const robot_movement_interface::CommandListConstPtr& msg)
@@ -124,16 +137,14 @@ public:
     return last_joint_state_;
   }
 
-  //  void cancelSocketGet()
-  //  {
-  //    socket_get_.cancel();
-  //  }
-
   /**
-   *This function will cancel active socket async commands and launch cmdSocketFlusher if needed.  This is
+   * \brief Calls socket::cancel() on the cmd socket if unable to acquire socket_cmd_mutex_ before the timeout expires.
+   *
+   * This function will cancel active socket async commands and launch cmdSocketFlusher if needed.  This is
    * automatically launched  by the driver when a high priority command like ABORT is received as a
-   * robot_movement_interface::Command.
-   * It will try to lock the socket_cmd_mutex_ to timeout ms.
+   * robot_movement_interface::Command.  It will try to lock the socket_cmd_mutex_ to timeout ms.  If this succeeds, it
+   * will not call cancel or launch the cmdSocketFlusher.
+   *
    * @param timeout ms to try to lock the socket mutex for before actually canceling
    */
   void cancelSocketCmd(int timeout = 50);
@@ -165,9 +176,6 @@ public:
   void publishState();
 
 protected:
-  /**
-   *
-   */
   void cmdThread();
 
   void getThread();
@@ -218,7 +226,6 @@ protected:
   std::string ns_;  ///< Namespace of this connection
 
   /// Socket used for motion commands that may block.  Default port 30000
-  std::shared_ptr<boost::asio::ip::tcp::socket> socket_cmd_ptr_;
   boost::asio::ip::tcp::socket socket_cmd_;
 
   /// Socket used for "instant" commands that can't block.  Default port socket_cmd_ + 1
@@ -234,13 +241,13 @@ protected:
 
   /// IP address of the robot
   std::string host_;
-  /// Port of the robot
+  /// Base port of the robot.  This is the port for Cmd messages.  Get messages are port_ + 1.
   int port_;
 
   /// asio io service.  Owned by Driver.
   boost::asio::io_service& io_service_;
 
-  /// Queue of all telnet commands to be sent by Connector::cmdThread().
+  /// Queue of all rmi_driver::RobotCommands to be sent by Connector::cmdThread().
   std::queue<RobotCommandPtr> command_list_;
 
   /// Receives the robot_movement_interface/CommandList for this namespace
@@ -263,6 +270,7 @@ protected:
   /// The last known tool frame.  Published by publishState(), called from Driver.
   robot_movement_interface::EulerFrame last_tool_frame_;
 
+  /// List of joint names for this robot.
   std::vector<std::string> joint_names_;
 
   /// The CommandRegister that was loaded by the plugin
@@ -272,12 +280,12 @@ protected:
   CmhLoaderPtr cmh_loader_;
 
   ///\brief Used to read and consume and messages sent after a cancel.
-  ///
   /// This was happening to me if I paused the PLC, aborted a command, then unpaused the PLC.
   bool flush_socket_cmd_ = false;
 
   boost::asio::streambuf socket_cmd_flush_buff_;
 
+  /// Will cause commandListCb to exit if it encounters a message it can't match.
   bool abort_on_fail_to_find_ = true;  /// @todo Will all robot types have an ABORT command?
 };
 

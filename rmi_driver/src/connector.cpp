@@ -349,9 +349,6 @@ void Connector::addCommand(RobotCommandPtr command)
   }
 }
 
-/**
- * Erase the command queue.  This does NOT abort commands that are already executing on the robot.
- */
 void Connector::clearCommands()
 {
   command_list_mutex_.lock();
@@ -607,7 +604,6 @@ void Connector::cmdThread()
       should_send = true;
 
       cmd = command_list_.front();
-      // command_list_.pop();
 
       std::ostringstream oss;
       oss << *cmd;
