@@ -381,30 +381,33 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       ROS_INFO_STREAM(ns_ << " Found cmd handler: " << handler->getName());
 
       // Create a new CommandPtr with the found handler
-      auto telnet_command_ptr = handler->processMsg(msg_cmd);
-      if (!telnet_command_ptr)
+      auto robot_command_ptr = handler->processMsg(msg_cmd);
+      if (!robot_command_ptr)
       {
         ROS_ERROR_STREAM(ns_ << " Connector::commandListCb got a null telnet_command_ptr");
         goto error_abort;
       }
 
       // Set the RobotCommand's id to the id of the message for feedback later
-      telnet_command_ptr->setCommandId(msg_cmd.command_id);
+      robot_command_ptr->setCommandId(msg_cmd.command_id);
 
       // Standard Cmds get added to the queue
-      if (telnet_command_ptr->getType() == RobotCommand::CommandType::Cmd)
+      if (robot_command_ptr->getType() == RobotCommand::CommandType::Cmd)
       {
-        command_vect.push_back(telnet_command_ptr);
+        command_vect.push_back(robot_command_ptr);
       }
       else  // A Get was received as part of a CommandList.
       {
-        ROS_INFO_STREAM(ns_ << " Got a high priority command via a message: " << telnet_command_ptr->getCommand());
+        ROS_INFO_STREAM(ns_ << " Got a high priority command via a message: " << robot_command_ptr->getCommand());
 
         // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
         auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
 
-        std::string send_response = conn->sendCommand(*telnet_command_ptr);
+        std::string send_response = conn->sendCommand(*robot_command_ptr);
         boost::trim_right(send_response);
+
+        // Publish the result
+        publishRmiResult(robot_command_ptr->getCommandId(), 0, send_response);
 
         ROS_INFO_STREAM(ns_ << " High priority response: " << send_response);
         fut.wait();
