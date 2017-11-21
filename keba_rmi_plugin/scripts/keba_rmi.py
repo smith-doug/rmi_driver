@@ -318,6 +318,20 @@ class RobotPost(object):
         self.AddCommand(cmd)
         # self.cmd_list.commands.append(cmd)
 
+    def Abort(self):
+        '''
+        Immediately sends an ABORT message.  It will call ProgStart, add the ABORT command, then call ProgRun
+        '''
+
+        self.ProgStart()
+        self.cmd_list.replace_previous_commands = True
+
+        cmd = rmi_msg.Command()
+        cmd.command_type = 'ABORT'
+        self.AddCommand(cmd)
+
+        self.ProgRun()
+
 
 
 #===============================================================================
