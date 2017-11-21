@@ -140,6 +140,7 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
     sock = &socket_get_;
   }
 
+  // Wait until the correct thread exits cleanly
   if (thread->joinable())
     thread->join();
 
@@ -153,13 +154,13 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
         else if (cmd_type == RobotCommand::CommandType::Get)
           con_type = "Get";
 
-        if (ec)
+        if (ec)  // If it failed, try again
         {
           ROS_INFO_STREAM(ns_ << " Socket(" << con_type << ") Ec was set " << ec.message());
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
         }
-        else
+        else  // Connected, launch the correct thread
         {
           if (cmd_type == RobotCommand::CommandType::Cmd)
           {
@@ -247,7 +248,7 @@ std::string Connector::sendCommand(const RobotCommand &command)
     socket = &socket_cmd_;
     mutex = &socket_cmd_mutex_;
 
-    if (flush_socket_cmd_)
+    if (flush_socket_cmd_)  // Flusher active, stop it
     {
       flush_socket_cmd_ = false;
       socket->cancel();
@@ -275,6 +276,7 @@ std::string Connector::sendCommand(const RobotCommand &command)
       *socket, boost::asio::buffer(sendStr), [&](const boost::system::error_code &e, std::size_t size) {
         if (e)
         {
+          // Let the future have the exception
           promise_sendCommand.set_exception(std::make_exception_ptr(boost::system::system_error(e)));
         }
         else
@@ -290,7 +292,6 @@ std::string Connector::sendCommand(const RobotCommand &command)
   catch (const std::exception &e)
   {
     throw;
-    // return "error";
   }
 
   promise_sendCommand = std::promise<size_t>();
@@ -346,6 +347,10 @@ void Connector::addCommand(RobotCommandPtr command)
     command_list_mutex_.lock();
     command_list_.push(command);
     command_list_mutex_.unlock();
+  }
+  else
+  {
+    ROS_ERROR_STREAM(ns_ << " Connector::addCommand invalid command type");
   }
 }
 
@@ -593,14 +598,20 @@ void Connector::cmdThread()
 
   RobotCommandPtr cmd;
 
+  // Start the flusher.  There could be some message in the buffer if this thread was just restarted.
   flush_socket_cmd_ = true;
   cmdSocketFlusher();
+
+  // Check for messages to send, send them 1 at a time and wait for a response for each one.  Send a
+  // robot_movement_interface::Result for each one.
   while (!ros::isShuttingDown())
   {
     // Separate the command list mutex and the socket mutex.  This makes it possible to add/remove commands even if it's
     // waiting for a response.
 
     bool should_send = false;
+
+    // Check for a message
     command_list_mutex_.lock();
     if (command_list_.size() > 0)
     {
@@ -631,6 +642,10 @@ void Connector::cmdThread()
         }
         else
         {
+          /// @todo consider clearing the list.  I'm not sure how people will be using this.  Maybe some will want to
+          /// continue after a not-ok response.  I can simplify this by specifying that OK only indicates that the
+          /// command was received and processed successfully and execution should continue, not that the actual result
+          /// was good/true/whatever.
           ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
           result.result_code = 1;
         }
@@ -658,6 +673,7 @@ void Connector::cmdThread()
           // Removing clearCommands() actually allows the robot to continue if the socket is lost due to a plc restart
           // or whatever.
           // An abort command will still clear it out.  Maybe a timer would be safer?
+          /// @todo clearing would be safer
           // clearCommands();
 
           std::thread(&Connector::connectSocket, this, host_, port_, RobotCommand::CommandType::Cmd).detach();

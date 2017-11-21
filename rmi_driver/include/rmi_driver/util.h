@@ -54,6 +54,13 @@ std::string floatToStringNoTrailing(float fval, int precision = 4);
  */
 std::vector<double> stringToDoubleVec(const std::string& s);
 
+/**
+ * \brief Outputs a vector as a nice string.
+ *
+ * This will take a vector like [1,2,3] and output a string "{1, 2, 3}"
+ * @param vec Vector of type T
+ * @return formatted string
+ */
 template <typename T>
 std::string vecToString(const std::vector<T>& vec)
 {

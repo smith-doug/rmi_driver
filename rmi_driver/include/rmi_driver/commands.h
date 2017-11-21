@@ -47,7 +47,7 @@ namespace rmi_driver
  *
  * Default string format:
  * \code
- * <command>[ : <values>]; [<param>[: <values>];]
+ * <command>[ : <values>]; [<param>[ : <values>];]
  * \endcode
  *
  * Examples: \n
@@ -145,7 +145,7 @@ public:
   virtual std::string toString(bool append_newline = true) const;
 
   /**
-   * Check the response of a command.  By default it just checks if the response is "error".
+   * Check the response of a command.  By default it just checks if the response starts with "error".
    *
    * @param response The string returned by the robot
    * @return True if the response is OK
@@ -192,6 +192,13 @@ protected:
   CommandType type_;
 };
 
+/**
+ * \brief << ostream operator for RobotCommands
+ *
+ * @param o ostream
+ * @param cmd the RobotCommand
+ * @return << stream operator magic
+ */
 inline std::ostream& operator<<(std::ostream& o, const RobotCommand& cmd)
 {
   return cmd.dump(o);

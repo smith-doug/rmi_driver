@@ -98,7 +98,8 @@ public:
 
   /**
    * Adds a command to the queue.  Currently only takes Cmd type
-   * @param command
+   *
+   * @param command a RobotCommand shared pointer
    */
   void addCommand(RobotCommandPtr command);
 
@@ -149,6 +150,11 @@ public:
    */
   void cancelSocketCmd(int timeout = 50);
 
+  /**
+   * \brief Get the CommandRegister that was loaded by the plugin
+   *
+   * @return The CommandRegister shared pointer
+   */
   CommandRegisterPtr getCommandRegister()
   {
     return cmd_register_;
@@ -176,8 +182,18 @@ public:
   void publishState();
 
 protected:
+  /**
+   * \brief Monitor command_list_, send command to the robot and publish results.
+   *
+   * This thread is automatically launched by Connector::connectSocket.
+   */
   void cmdThread();
 
+  /**
+   * \brief Gets the cyclical status data.
+   *
+   * This thread is automatically launched by Connector::connectSocket.
+   */
   void getThread();
 
   /**
