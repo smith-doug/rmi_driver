@@ -40,7 +40,8 @@ namespace rmi_driver
 using namespace boost::asio::ip;
 
 Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::string host, int port,
-                     StringVec joint_names, CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader)
+                     StringVec joint_names, CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader,
+                     bool clear_commands_on_error)
   : ns_(ns)
   , io_service_(io_service)
   , socket_cmd_(io_service)
@@ -50,6 +51,7 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   , cmd_register_(cmd_register)
   , nh_(ns)
   , cmh_loader_(cmh_loader)
+  , clear_commands_on_error_(clear_commands_on_error)
 
 {
   joint_names_ = joint_names;
@@ -411,7 +413,8 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
         std::string send_response = conn->sendCommand(*robot_command_ptr);
         boost::trim_right(send_response);
 
-        // Publish the result
+        // Publish the result  @todo is this really the right thing to do?  It will publish over the same channel.
+        // Maybe I should assume that there will be no response to the abort itself, only the command that was aborted?
         publishRmiResult(robot_command_ptr->getCommandId(), 0, send_response);
 
         ROS_INFO_STREAM(ns_ << " High priority response: " << send_response);
@@ -642,12 +645,18 @@ void Connector::cmdThread()
         }
         else
         {
-          /// @todo consider clearing the list.  I'm not sure how people will be using this.  Maybe some will want to
-          /// continue after a not-ok response.  I can simplify this by specifying that OK only indicates that the
-          /// command was received and processed successfully and execution should continue, not that the actual result
-          /// was good/true/whatever.
+          /// OK only indicates that the command was received and processed successfully and execution should continue,
+          /// not that the actual result was good/true/whatever.  A not-OK response is always a problem.
           ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
           result.result_code = 1;
+
+          ///@todo think about how this might affect the order of responses.
+          // Clear the list if set.
+          if (clear_commands_on_error_)
+          {
+            ROS_INFO_STREAM(ns_ << " Connector::cmdThread is clearing any remaining commands after receiving an error");
+            clearCommands();
+          }
         }
 
         // Command was sent and responded to in some way.  Lock n' pop.
@@ -674,7 +683,12 @@ void Connector::cmdThread()
           // or whatever.
           // An abort command will still clear it out.  Maybe a timer would be safer?
           /// @todo clearing would be safer
-          // clearCommands();
+
+          if (clear_commands_on_error_)
+          {
+            ROS_INFO_STREAM(ns_ << " Connector::cmdThread is clearing any remaining commands due to the socket error");
+            clearCommands();
+          }
 
           std::thread(&Connector::connectSocket, this, host_, port_, RobotCommand::CommandType::Cmd).detach();
 
