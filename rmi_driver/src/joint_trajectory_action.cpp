@@ -84,6 +84,20 @@ void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHand
     std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.pose),
                    [&](int i) { return point.positions[i]; });
 
+    if (point.velocities.size() == mapping.size())
+    {
+      cmd.velocity_type = "ROS";
+      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.velocity),
+                     [&](int i) { return point.velocities[i]; });
+    }
+
+    if (point.accelerations.size() == mapping.size())
+    {
+      cmd.acceleration_type = "ROS";
+      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.acceleration),
+                     [&](int i) { return point.accelerations[i]; });
+    }
+
     cmd_list.commands.push_back(std::move(cmd));
   }
 
