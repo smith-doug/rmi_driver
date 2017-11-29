@@ -27,6 +27,11 @@
  *      Author: Doug Smith
  */
 
+/*
+ * Sections of this code are either inspired by or taken directly from the robot_movement_interface and
+ * industrial_robot_client.
+ */
+
 #ifndef INCLUDE_RMI_DRIVER_JOINT_TRAJECTORY_ACTION_H_
 #define INCLUDE_RMI_DRIVER_JOINT_TRAJECTORY_ACTION_H_
 
@@ -46,7 +51,7 @@ typedef actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction> Joint
 class JointTrajectoryAction
 {
 public:
-  JointTrajectoryAction(std::string ns);
+  JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names);
 
   void test(JointTractoryActionServer::GoalHandle &gh);
 
@@ -64,7 +69,6 @@ public:
    * \param gh goal handle
    *
    */
-
   void cancelCB(JointTractoryActionServer::GoalHandle gh)
   {
   }
@@ -74,8 +78,8 @@ public:
 protected:
   ros::NodeHandle nh_;
   /**
-     * \brief Internal action server
-     */
+   * \brief Internal action server
+   */
   JointTractoryActionServer action_server_;
 
   ros::Publisher pub_rmi_;
@@ -85,6 +89,8 @@ protected:
   JointTractoryActionServer::GoalHandle active_goal_;
 
   int cmd_id_;
+
+  std::vector<std::string> conf_joint_names_;
 };
 }  // namespace rmi_driver
 

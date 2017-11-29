@@ -95,7 +95,7 @@ void Driver::addConnection(std::string ns, std::string host, int port, std::vect
                                             config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
-  auto jta = std::make_shared<JointTrajectoryAction>(ns);
+  auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names);
   jta_map_.emplace(conn_num_, jta);
 
   auto &conn = conn_map_.at(conn_num_);

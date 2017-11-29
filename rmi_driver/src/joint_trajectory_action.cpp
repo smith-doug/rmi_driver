@@ -34,8 +34,9 @@ namespace rmi_driver
 {
 }  // namespace rmi_driver
 
-rmi_driver::JointTrajectoryAction::JointTrajectoryAction(std::string ns)
+rmi_driver::JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names)
   : action_server_(nh_, ns + "/joint_trajectory_action", boost::bind(&JointTrajectoryAction::goalCB, this, _1), false)
+  , conf_joint_names_(joint_names)
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
 
@@ -46,15 +47,16 @@ rmi_driver::JointTrajectoryAction::JointTrajectoryAction(std::string ns)
 
 void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 {
-  std::vector<std::string> conf_names = { "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
-                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
+  //  std::vector<std::string> conf_names = { "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
+  //  "wrist_1_joint",
+  //                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
 
   auto &traj = gh.getGoal()->trajectory;
 
   auto &joint_names = traj.joint_names;
   std::vector<int> mapping;
 
-  for (auto &&name : conf_names)
+  for (auto &&name : conf_joint_names_)
   {
     auto idx = std::find(joint_names.begin(), joint_names.end(), name) - joint_names.begin();
     mapping.push_back(idx);
