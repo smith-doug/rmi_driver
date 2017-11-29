@@ -35,6 +35,7 @@
 
 #include "rmi_driver/commands.h"
 #include "rmi_driver/connector.h"
+#include "rmi_driver/joint_trajectory_action.h"
 #include "rmi_driver/rmi_config.h"
 
 #include <robot_movement_interface/CommandList.h>
@@ -72,6 +73,8 @@ protected:
   ros::NodeHandle nh_;
 
   std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
+
+  std::unordered_map<int32_t, std::shared_ptr<JointTrajectoryAction>> jta_map_;
 
   // Connector connector_;
 

@@ -13,9 +13,6 @@ int main(int argc, char **argv)
 
   driver.start();
 
-  JointTrajectoryAction jta;
-  // jta.test();
-
   ros::spin();
 
   return 0;

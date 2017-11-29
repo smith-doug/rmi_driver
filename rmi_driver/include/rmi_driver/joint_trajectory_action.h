@@ -46,7 +46,7 @@ typedef actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction> Joint
 class JointTrajectoryAction
 {
 public:
-  JointTrajectoryAction();
+  JointTrajectoryAction(std::string ns);
 
   void test(JointTractoryActionServer::GoalHandle &gh);
 
