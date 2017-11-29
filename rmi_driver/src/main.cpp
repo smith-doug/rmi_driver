@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include "rmi_driver/driver.h"
+#include "rmi_driver/joint_trajectory_action.h"
 
 using namespace rmi_driver;
 int main(int argc, char **argv)
@@ -11,6 +12,9 @@ int main(int argc, char **argv)
   rmi_driver::Driver driver;
 
   driver.start();
+
+  JointTrajectoryAction jta;
+  // jta.test();
 
   ros::spin();
 
