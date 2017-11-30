@@ -74,8 +74,10 @@ public:
 
   void subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg);
 
-  template <typename T>
-  std::vector<float> sortVector(const std::vector<size_t> &indices, const std::vector<T> &data)
+  void abort(const std::string &error_msg);
+
+  template <typename Tdest, typename Tsource>
+  std::vector<float> sortVector(const std::vector<size_t> &indices, const std::vector<Tsource> &data)
   {
     if (indices.size() != data.size())
     {
@@ -83,7 +85,7 @@ public:
       ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
       throw std::runtime_error(ss.str());
     }
-    std::vector<float> ret;
+    std::vector<Tdest> ret;
     ret.reserve(indices.size());
 
     std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
@@ -97,6 +99,8 @@ protected:
    * \brief Internal action server
    */
   JointTractoryActionServer action_server_;
+
+  std::string ns_;
 
   ros::Publisher pub_rmi_;
 

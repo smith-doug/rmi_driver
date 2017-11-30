@@ -42,6 +42,7 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
   : action_server_(nh_, ns + "/joint_trajectory_action", boost::bind(&JointTrajectoryAction::goalCB, this, _1),
                    boost::bind(&JointTrajectoryAction::cancelCB, this, _1), false)
   , conf_joint_names_(joint_names)
+  , ns_(ns)
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
 
@@ -55,10 +56,8 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   auto &traj = gh.getGoal()->trajectory;
 
   auto &joint_names = traj.joint_names;
-  std::vector<size_t> mapping;
 
-  auto boost_perm_test = boost::algorithm::is_permutation(conf_joint_names_, joint_names.begin());
-  ROS_INFO_STREAM("####boost_perm_test: " << boost_perm_test);
+  std::vector<size_t> mapping;  // mapping[0] will contain the position of joint0 in the vectors
 
   for (auto &&name : conf_joint_names_)
   {
@@ -67,60 +66,52 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   }
   if (mapping.size() != joint_names.size())
   {
-    ROS_INFO_STREAM("rejected");
-    gh.setRejected();
+    ROS_ERROR_STREAM("rejected");
+    control_msgs::FollowJointTrajectoryResult rslt;
+    rslt.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL;
+    gh.setRejected(rslt, "mapping.size() != joint_names.size()");
     return;
   }
 
-  for (auto &&idx : mapping)
-  {
-    ROS_INFO_STREAM(idx);
-  }
+  //  for (auto &&idx : mapping)
+  //  {
+  //    ROS_INFO_STREAM(idx);
+  //  }
 
   robot_movement_interface::CommandList cmd_list;
 
   cmd_id_ = 0;
-  for (auto &&point : traj.points)
+
+  try
   {
-    robot_movement_interface::Command cmd;
-    cmd.command_id = cmd_id_++;
-
-    cmd.command_type = "PTP";
-    cmd.pose_type = "JOINTS";
-
-    // boost::transform(mapping, std::back_inserter(cmd.pose), [&](int i) { return point.positions[i]; });
-
-    //    std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.pose),
-    //                   [&](int i) { return point.positions[i]; });
-
-    // auto begin = boost::make_permutation_iterator(point.positions.begin(), mapping.begin());
-    auto begin_zip = boost::make_zip_iterator(boost::make_tuple(point.positions.begin(), point.velocities.begin()));
-    auto end_zip = boost::make_zip_iterator(boost::make_tuple(point.positions.end(), point.velocities.end()));
-
-    auto begin = boost::make_permutation_iterator(point.positions.begin(), mapping.begin());
-    auto end = boost::make_permutation_iterator(point.positions.end(), mapping.end());
-
-    // std::copy(begin, end, std::back_inserter(cmd.pose));
-
-    cmd.pose = sortVector(mapping, point.positions);
-
-    if (point.velocities.size() == mapping.size())
+    for (auto &&point : traj.points)
     {
-      cmd.velocity_type = "ROS";
+      robot_movement_interface::Command cmd;
+      cmd.command_id = cmd_id_++;
 
-      cmd.velocity = sortVector(mapping, point.velocities);
-      //      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.velocity),
-      //                     [&](int i) { return point.velocities[i]; });
+      cmd.command_type = "PTP";
+      cmd.pose_type = "JOINTS";
+
+      cmd.pose = sortVector<float>(mapping, point.positions);
+
+      if (point.velocities.size() == mapping.size())
+      {
+        cmd.velocity_type = "ROS";
+        cmd.velocity = sortVector<float>(mapping, point.velocities);
+      }
+
+      if (point.accelerations.size() == mapping.size())
+      {
+        cmd.acceleration_type = "ROS";
+        cmd.acceleration = sortVector<float>(mapping, point.accelerations);
+      }
+      cmd_list.commands.push_back(std::move(cmd));
     }
-
-    if (point.accelerations.size() == mapping.size())
-    {
-      cmd.acceleration_type = "ROS";
-      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.acceleration),
-                     [&](int i) { return point.accelerations[i]; });
-    }
-
-    cmd_list.commands.push_back(std::move(cmd));
+  }
+  catch (const std::runtime_error &error)
+  {
+    gh.setRejected();
+    abort(error.what());
   }
 
   robot_movement_interface::Command cmd;
@@ -156,6 +147,15 @@ void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::
 
 void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
 {
+  ROS_INFO_STREAM("CancelCB");
+  if (gh == active_goal_)
+  {
+    abort("JointTrajectoryAction::cancelCB called");
+  }
+}
+
+void JointTrajectoryAction::abort(const std::string &error_msg)
+{
   robot_movement_interface::CommandList cmd_list;
   robot_movement_interface::Command cmd;
   cmd.command_type = "ABORT";
@@ -165,9 +165,12 @@ void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
 
   pub_rmi_.publish(cmd_list);
 
-  ROS_INFO_STREAM("CancelCB");
-  if (gh == active_goal_)
+  auto status = active_goal_.getGoalStatus().status;
+  if (status == actionlib_msgs::GoalStatus::PENDING || status == actionlib_msgs::GoalStatus::RECALLING ||
+      status == actionlib_msgs::GoalStatus::ACTIVE || status == actionlib_msgs::GoalStatus::PREEMPTING)
     active_goal_.setCanceled();
+
+  ROS_INFO_STREAM(ns_ << " JointTrajectoryAction::abort: " << error_msg);
 }
 
 }  // namespace rmi_driver
