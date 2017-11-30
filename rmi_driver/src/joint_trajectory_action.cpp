@@ -28,14 +28,19 @@
  */
 
 #include <rmi_driver/joint_trajectory_action.h>
+#include <boost/algorithm/cxx11/is_permutation.hpp>
+#include <boost/range/algorithm.hpp>
+//#include <boost/range/algorithm/transform.hpp>
+#include <boost/iterator/permutation_iterator.hpp>
+#include <boost/iterator/zip_iterator.hpp>
+
 #include <vector>
 
 namespace rmi_driver
 {
-}  // namespace rmi_driver
-
-rmi_driver::JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names)
-  : action_server_(nh_, ns + "/joint_trajectory_action", boost::bind(&JointTrajectoryAction::goalCB, this, _1), false)
+JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names)
+  : action_server_(nh_, ns + "/joint_trajectory_action", boost::bind(&JointTrajectoryAction::goalCB, this, _1),
+                   boost::bind(&JointTrajectoryAction::cancelCB, this, _1), false)
   , conf_joint_names_(joint_names)
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
@@ -45,16 +50,15 @@ rmi_driver::JointTrajectoryAction::JointTrajectoryAction(std::string ns, const s
   action_server_.start();
 }
 
-void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
+void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 {
-  //  std::vector<std::string> conf_names = { "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",
-  //  "wrist_1_joint",
-  //                                          "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
-
   auto &traj = gh.getGoal()->trajectory;
 
   auto &joint_names = traj.joint_names;
-  std::vector<int> mapping;
+  std::vector<size_t> mapping;
+
+  auto boost_perm_test = boost::algorithm::is_permutation(conf_joint_names_, joint_names.begin());
+  ROS_INFO_STREAM("####boost_perm_test: " << boost_perm_test);
 
   for (auto &&name : conf_joint_names_)
   {
@@ -66,6 +70,10 @@ void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHand
   {
     ROS_INFO_STREAM(idx);
   }
+
+  using TupleNode = std::tuple<int, double, double>;
+
+  std::vector<TupleNode> tupVec;
 
   // trajectory_msgs::JointTrajectoryPoint pt;
   // pt.positions = { 2, 6, 1, 0, 3, 4, 5 };
@@ -81,14 +89,30 @@ void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHand
 
     cmd.command_type = "PTP";
     cmd.pose_type = "JOINTS";
-    std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.pose),
-                   [&](int i) { return point.positions[i]; });
+
+    // boost::transform(mapping, std::back_inserter(cmd.pose), [&](int i) { return point.positions[i]; });
+
+    //    std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.pose),
+    //                   [&](int i) { return point.positions[i]; });
+
+    // auto begin = boost::make_permutation_iterator(point.positions.begin(), mapping.begin());
+    auto begin_zip = boost::make_zip_iterator(boost::make_tuple(point.positions.begin(), point.velocities.begin()));
+    auto end_zip = boost::make_zip_iterator(boost::make_tuple(point.positions.end(), point.velocities.end()));
+
+    auto begin = boost::make_permutation_iterator(point.positions.begin(), mapping.begin());
+    auto end = boost::make_permutation_iterator(point.positions.end(), mapping.end());
+
+    // std::copy(begin, end, std::back_inserter(cmd.pose));
+
+    cmd.pose = sortVector(mapping, point.positions);
 
     if (point.velocities.size() == mapping.size())
     {
       cmd.velocity_type = "ROS";
-      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.velocity),
-                     [&](int i) { return point.velocities[i]; });
+
+      cmd.velocity = sortVector(mapping, point.velocities);
+      //      std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.velocity),
+      //                     [&](int i) { return point.velocities[i]; });
     }
 
     if (point.accelerations.size() == mapping.size())
@@ -118,15 +142,24 @@ void rmi_driver::JointTrajectoryAction::test(JointTractoryActionServer::GoalHand
   JointTractoryActionServer::Result res;
 }
 
-void rmi_driver::JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
+void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
 {
   active_goal_ = gh;
   gh.setAccepted();
   test(gh);
 }
 
-void rmi_driver::JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
+void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
 {
   if (msg->command_id == cmd_id_)
     active_goal_.setSucceeded();
 }
+
+void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
+{
+  ROS_INFO_STREAM("CancelCB");
+  if (gh == active_goal_)
+    active_goal_.setCanceled();
+}
+
+}  // namespace rmi_driver

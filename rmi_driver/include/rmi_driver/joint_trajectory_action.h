@@ -35,8 +35,9 @@
 #ifndef INCLUDE_RMI_DRIVER_JOINT_TRAJECTORY_ACTION_H_
 #define INCLUDE_RMI_DRIVER_JOINT_TRAJECTORY_ACTION_H_
 
-#include <actionlib/server/action_server.h>
 #include <ros/ros.h>
+
+#include <actionlib/server/action_server.h>
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <control_msgs/FollowJointTrajectoryFeedback.h>
@@ -69,11 +70,26 @@ public:
    * \param gh goal handle
    *
    */
-  void cancelCB(JointTractoryActionServer::GoalHandle gh)
-  {
-  }
+  void cancelCB(JointTractoryActionServer::GoalHandle gh);
 
   void subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg);
+
+  template <typename T>
+  std::vector<float> sortVector(const std::vector<size_t> &indices, const std::vector<T> &data)
+  {
+    if (indices.size() != data.size())
+    {
+      std::stringstream ss;
+      ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
+      throw std::runtime_error(ss.str());
+    }
+    std::vector<float> ret;
+    ret.reserve(indices.size());
+
+    std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
+
+    return ret;
+  }
 
 protected:
   ros::NodeHandle nh_;
