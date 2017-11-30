@@ -91,7 +91,8 @@ void Driver::addConnection(std::string ns, std::string host, int port, std::vect
   conn_num_++;
 
   // Make a new Connector and add it
-  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands, cmh_loader);
+  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands, cmh_loader,
+                                            config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
   auto &conn = conn_map_.at(conn_num_);

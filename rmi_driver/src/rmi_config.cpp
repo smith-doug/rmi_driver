@@ -39,6 +39,8 @@ bool DriverConfig::loadConfig(ros::NodeHandle& nh)
   // Load "global" params first
   loadParam(nh, "/rmi_driver/publish_rate", publishing_rate_, 30);
 
+  loadParam(nh, "/rmi_driver/clear_commands_on_error", clear_commands_on_error_, true);
+
   // Load the connections
   std::string config_name = "rmi_driver_map";
   return getListParam(config_name, connections_);

@@ -143,7 +143,10 @@ public:
 
   std::vector<ConnectionConfig> connections_;  /// All the connections
 
-  int publishing_rate_;
+  int publishing_rate_;  /// Rate to publish the aggregated joint states
+
+  /// Connector::cmdThread() will clearCommands if it receives an error response
+  bool clear_commands_on_error_ = true;
 };
 
 /**

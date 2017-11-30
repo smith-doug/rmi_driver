@@ -69,7 +69,7 @@ class Connector
 
 public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
-            CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader);
+            CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader, bool clear_commands_on_error);
 
   /**
    * \brief Starts the asynchronous connect methods
@@ -303,6 +303,9 @@ protected:
 
   /// Will cause commandListCb to exit if it encounters a message it can't match.
   bool abort_on_fail_to_find_ = true;  /// @todo Will all robot types have an ABORT command?
+
+  /// Connector::cmdThread() will clearCommands if it receives an error response or disconnects
+  bool clear_commands_on_error_ = true;
 };
 
 }  // namespace rmi_driver
