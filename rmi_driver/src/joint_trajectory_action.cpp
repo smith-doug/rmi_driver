@@ -65,19 +65,17 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     auto idx = std::find(joint_names.begin(), joint_names.end(), name) - joint_names.begin();
     mapping.push_back(idx);
   }
+  if (mapping.size() != joint_names.size())
+  {
+    ROS_INFO_STREAM("rejected");
+    gh.setRejected();
+    return;
+  }
 
   for (auto &&idx : mapping)
   {
     ROS_INFO_STREAM(idx);
   }
-
-  using TupleNode = std::tuple<int, double, double>;
-
-  std::vector<TupleNode> tupVec;
-
-  // trajectory_msgs::JointTrajectoryPoint pt;
-  // pt.positions = { 2, 6, 1, 0, 3, 4, 5 };
-  // goal.goal.trajectory.points.push_back(pt);
 
   robot_movement_interface::CommandList cmd_list;
 
@@ -137,6 +135,7 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   // });
 
   // ROS_INFO_STREAM(cmd_list);
+  gh.setAccepted();
 
   pub_rmi_.publish(cmd_list);
   JointTractoryActionServer::Result res;
@@ -145,18 +144,27 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
 {
   active_goal_ = gh;
-  gh.setAccepted();
+
   test(gh);
 }
 
 void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
 {
-  if (msg->command_id == cmd_id_)
+  if (msg->command_id == cmd_id_ && active_goal_.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
     active_goal_.setSucceeded();
 }
 
 void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
 {
+  robot_movement_interface::CommandList cmd_list;
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "ABORT";
+
+  cmd_list.commands.push_back(cmd);
+  cmd_list.replace_previous_commands = true;
+
+  pub_rmi_.publish(cmd_list);
+
   ROS_INFO_STREAM("CancelCB");
   if (gh == active_goal_)
     active_goal_.setCanceled();
