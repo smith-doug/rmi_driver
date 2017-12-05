@@ -285,19 +285,28 @@ JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_traj
   robot_movement_interface::CommandList cmd_list;
 
   if (joint_trajectory.points.size() >= 1)
-    cmd_list.commands.emplace_back(processFirstJtaPoint(*joint_trajectory.points.begin()));
+    processFirstJtaPoint(joint_trajectory.points.front(), cmd_list);
+  else
+    return cmd_list;
 
-  std::transform(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
-                 std::back_inserter(cmd_list.commands),
-                 [&](const trajectory_msgs::JointTrajectoryPoint& pt) { return processJtaPoint(pt); });
+  std::for_each(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
+                [&](const trajectory_msgs::JointTrajectoryPoint& pt) { processJtaPoint(pt, cmd_list); });
+
+  // cmd_list.commands.emplace_back(processFirstJtaPoint(*joint_trajectory.points.begin()));
+
+  //  std::transform(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
+  //                 std::back_inserter(cmd_list.commands),
+  //                 [&](const trajectory_msgs::JointTrajectoryPoint& pt) { return processJtaPoint(pt); });
 
   if (joint_trajectory.points.size() >= 2)
-    cmd_list.commands.emplace_back(processLastJtaPoint(joint_trajectory.points.back()));
+    processFirstJtaPoint(joint_trajectory.points.back(), cmd_list);
+  // cmd_list.commands.emplace_back(processLastJtaPoint(joint_trajectory.points.back()));
 
   return cmd_list;
 }
 
-robot_movement_interface::Command JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+void JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                        robot_movement_interface::CommandList& cmd_list)
 {
   robot_movement_interface::Command cmd;
   cmd.command_id = cmd_id_++;
@@ -318,7 +327,7 @@ robot_movement_interface::Command JtaCommandHandler::processJtaPoint(const traje
     std::copy(point.velocities.begin(), point.velocities.end(), std::back_inserter(cmd.velocity));
   }
 
-  return cmd;
+  cmd_list.commands.push_back(cmd);
 }
 
 }  // namespace rmi_driver

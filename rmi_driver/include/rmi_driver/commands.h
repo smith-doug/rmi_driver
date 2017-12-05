@@ -372,20 +372,23 @@ public:
 
   virtual robot_movement_interface::CommandList processJta(const trajectory_msgs::JointTrajectory& joint_trajectory);
 
-  virtual robot_movement_interface::Command processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point);
+  virtual void processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                               robot_movement_interface::CommandList& cmd_list);
 
-  virtual robot_movement_interface::Command processFirstJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+  virtual void processFirstJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                    robot_movement_interface::CommandList& cmd_list)
   {
-    return processJtaPoint(point);
+    processJtaPoint(point, cmd_list);
   }
 
-  virtual robot_movement_interface::Command processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+  virtual void processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                   robot_movement_interface::CommandList& cmd_list)
   {
-    return processJtaPoint(point);
+    processJtaPoint(point, cmd_list);
   }
 
 protected:
-  std::shared_ptr<robot_movement_interface::CommandList> cmd_list_;
+  // std::shared_ptr<robot_movement_interface::CommandList> cmd_list_;
   int cmd_id_;
 };
 
