@@ -38,11 +38,13 @@
 
 namespace rmi_driver
 {
-JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names)
+JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names,
+                                             JtaCommandHandler *jta_handler)
   : action_server_(nh_, ns + "/joint_trajectory_action", boost::bind(&JointTrajectoryAction::goalCB, this, _1),
                    boost::bind(&JointTrajectoryAction::cancelCB, this, _1), false)
   , conf_joint_names_(joint_names)
   , ns_(ns)
+  , jta_handler_(jta_handler)
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
 
@@ -53,6 +55,7 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
 
 void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 {
+  trajectory_msgs::JointTrajectory traj_sorted;
   auto &traj = gh.getGoal()->trajectory;
 
   auto &joint_names = traj.joint_names;
@@ -73,10 +76,8 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     return;
   }
 
-  //  for (auto &&idx : mapping)
-  //  {
-  //    ROS_INFO_STREAM(idx);
-  //  }
+  traj_sorted.header = traj.header;
+  traj_sorted.joint_names = sortVectorByIndices<std::string>(mapping, traj.joint_names);
 
   robot_movement_interface::CommandList cmd_list;
 
@@ -86,26 +87,36 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   {
     for (auto &&point : traj.points)
     {
-      robot_movement_interface::Command cmd;
-      cmd.command_id = cmd_id_++;
+      trajectory_msgs::JointTrajectoryPoint jtp;
 
-      cmd.command_type = "PTP";
-      cmd.pose_type = "JOINTS";
+      jtp.positions = sortVectorByIndices<double>(mapping, point.positions);
+      jtp.velocities = sortVectorByIndices<double>(mapping, point.velocities);
+      jtp.accelerations = sortVectorByIndices<double>(mapping, point.accelerations);
+      jtp.effort = sortVectorByIndices<double>(mapping, point.effort);
+      jtp.time_from_start = point.time_from_start;
 
-      cmd.pose = sortVector<float>(mapping, point.positions);
+      traj_sorted.points.push_back(jtp);
 
-      if (point.velocities.size() == mapping.size())
-      {
-        cmd.velocity_type = "ROS";
-        cmd.velocity = sortVector<float>(mapping, point.velocities);
-      }
-
-      if (point.accelerations.size() == mapping.size())
-      {
-        cmd.acceleration_type = "ROS";
-        cmd.acceleration = sortVector<float>(mapping, point.accelerations);
-      }
-      cmd_list.commands.push_back(std::move(cmd));
+      //      robot_movement_interface::Command cmd;
+      //      cmd.command_id = cmd_id_++;
+      //
+      //      cmd.command_type = "PTP";
+      //      cmd.pose_type = "JOINTS";
+      //
+      //      cmd.pose = sortVectorByIndices<float>(mapping, point.positions);
+      //
+      //      if (point.velocities.size() == mapping.size())
+      //      {
+      //        cmd.velocity_type = "ROS";
+      //        cmd.velocity = sortVectorByIndices<float>(mapping, point.velocities);
+      //      }
+      //
+      //      if (point.accelerations.size() == mapping.size())
+      //      {
+      //        cmd.acceleration_type = "ROS";
+      //        cmd.acceleration = sortVectorByIndices<float>(mapping, point.accelerations);
+      //      }
+      //      cmd_list.commands.push_back(std::move(cmd));
     }
   }
   catch (const std::runtime_error &error)
@@ -114,8 +125,12 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     abort(error.what());
   }
 
+  cmd_list = jta_handler_->processJta(traj_sorted);
+
   robot_movement_interface::Command cmd;
-  cmd.command_id = cmd_id_;
+  // cmd.command_id = cmd_id_;
+  cmd.command_id = cmd_list.commands.back().command_id + 1;
+  cmd_id_ = cmd.command_id;
   cmd.command_type = "WAIT";
   cmd.pose_type = "IS_FINISHED";
   cmd_list.commands.push_back(cmd);

@@ -32,7 +32,10 @@
 
 #include <ros/ros.h>
 
-#include <robot_movement_interface/Command.h>
+#include <robot_movement_interface/CommandList.h>
+
+#include <control_msgs/FollowJointTrajectoryAction.h>
+//#include <rmi_driver/joint_trajectory_action.h>
 
 #include <string>
 
@@ -355,6 +358,37 @@ inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
   return cmdh.dump(o);
 }
 
+class JtaCommandHandler : public CommandHandler
+{
+public:
+  JtaCommandHandler()
+  {
+    handler_name_ = "JTA Command";
+  }
+
+  virtual ~JtaCommandHandler()
+  {
+  }
+
+  virtual robot_movement_interface::CommandList processJta(const trajectory_msgs::JointTrajectory& joint_trajectory);
+
+  virtual robot_movement_interface::Command processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point);
+
+  virtual robot_movement_interface::Command processFirstJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+  {
+    return processJtaPoint(point);
+  }
+
+  virtual robot_movement_interface::Command processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+  {
+    return processJtaPoint(point);
+  }
+
+protected:
+  std::shared_ptr<robot_movement_interface::CommandList> cmd_list_;
+  int cmd_id_;
+};
+
 /**
  * \brief This class contains all the registered command handlers.
  *
@@ -368,6 +402,7 @@ public:
 
   CommandRegister()
   {
+    jta_command_handler_.reset(new JtaCommandHandler);
   }
 
   virtual ~CommandRegister()
@@ -442,6 +477,11 @@ public:
    */
   const CommandHandler* findHandler(const robot_movement_interface::Command& msg_cmd);
 
+  virtual JtaCommandHandler* getJtaCommandHandler()
+  {
+    return jta_command_handler_.get();
+  }
+
 protected:
   /**
    * \brief Use addHandler to create and add new CommandHandlers to this register.
@@ -452,6 +492,8 @@ protected:
 
   /// Vector of all registered command handlers
   CommandHandlerPtrVec command_handlers_;
+
+  std::unique_ptr<JtaCommandHandler> jta_command_handler_ = std::unique_ptr<JtaCommandHandler>(new JtaCommandHandler);
 };
 
 using CommandRegisterPtr = std::shared_ptr<CommandRegister>;

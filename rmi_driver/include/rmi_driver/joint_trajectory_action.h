@@ -37,6 +37,8 @@
 
 #include <ros/ros.h>
 
+#include "rmi_driver/commands.h"
+
 #include <actionlib/server/action_server.h>
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
@@ -52,7 +54,7 @@ typedef actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction> Joint
 class JointTrajectoryAction
 {
 public:
-  JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names);
+  JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names, JtaCommandHandler *jta_handler);
 
   void test(JointTractoryActionServer::GoalHandle &gh);
 
@@ -77,15 +79,19 @@ public:
   void abort(const std::string &error_msg);
 
   template <typename Tdest, typename Tsource>
-  std::vector<float> sortVector(const std::vector<size_t> &indices, const std::vector<Tsource> &data)
+  std::vector<Tdest> sortVectorByIndices(const std::vector<size_t> &indices, const std::vector<Tsource> &data)
   {
+    std::vector<Tdest> ret;
+    if (data.size() == 0)
+      return ret;
+
     if (indices.size() != data.size())
     {
       std::stringstream ss;
       ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
       throw std::runtime_error(ss.str());
     }
-    std::vector<Tdest> ret;
+
     ret.reserve(indices.size());
 
     std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
@@ -94,6 +100,7 @@ public:
   }
 
 protected:
+  /// Must be created before the action server
   ros::NodeHandle nh_;
   /**
    * \brief Internal action server
@@ -111,6 +118,8 @@ protected:
   int cmd_id_;
 
   std::vector<std::string> conf_joint_names_;
+
+  JtaCommandHandler *jta_handler_;
 };
 }  // namespace rmi_driver
 

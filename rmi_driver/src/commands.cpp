@@ -277,4 +277,48 @@ RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Comma
   return ret;
 }
 
+robot_movement_interface::CommandList
+JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_trajectory)
+{
+  cmd_id_ = 0;
+
+  robot_movement_interface::CommandList cmd_list;
+
+  if (joint_trajectory.points.size() >= 1)
+    cmd_list.commands.emplace_back(processFirstJtaPoint(*joint_trajectory.points.begin()));
+
+  std::transform(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
+                 std::back_inserter(cmd_list.commands),
+                 [&](const trajectory_msgs::JointTrajectoryPoint& pt) { return processJtaPoint(pt); });
+
+  if (joint_trajectory.points.size() >= 2)
+    cmd_list.commands.emplace_back(processLastJtaPoint(joint_trajectory.points.back()));
+
+  return cmd_list;
+}
+
+robot_movement_interface::Command JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point)
+{
+  robot_movement_interface::Command cmd;
+  cmd.command_id = cmd_id_++;
+  cmd.command_type = "PTP";
+  cmd.pose_type = "JOINTS";
+
+  std::copy(point.positions.begin(), point.positions.end(), std::back_inserter(cmd.pose));
+
+  if (point.accelerations.size() > 0)
+  {
+    cmd.acceleration_type = "ROS";
+    std::copy(point.accelerations.begin(), point.accelerations.end(), std::back_inserter(cmd.acceleration));
+  }
+
+  if (point.velocities.size() > 0)
+  {
+    cmd.velocity_type = "ROS";
+    std::copy(point.velocities.begin(), point.velocities.end(), std::back_inserter(cmd.velocity));
+  }
+
+  return cmd;
+}
+
 }  // namespace rmi_driver
