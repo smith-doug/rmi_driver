@@ -277,6 +277,14 @@ RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Comma
   return ret;
 }
 
+uint32_t JtaCommandHandler::getNextCommandId(robot_movement_interface::CommandList& cmd_list)
+{
+  if (cmd_list.commands.size() > 0)
+    return cmd_list.commands.back().command_id + 1;
+  else
+    return 0;
+}
+
 robot_movement_interface::CommandList
 JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_trajectory)
 {
@@ -299,7 +307,7 @@ JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_traj
   //                 [&](const trajectory_msgs::JointTrajectoryPoint& pt) { return processJtaPoint(pt); });
 
   if (joint_trajectory.points.size() >= 2)
-    processFirstJtaPoint(joint_trajectory.points.back(), cmd_list);
+    processLastJtaPoint(joint_trajectory.points.back(), cmd_list);
   // cmd_list.commands.emplace_back(processLastJtaPoint(joint_trajectory.points.back()));
 
   return cmd_list;
@@ -309,7 +317,11 @@ void JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPo
                                         robot_movement_interface::CommandList& cmd_list)
 {
   robot_movement_interface::Command cmd;
-  cmd.command_id = cmd_id_++;
+  if (cmd_list.commands.size() > 0)
+    cmd.command_id = cmd_list.commands.back().command_id + 1;
+  else
+    cmd.command_id = 0;
+
   cmd.command_type = "PTP";
   cmd.pose_type = "JOINTS";
 

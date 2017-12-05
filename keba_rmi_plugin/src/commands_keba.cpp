@@ -81,6 +81,8 @@ void KebaCommandRegister::registerCommandHandlers()
 
   this->addHandler(std::move(chtest));
 
+  this->setJtaCommandHandler<KebaJtaCommandHandler>();
+
   commands_registered_ = true;
 }
 
@@ -352,6 +354,19 @@ RobotCommandPtr KebaCommandWait::processMsg(const robot_movement_interface::Comm
   cmd_ptr->setCommand(command_str, "");
 
   return cmd_ptr;
+}
+
+void KebaJtaCommandHandler::processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint &point,
+                                                robot_movement_interface::CommandList &cmd_list)
+{
+  JtaCommandHandler::processJtaPoint(point, cmd_list);
+
+  robot_movement_interface::Command cmd;
+  cmd.command_id = getNextCommandId(cmd_list);
+  cmd.command_type = "WAIT";
+  cmd.pose_type = "IS_FINISHED";  // Can add more types later
+
+  cmd_list.commands.push_back(cmd);
 }
 
 }  // namespace keba_rmi_plugin

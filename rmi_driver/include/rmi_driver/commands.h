@@ -370,6 +370,8 @@ public:
   {
   }
 
+  uint32_t getNextCommandId(robot_movement_interface::CommandList& cmd_list);
+
   virtual robot_movement_interface::CommandList processJta(const trajectory_msgs::JointTrajectory& joint_trajectory);
 
   virtual void processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
@@ -483,6 +485,12 @@ public:
   virtual JtaCommandHandler* getJtaCommandHandler()
   {
     return jta_command_handler_.get();
+  }
+
+  template <typename T>
+  void setJtaCommandHandler()
+  {
+    jta_command_handler_.reset(new T);
   }
 
 protected:

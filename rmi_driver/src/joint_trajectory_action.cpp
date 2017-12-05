@@ -55,7 +55,8 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
 
 void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 {
-  trajectory_msgs::JointTrajectory traj_sorted;
+  trajectory_msgs::JointTrajectory traj_sorted;  // Will contain the full trajectory in the correct order
+
   auto &traj = gh.getGoal()->trajectory;
 
   auto &joint_names = traj.joint_names;
@@ -76,10 +77,10 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     return;
   }
 
+  robot_movement_interface::CommandList cmd_list;
+
   traj_sorted.header = traj.header;
   traj_sorted.joint_names = sortVectorByIndices<std::string>(mapping, traj.joint_names);
-
-  robot_movement_interface::CommandList cmd_list;
 
   cmd_id_ = 0;
 
@@ -123,24 +124,14 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   {
     gh.setRejected();
     abort(error.what());
+
+    return;
   }
 
   cmd_list = jta_handler_->processJta(traj_sorted);
 
-  robot_movement_interface::Command cmd;
-  // cmd.command_id = cmd_id_;
-  cmd.command_id = cmd_list.commands.back().command_id + 1;
-  cmd_id_ = cmd.command_id;
-  cmd.command_type = "WAIT";
-  cmd.pose_type = "IS_FINISHED";
-  cmd_list.commands.push_back(cmd);
+  cmd_id_ = cmd_list.commands.back().command_id;  // Need to store it to know when the trajectory is complete
 
-  // std::transform(mapping.begin(), mapping.end(), sorted.begin(), [&](int i) { return pt.positions[i]; });
-
-  // std::transform(mapping.begin(), mapping.end(), std::back_inserter(cmd.pose), [&](int i) { return pt.positions[i];
-  // });
-
-  // ROS_INFO_STREAM(cmd_list);
   gh.setAccepted();
 
   pub_rmi_.publish(cmd_list);
