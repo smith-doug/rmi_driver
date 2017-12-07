@@ -288,8 +288,6 @@ uint32_t JtaCommandHandler::getNextCommandId(robot_movement_interface::CommandLi
 robot_movement_interface::CommandList
 JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_trajectory)
 {
-  cmd_id_ = 0;
-
   robot_movement_interface::CommandList cmd_list;
 
   if (joint_trajectory.points.size() >= 1)
@@ -317,10 +315,8 @@ void JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPo
                                         robot_movement_interface::CommandList& cmd_list)
 {
   robot_movement_interface::Command cmd;
-  if (cmd_list.commands.size() > 0)
-    cmd.command_id = cmd_list.commands.back().command_id + 1;
-  else
-    cmd.command_id = 0;
+
+  cmd.command_id = getNextCommandId(cmd_list);
 
   cmd.command_type = "PTP";
   cmd.pose_type = "JOINTS";
@@ -337,6 +333,12 @@ void JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPo
   {
     cmd.velocity_type = "ROS";
     std::copy(point.velocities.begin(), point.velocities.end(), std::back_inserter(cmd.velocity));
+  }
+
+  if (point.effort.size() > 0)
+  {
+    cmd.effort_type = "ROS";
+    std::copy(point.effort.begin(), point.effort.end(), std::back_inserter(cmd.effort));
   }
 
   cmd_list.commands.push_back(cmd);
