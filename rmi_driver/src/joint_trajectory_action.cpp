@@ -27,7 +27,9 @@
  *      Author: Doug Smith
  */
 
-#include <rmi_driver/joint_trajectory_action.h>
+#include "rmi_driver/joint_trajectory_action.h"
+#include "rmi_driver/util.h"
+
 #include <boost/algorithm/cxx11/is_permutation.hpp>
 #include <boost/range/algorithm.hpp>
 //#include <boost/range/algorithm/transform.hpp>
@@ -55,7 +57,8 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
 
 void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 {
-  trajectory_msgs::JointTrajectory traj_sorted;  // Will contain the full trajectory in the correct order
+  // Will contain the full trajectory in the correct order.  It's much easier to rearrange everything now in 1 batch
+  trajectory_msgs::JointTrajectory traj_sorted;
 
   auto &traj = gh.getGoal()->trajectory;
 
@@ -80,7 +83,7 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   robot_movement_interface::CommandList cmd_list;
 
   traj_sorted.header = traj.header;
-  traj_sorted.joint_names = sortVectorByIndices<std::string>(mapping, traj.joint_names);
+  traj_sorted.joint_names = util::sortVectorByIndices<std::string>(mapping, traj.joint_names);
 
   cmd_id_ = 0;
 
@@ -90,34 +93,13 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     {
       trajectory_msgs::JointTrajectoryPoint jtp;
 
-      jtp.positions = sortVectorByIndices<double>(mapping, point.positions);
-      jtp.velocities = sortVectorByIndices<double>(mapping, point.velocities);
-      jtp.accelerations = sortVectorByIndices<double>(mapping, point.accelerations);
-      jtp.effort = sortVectorByIndices<double>(mapping, point.effort);
+      jtp.positions = util::sortVectorByIndices<double>(mapping, point.positions);
+      jtp.velocities = util::sortVectorByIndices<double>(mapping, point.velocities);
+      jtp.accelerations = util::sortVectorByIndices<double>(mapping, point.accelerations);
+      jtp.effort = util::sortVectorByIndices<double>(mapping, point.effort);
       jtp.time_from_start = point.time_from_start;
 
       traj_sorted.points.push_back(jtp);
-
-      //      robot_movement_interface::Command cmd;
-      //      cmd.command_id = cmd_id_++;
-      //
-      //      cmd.command_type = "PTP";
-      //      cmd.pose_type = "JOINTS";
-      //
-      //      cmd.pose = sortVectorByIndices<float>(mapping, point.positions);
-      //
-      //      if (point.velocities.size() == mapping.size())
-      //      {
-      //        cmd.velocity_type = "ROS";
-      //        cmd.velocity = sortVectorByIndices<float>(mapping, point.velocities);
-      //      }
-      //
-      //      if (point.accelerations.size() == mapping.size())
-      //      {
-      //        cmd.acceleration_type = "ROS";
-      //        cmd.acceleration = sortVectorByIndices<float>(mapping, point.accelerations);
-      //      }
-      //      cmd_list.commands.push_back(std::move(cmd));
     }
   }
   catch (const std::runtime_error &error)
@@ -140,9 +122,15 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 
 void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
 {
-  active_goal_ = gh;
-
-  test(gh);
+  if (goalIsBusy(active_goal_))
+  {
+    gh.setRejected();
+  }
+  else
+  {
+    active_goal_ = gh;
+    test(gh);
+  }
 }
 
 void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
@@ -154,10 +142,21 @@ void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::
 void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
 {
   ROS_INFO_STREAM("CancelCB");
-  if (gh == active_goal_)
+  if (active_goal_.isValid() && active_goal_ == gh && goalIsBusy(active_goal_))
   {
     abort("JointTrajectoryAction::cancelCB called");
   }
+}
+
+bool JointTrajectoryAction::goalIsBusy(JointTractoryActionServer::GoalHandle &gh)
+{
+  if (!gh.isValid())
+    return false;
+
+  auto status = gh.getGoalStatus().status;
+
+  return (status == actionlib_msgs::GoalStatus::PENDING || status == actionlib_msgs::GoalStatus::RECALLING ||
+          status == actionlib_msgs::GoalStatus::ACTIVE || status == actionlib_msgs::GoalStatus::PREEMPTING);
 }
 
 void JointTrajectoryAction::abort(const std::string &error_msg)
@@ -171,9 +170,7 @@ void JointTrajectoryAction::abort(const std::string &error_msg)
 
   pub_rmi_.publish(cmd_list);
 
-  auto status = active_goal_.getGoalStatus().status;
-  if (status == actionlib_msgs::GoalStatus::PENDING || status == actionlib_msgs::GoalStatus::RECALLING ||
-      status == actionlib_msgs::GoalStatus::ACTIVE || status == actionlib_msgs::GoalStatus::PREEMPTING)
+  if (goalIsBusy(active_goal_))
     active_goal_.setCanceled();
 
   ROS_INFO_STREAM(ns_ << " JointTrajectoryAction::abort: " << error_msg);

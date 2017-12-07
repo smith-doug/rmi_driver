@@ -78,26 +78,7 @@ public:
 
   void abort(const std::string &error_msg);
 
-  template <typename Tdest, typename Tsource>
-  std::vector<Tdest> sortVectorByIndices(const std::vector<size_t> &indices, const std::vector<Tsource> &data)
-  {
-    std::vector<Tdest> ret;
-    if (data.size() == 0)
-      return ret;
-
-    if (indices.size() != data.size())
-    {
-      std::stringstream ss;
-      ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
-      throw std::runtime_error(ss.str());
-    }
-
-    ret.reserve(indices.size());
-
-    std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
-
-    return ret;
-  }
+  bool goalIsBusy(JointTractoryActionServer::GoalHandle &gh);
 
 protected:
   /// Must be created before the action server

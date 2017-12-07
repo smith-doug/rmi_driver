@@ -117,9 +117,44 @@ bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const
  * @param sample Stored sample.  Can be 1 entry like "JOINTS" or multiple entries like "JOINTS|QUATERNION"
  * @param msg The received value
  * @param entry_index Optional.  Store the index of the entry that was found.
- * @return True if the sample
+ *
+ * @return True if the message disqualifies this as a match.
  */
 bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* entry_index = 0);
+
+/**
+ * \brief Sort a vector of type Tsource by a vector of indices
+ *
+ * ret[n] = data[indices[n]];
+ *
+ * indices = {1, 2, 0}
+ * data = {123, 456, 789}
+ * sorted = {456, 789, 123}
+ *
+ * @param indices Indicates the order to rearrange the data by.
+ * @param data The data to sort
+ * @return Sorted vector.  Tsource must be able to be placed in Tdest.
+ */
+template <typename Tdest, typename Tsource>
+std::vector<Tdest> sortVectorByIndices(const std::vector<size_t>& indices, const std::vector<Tsource>& data)
+{
+  std::vector<Tdest> ret;
+  if (data.size() == 0)  // data isn't used
+    return ret;
+
+  if (indices.size() != data.size())  // sizes have to be equal to sort
+  {
+    std::stringstream ss;
+    ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
+    throw std::runtime_error(ss.str());
+  }
+
+  ret.reserve(indices.size());
+
+  std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
+
+  return ret;
+}
 
 ///@}
 
