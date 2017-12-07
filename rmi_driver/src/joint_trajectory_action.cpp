@@ -30,12 +30,6 @@
 #include "rmi_driver/joint_trajectory_action.h"
 #include "rmi_driver/util.h"
 
-#include <boost/algorithm/cxx11/is_permutation.hpp>
-#include <boost/range/algorithm.hpp>
-//#include <boost/range/algorithm/transform.hpp>
-#include <boost/iterator/permutation_iterator.hpp>
-#include <boost/iterator/zip_iterator.hpp>
-
 #include <vector>
 
 namespace rmi_driver
@@ -50,7 +44,7 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
 
-  sub_rmi_ = nh_.subscribe("command_result", 1, &JointTrajectoryAction::subCB_CommandResult, this);
+  sub_rmi_ = nh_.subscribe(ns + "/command_result", 1, &JointTrajectoryAction::subCB_CommandResult, this);
 
   action_server_.start();
 }
