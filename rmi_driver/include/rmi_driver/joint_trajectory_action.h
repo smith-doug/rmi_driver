@@ -76,7 +76,11 @@ public:
 
   void subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg);
 
-  void abort(const std::string &error_msg);
+  void abortGoal(int32_t error_code, const std::string &error_msg);
+
+  void abortGoal();
+
+  void reject(int32_t error_code, const std::string &error_msg);
 
   bool goalIsBusy(JointTractoryActionServer::GoalHandle &gh);
 
@@ -95,6 +99,8 @@ protected:
   ros::Subscriber sub_rmi_;
 
   JointTractoryActionServer::GoalHandle active_goal_;
+
+  bool has_goal_;
 
   int cmd_id_;
 
