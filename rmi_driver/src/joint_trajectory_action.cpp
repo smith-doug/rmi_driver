@@ -140,10 +140,17 @@ void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::
 {
   //  if ( active_goal_.isValid() && msg->command_id == cmd_id_ &&
   //      active_goal_.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
-  if (has_goal_ && msg->command_id == cmd_id_)
+  if (has_goal_)
   {
-    active_goal_.setSucceeded();
-    has_goal_ = false;
+    if (msg->result_code != 0)  // If any message is an error, just stop
+    {
+      abortGoal(-100, "subCB_CommandResult received a msg with non-zero result code");
+    }
+    else if (msg->command_id == cmd_id_)
+    {
+      active_goal_.setSucceeded();
+      has_goal_ = false;
+    }
   }
 }
 
