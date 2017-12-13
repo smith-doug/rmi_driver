@@ -351,6 +351,8 @@ public:
     command_register_ = commandRegister;
   }
 
+  friend std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh);
+
 protected:
   /// Pointer to the CommandRegister that owns this CommandHandler
   CommandRegister* command_register_ = nullptr;
@@ -364,11 +366,6 @@ protected:
   /// The function to call when constructed by a lambda.
   CommandHandlerFunc process_func_ = nullptr;
 };
-
-inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
-{
-  return cmdh.dump(o);
-}
 
 /**
  * \brief Processes trajectory_msgs::JointTrajectory messages and turns them into a

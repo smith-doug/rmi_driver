@@ -200,6 +200,11 @@ bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg
   return true;  // If it got this far it's a match
 }
 
+std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
+{
+  return cmdh.dump(o);
+}
+
 std::ostream& CommandHandler::dump(std::ostream& o) const
 {
   o << "CommandHandler " << getName() << " criteria: " << std::endl;
