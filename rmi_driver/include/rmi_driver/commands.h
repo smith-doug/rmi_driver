@@ -41,6 +41,18 @@
 
 namespace rmi_driver
 {
+struct CommandResultCodes
+{
+  enum
+  {
+    OK = 0,
+    FAILED_TO_FIND_HANDLER = 1,
+    ABORT_FAIL = 9998,
+    ABORT_OK = 9999,
+
+  };
+};
+
 /**
  * \brief Commands that will be sent to the robot controller as strings.
  *

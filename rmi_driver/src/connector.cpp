@@ -414,8 +414,12 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
         boost::trim_right(send_response);
 
         // Publish the result  @todo is this really the right thing to do?  It will publish over the same channel.
-        // Maybe I should assume that there will be no response to the abort itself, only the command that was aborted?
-        publishRmiResult(robot_command_ptr->getCommandId(), 0, send_response);
+        auto abort_res_code = CommandResultCodes::ABORT_OK;
+        if (!boost::istarts_with(send_response, "aborted"))
+        {
+          abort_res_code = CommandResultCodes::ABORT_FAIL;
+        }
+        publishRmiResult(robot_command_ptr->getCommandId(), abort_res_code, send_response);
 
         ROS_INFO_STREAM(ns_ << " High priority response: " << send_response);
         fut.wait();
@@ -427,7 +431,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       ROS_ERROR_STREAM(ns_ << " Failed to find cmd handler for: " << msg_cmd);
 
       // Send a failure response
-      publishRmiResult(msg_cmd.command_id, 1, "Failed to find cmd handler");
+      publishRmiResult(msg_cmd.command_id, CommandResultCodes::FAILED_TO_FIND_HANDLER, "Failed to find cmd handler");
       /// @todo If I make an ABORT message mandatory, I could use that to actually make the robot stop.
       if (abort_on_fail_to_find_)
       {
