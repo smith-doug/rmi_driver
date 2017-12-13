@@ -28,3 +28,58 @@
  */
 
 #include "rmi_driver/rmi_logger.h"
+
+namespace rmi_driver
+{
+namespace rmi_log
+{
+RmiLogger::RmiLogger(const std::string& module_name, const std::string& ns) : module_name_(module_name), ns_(ns)
+{
+}
+
+void RmiLogger::setLoggerLevel(Level level)
+{
+  std::string log_name = std::string(ROSCONSOLE_NAME_PREFIX) + "." + module_name_;
+  if (ros::console::set_logger_level(log_name, level))
+    ros::console::notifyLoggerLevelsChanged();
+}
+
+RmiLogger::DebugEx::DebugEx(const std::string& module, const std::string& ns, Level level)
+  : module_name_(module), ns_(ns), level_(level)
+{
+}
+
+RmiLogger::DebugEx::DebugEx(const DebugEx& other)
+  : module_name_(other.module_name_), ns_(other.ns_), level_(other.level_)
+{
+}
+
+RmiLogger::DebugEx::~DebugEx()
+{
+  std::string str = ss_.str();
+  if (!str.empty())
+  {
+    switch (level_)
+    {
+      case Level::Debug:
+        ROS_DEBUG_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        break;
+      case Level::Info:
+        ROS_INFO_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        break;
+      case Level::Warn:
+        ROS_WARN_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        break;
+      case Level::Error:
+        ROS_ERROR_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        break;
+      case Level::Fatal:
+        ROS_FATAL_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        break;
+    }
+  }
+}
+
+}  // namespace log
+
+}  // namespace rmi_driver

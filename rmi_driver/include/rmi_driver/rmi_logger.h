@@ -45,62 +45,31 @@ namespace rmi_log
 class RmiLogger
 {
 public:
-  RmiLogger(const std::string& module_name, const std::string& ns) : module_name_(module_name), ns_(ns)
-  {
-  }
-  ~RmiLogger()
-  {
-  }
-
   typedef ros::console::levels::Level Level;
+
+  RmiLogger(const std::string& module_name, const std::string& ns);
 
   class DebugEx
   {
-  private:
-    std::string module_name_;
-    std::string ns_;
-    std::stringstream ss_;
-    Level level_;
-
   public:
-    DebugEx(const std::string& module, const std::string& ns, Level level = Level::Info)
-      : module_name_(module), ns_(ns), level_(level)
-    {
-    }
-    DebugEx(const DebugEx& other) : module_name_(other.module_name_), ns_(other.ns_), level_(other.level_)
-    {
-    }
-    ~DebugEx()
-    {
-      std::string str = ss_.str();
-      if (!str.empty())
-      {
-        switch (level_)
-        {
-          case Level::Debug:
-            ROS_DEBUG_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << str);
-            break;
-          case Level::Info:
-            ROS_INFO_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << str);
-            break;
-          case Level::Warn:
-            ROS_WARN_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << str);
-            break;
-          case Level::Error:
-            ROS_ERROR_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << str);
-            break;
-          case Level::Fatal:
-            ROS_FATAL_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << str);
-            break;
-        }
-      }
-    }
+    DebugEx(const std::string& module, const std::string& ns, Level level = Level::Info);
+
+    DebugEx(const DebugEx& other);
+
+    ~DebugEx();
+
     template <typename T>
     DebugEx& operator<<(const T& thing_to_log)
     {
       ss_ << thing_to_log;
       return *this;
     }
+
+  private:
+    std::string module_name_;
+    std::string ns_;
+    std::stringstream ss_;
+    Level level_;
   };
 
 public:
@@ -124,22 +93,18 @@ public:
     return DebugEx(module_name_, ns_, Level::Error);
   }
 
-  void setLoggerLevel(Level level)
-  {
-    std::string log_name = std::string(ROSCONSOLE_NAME_PREFIX) + "." + module_name_;
-    if (ros::console::set_logger_level(log_name, level))
-      ros::console::notifyLoggerLevelsChanged();
-  }
+  void setLoggerLevel(Level level);
 
   void disable()
   {
-    // I can't find any other way to disable the output
+    // I can't find any other way to disable the output.  Count doesn't seem to work.
     setLoggerLevel(Level::Fatal);
   }
 
 private:
   std::string module_name_;
   std::string ns_;
+  // bool enabled_;
 };
 }
 }
