@@ -52,7 +52,10 @@ public:
   class DebugEx
   {
   public:
-    DebugEx(const std::string& module, const std::string& ns, Level level = Level::Info);
+    ros::console::LogLocation& loc_;
+
+    DebugEx(const std::string& module, const std::string& ns, ros::console::LogLocation& loc,
+            Level level = Level::Info);
 
     DebugEx(const DebugEx& other);
 
@@ -98,7 +101,10 @@ public:
 
     std::string getName()
     {
-      return module_name_ + ns_;
+      std::string ns_name = ns_;
+      if (*ns_name.begin() == '/')
+        ns_name.erase(0, 1);
+      return module_name_ + ns_name;
     }
 
     /*template <typename... Args>
@@ -119,27 +125,27 @@ public:
 public:
   DebugEx DEBUG()
   {
-    return DebugEx(module_name_, ns_, Level::Debug);
+    return DebugEx(module_name_, ns_, log_location, Level::Debug);
   }
 
   DebugEx INFO()
   {
-    return DebugEx(module_name_, ns_, Level::Info);
+    return DebugEx(module_name_, ns_, log_location, Level::Info);
   }
 
   DebugEx WARN()
   {
-    return DebugEx(module_name_, ns_, Level::Warn);
+    return DebugEx(module_name_, ns_, log_location, Level::Warn);
   }
 
   DebugEx ERROR()
   {
-    return DebugEx(module_name_, ns_, Level::Error);
+    return DebugEx(module_name_, ns_, log_location, Level::Error);
   }
 
   DebugEx FATAL()
   {
-    return DebugEx(module_name_, ns_, Level::Error);
+    return DebugEx(module_name_, ns_, log_location, Level::Error);
   }
 
   void setLoggerLevel(Level level);
@@ -150,9 +156,19 @@ public:
     setLoggerLevel(Level::Fatal);
   }
 
+  std::string getName()
+  {
+    std::string ns_name = ns_;
+    if (*ns_name.begin() == '/')
+      ns_name.erase(0, 1);
+    return module_name_ + ns_name;
+  }
+
 private:
   std::string module_name_;
   std::string ns_;
+
+  ::ros::console::LogLocation log_location;
   // bool enabled_;
 };
 }

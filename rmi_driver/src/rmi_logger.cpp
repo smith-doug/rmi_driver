@@ -35,6 +35,14 @@ namespace rmi_log
 {
 RmiLogger::RmiLogger(const std::string& module_name, const std::string& ns) : module_name_(module_name), ns_(ns)
 {
+  ROSCONSOLE_AUTOINIT;
+  log_location = { false, false, ::ros::console::levels::Count, 0 };
+
+  ros::console::initializeLogLocation(&log_location, std::string(ROSCONSOLE_NAME_PREFIX) + "." + getName(),
+                                      ros::console::levels::Info);
+
+  ros::console::setLogLocationLevel(&log_location, ros::console::levels::Info);
+  ros::console::checkLogLocationEnabled(&log_location);
 }
 
 void RmiLogger::setLoggerLevel(Level level)
@@ -44,24 +52,27 @@ void RmiLogger::setLoggerLevel(Level level)
     ros::console::notifyLoggerLevelsChanged();
 }
 
-RmiLogger::DebugEx::DebugEx(const std::string& module, const std::string& ns, Level level)
-  : module_name_(module), ns_(ns), level_(level)
+RmiLogger::DebugEx::DebugEx(const std::string& module, const std::string& ns, ros::console::LogLocation& loc,
+                            Level level)
+  : module_name_(module), ns_(ns), level_(level), loc_(loc)
 {
 }
 
 RmiLogger::DebugEx::DebugEx(const DebugEx& other)
-  : module_name_(other.module_name_), ns_(other.ns_), level_(other.level_)
+  : module_name_(other.module_name_), ns_(other.ns_), level_(other.level_), loc_(other.loc_)
 {
 }
 
 RmiLogger::DebugEx::DebugEx(DebugEx&& other)
-  : module_name_(std::move(other.module_name_)), ns_(std::move(other.ns_)), level_(other.level_)
+  : module_name_(std::move(other.module_name_)), ns_(std::move(other.ns_)), level_(other.level_), loc_(other.loc_)
 {
 }
 
 RmiLogger::DebugEx::~DebugEx()
 {
   std::string str = ss_.str();
+  std::stringstream lss;
+  lss << module_name_ << ":" << ns_ << " " << str;
   if (!str.empty())
   {
     //    auto log_name = getName();
@@ -71,13 +82,24 @@ RmiLogger::DebugEx::~DebugEx()
     //      return;
     //    }
 
+    ros::console::setLogLocationLevel(&loc_, level_);
+    ros::console::checkLogLocationEnabled(&loc_);
+
+    bool cont = loc_.logger_enabled_;
+    if (!cont)
+      return;
+
+    std::string logger_name = getName();
+
     switch (level_)
     {
       case Level::Debug:
         ROS_DEBUG_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Info:
-        ROS_INFO_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
+
+        ros::console::print(0, loc_.logger_, loc_.level_, lss, __FILE__, __LINE__, __ROSCONSOLE_FUNCTION__);
+        // ROS_INFO_STREAM_NAMED(logger_name, module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Warn:
         ROS_WARN_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
