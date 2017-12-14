@@ -38,6 +38,7 @@
 #include <ros/ros.h>
 
 #include "rmi_driver/commands.h"
+#include "rmi_driver/rmi_logger.h"
 
 #include <actionlib/server/action_server.h>
 
@@ -107,6 +108,8 @@ protected:
   std::vector<std::string> conf_joint_names_;
 
   JtaCommandHandler *jta_handler_;
+
+  rmi_log::RmiLogger logger_;
 };
 }  // namespace rmi_driver
 

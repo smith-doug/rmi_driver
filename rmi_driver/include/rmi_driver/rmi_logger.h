@@ -56,6 +56,8 @@ public:
 
     DebugEx(const DebugEx& other);
 
+    DebugEx(DebugEx&& other);
+
     ~DebugEx();
 
     template <typename T>
@@ -65,11 +67,53 @@ public:
       return *this;
     }
 
+    // this is the type of std::cout
+    typedef std::basic_ostream<char, std::char_traits<char> > CoutType;
+
+    // this is the function signature of std::endl
+    typedef CoutType& (*StandardEndLine)(CoutType&);
+
+    // define an operator<< to take in std::endl
+    //    DebugEx& operator<<(StandardEndLine manip)
+    //    {
+    //      // call the function, but we cannot return it's value
+    //      manip(ss_);
+    //
+    //      return *this;
+    //    }
+
+    DebugEx& operator<<(std::ostream& (*f)(std::ostream&))
+    {
+      f(ss_);
+      return *this;
+    }
+
+    // Doesn't really work since the state variables are created in the macro, all instances will share the same
+    // throttle
+    //    DebugEx& throttle(int rate)
+    //    {
+    //      throttle_ = rate;
+    //      return *this;
+    //    }
+
+    std::string getName()
+    {
+      return module_name_ + ns_;
+    }
+
+    /*template <typename... Args>
+    void print(const char* fmt, Args const&... args)
+    {
+      ROS_ERROR(fmt, args...);
+    }*/
+
   private:
     std::string module_name_;
     std::string ns_;
     std::stringstream ss_;
     Level level_;
+
+    int throttle_ = 0;
   };
 
 public:
@@ -89,6 +133,11 @@ public:
   }
 
   DebugEx ERROR()
+  {
+    return DebugEx(module_name_, ns_, Level::Error);
+  }
+
+  DebugEx FATAL()
   {
     return DebugEx(module_name_, ns_, Level::Error);
   }

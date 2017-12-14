@@ -42,12 +42,15 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
   , ns_(ns)
   , jta_handler_(jta_handler)
   , has_goal_(false)
+  , logger_("JTA", ns)
 {
   pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
 
   sub_rmi_ = nh_.subscribe(ns + "/command_result", 1, &JointTrajectoryAction::subCB_CommandResult, this);
 
   action_server_.start();
+
+  logger_.INFO() << "joint_trajectory_handler started on topic " << ns + "/joint_trajectory_action";
 }
 
 void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
@@ -68,11 +71,6 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   }
   if (mapping.size() != joint_names.size())
   {
-    //    ROS_ERROR_STREAM("rejected");
-    //    control_msgs::FollowJointTrajectoryResult rslt;
-    //    rslt.error_code = control_msgs::FollowJointTrajectoryResult::INVALID_GOAL;
-    //    gh.setRejected(rslt, "mapping.size() != joint_names.size()");
-
     reject(control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS, "mapping.size() != joint_names.size()");
     return;
   }
@@ -138,8 +136,6 @@ void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
 
 void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
 {
-  //  if ( active_goal_.isValid() && msg->command_id == cmd_id_ &&
-  //      active_goal_.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
   if (has_goal_)
   {
     if (msg->result_code != 0)  // If any message is an error, just stop
@@ -156,7 +152,9 @@ void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::
 
 void JointTrajectoryAction::cancelCB(JointTractoryActionServer::GoalHandle gh)
 {
-  ROS_INFO_STREAM("CancelCB");
+  // ROS_INFO_STREAM("CancelCB");
+
+  logger_.INFO() << "JointTrajectoryAction::cancelCB called";
   // if (active_goal_.isValid() && active_goal_ == gh && goalIsBusy(active_goal_))
   if (has_goal_ && active_goal_ == gh)
   {
@@ -201,7 +199,7 @@ void JointTrajectoryAction::abortGoal(int32_t error_code, const std::string &err
     has_goal_ = false;
   }
 
-  ROS_INFO_STREAM(ns_ << " JointTrajectoryAction::abort: " << error_msg);
+  logger_.INFO() << "JointTrajectoryAction::abort: " << error_msg;
 }
 
 void JointTrajectoryAction::reject(int32_t error_code, const std::string &error_msg)
@@ -216,7 +214,7 @@ void JointTrajectoryAction::reject(int32_t error_code, const std::string &error_
     has_goal_ = false;
   }
 
-  ROS_ERROR_STREAM(ns_ << " JTA Rejected: " << error_msg);
+  logger_.ERROR() << "JTA Rejected : " << error_msg;
 }
 
 }  // namespace rmi_driver

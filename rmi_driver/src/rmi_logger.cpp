@@ -54,27 +54,39 @@ RmiLogger::DebugEx::DebugEx(const DebugEx& other)
 {
 }
 
+RmiLogger::DebugEx::DebugEx(DebugEx&& other)
+  : module_name_(std::move(other.module_name_)), ns_(std::move(other.ns_)), level_(other.level_)
+{
+}
+
 RmiLogger::DebugEx::~DebugEx()
 {
   std::string str = ss_.str();
   if (!str.empty())
   {
+    //    auto log_name = getName();
+    //    if (throttle_ > 0)
+    //    {
+    //      ROS_ERROR_STREAM_THROTTLE_NAMED(throttle_, log_name, log_name << " " << str);
+    //      return;
+    //    }
+
     switch (level_)
     {
       case Level::Debug:
-        ROS_DEBUG_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        ROS_DEBUG_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Info:
-        ROS_INFO_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        ROS_INFO_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Warn:
-        ROS_WARN_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        ROS_WARN_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Error:
-        ROS_ERROR_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        ROS_ERROR_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
       case Level::Fatal:
-        ROS_FATAL_STREAM_NAMED(module_name_, module_name_ << ":" << ns_ << " " << str);
+        ROS_FATAL_STREAM_NAMED(getName(), module_name_ << ":" << ns_ << " " << str);
         break;
     }
   }
