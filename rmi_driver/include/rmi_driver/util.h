@@ -32,6 +32,7 @@
 
 #include <ros/ros.h>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace rmi_driver
@@ -74,6 +75,39 @@ std::string vecToString(const std::vector<T>& vec)
   oss << "}";
 
   return oss.str();
+}
+
+#ifdef __linux__
+inline bool setThreadName(pthread_t thread_hdl, const char* name)
+{
+  return ::pthread_setname_np(thread_hdl, name) == 0;
+}
+#else
+inline bool setThreadName(pthread_t thread_hdl, const char* name)
+{
+  return false;
+}
+#endif
+
+inline bool setThreadName(std::thread& th, const char* name)
+{
+  return setThreadName(th.native_handle(), name);
+}
+
+inline bool setThreadName(const std::thread& th, const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+
+  return setThreadName(th, name.c_str());
+}
+
+inline bool setThreadName(const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+
+  return setThreadName(::pthread_self(), name.c_str());
 }
 
 ///@{
