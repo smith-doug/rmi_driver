@@ -38,6 +38,16 @@
 #include <sstream>
 #include <string>
 
+#include <boost/algorithm/string/replace.hpp>
+
+// I was trying to get away from using defines, but the only way to get the __FILE__ etc info is from the preprocessor.
+// Call these link member functions, logger_.DEBUG() << "blah";
+#define DEBUG() DEBUG_(__FILE__, __LINE__, __ROSCONSOLE_FUNCTION__)
+#define INFO() INFO_(__FILE__, __LINE__, __ROSCONSOLE_FUNCTION__)
+#define WARN() WARN_(__FILE__, __LINE__, __ROSCONSOLE_FUNCTION__)
+#define ERROR() ERROR_(__FILE__, __LINE__, __ROSCONSOLE_FUNCTION__)
+#define FATAL() FATAL_(__FILE__, __LINE__, __ROSCONSOLE_FUNCTION__)
+
 namespace rmi_driver
 {
 namespace rmi_log
@@ -56,6 +66,9 @@ public:
 
     DebugEx(const std::string& module, const std::string& ns, ros::console::LogLocation& loc,
             Level level = Level::Info);
+
+    DebugEx(const std::string& module, const std::string& ns, ros::console::LogLocation& loc, Level level,
+            const char* file, int line, const char* function);
 
     DebugEx(const DebugEx& other);
 
@@ -99,14 +112,6 @@ public:
     //      return *this;
     //    }
 
-    std::string getName()
-    {
-      std::string ns_name = ns_;
-      if (*ns_name.begin() == '/')
-        ns_name.erase(0, 1);
-      return module_name_ + ns_name;
-    }
-
     /*template <typename... Args>
     void print(const char* fmt, Args const&... args)
     {
@@ -119,33 +124,37 @@ public:
     std::stringstream ss_;
     Level level_;
 
+    const char* file_;
+    int line_;
+    const char* function_;
+
     int throttle_ = 0;
   };
 
 public:
-  DebugEx DEBUG()
+  DebugEx DEBUG_(const char* file = 0, int line = 0, const char* function = 0)
   {
-    return DebugEx(module_name_, ns_, log_location, Level::Debug);
+    return DebugEx(module_name_, ns_, log_location, Level::Debug, file, line, function);
   }
 
-  DebugEx INFO()
+  DebugEx INFO_(const char* file = 0, int line = 0, const char* function = 0)
   {
-    return DebugEx(module_name_, ns_, log_location, Level::Info);
+    return DebugEx(module_name_, ns_, log_location, Level::Info, file, line, function);
   }
 
-  DebugEx WARN()
+  DebugEx WARN_(const char* file = 0, int line = 0, const char* function = 0)
   {
-    return DebugEx(module_name_, ns_, log_location, Level::Warn);
+    return DebugEx(module_name_, ns_, log_location, Level::Warn, file, line, function);
   }
 
-  DebugEx ERROR()
+  DebugEx ERROR_(const char* file = 0, int line = 0, const char* function = 0)
   {
-    return DebugEx(module_name_, ns_, log_location, Level::Error);
+    return DebugEx(module_name_, ns_, log_location, Level::Error, file, line, function);
   }
 
-  DebugEx FATAL()
+  DebugEx FATAL_(const char* file = 0, int line = 0, const char* function = 0)
   {
-    return DebugEx(module_name_, ns_, log_location, Level::Error);
+    return DebugEx(module_name_, ns_, log_location, Level::Error, file, line, function);
   }
 
   void setLoggerLevel(Level level);
@@ -156,12 +165,20 @@ public:
     setLoggerLevel(Level::Fatal);
   }
 
-  std::string getName()
+  /*std::string getName()
   {
     std::string ns_name = ns_;
     if (*ns_name.begin() == '/')
       ns_name.erase(0, 1);
     return module_name_ + ns_name;
+  }*/
+
+  std::string getName()
+  {
+    // std::string ns_name = boost::replace_all_copy(ns_, "/", "");
+    // ns_name = ns_;
+    return module_name_ + ":" + ns_;
+    // return ns_name;
   }
 
 private:
