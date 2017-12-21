@@ -44,16 +44,16 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
   , has_goal_(false)
   , logger_("JTA", ns)
 {
-  pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>(ns + "/command_list", 1);
+  pub_rmi_ = nh_.advertise<robot_movement_interface::CommandList>("command_list", 2);
 
-  sub_rmi_ = nh_.subscribe(ns + "/command_result", 1, &JointTrajectoryAction::subCB_CommandResult, this);
+  sub_rmi_ = nh_.subscribe("command_result", 1, &JointTrajectoryAction::subCB_CommandResult, this);
 
   action_server_.start();
 
   logger_.INFO() << "joint_trajectory_handler started on topic " << ns + "/joint_trajectory_action";
 }
 
-void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
+void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
 {
   // Will contain the full trajectory in the correct order.  It's much easier to rearrange everything now in 1 batch
   trajectory_msgs::JointTrajectory traj_sorted;
@@ -80,7 +80,7 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
   traj_sorted.header = traj.header;
   traj_sorted.joint_names = util::sortVectorByIndices<std::string>(mapping, traj.joint_names);
 
-  cmd_id_ = 0;
+  last_cmd_id_ = 0;
 
   try
   {
@@ -112,7 +112,7 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
     return;
   }
 
-  cmd_id_ = cmd_list.commands.back().command_id;  // Need to store it to know when the trajectory is complete
+  last_cmd_id_ = cmd_list.commands.back().command_id;  // Need to store it to know when the trajectory is complete
 
   gh.setAccepted();
 
@@ -121,28 +121,32 @@ void JointTrajectoryAction::test(JointTractoryActionServer::GoalHandle &gh)
 
 void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
 {
-  // if (goalIsBusy(active_goal_))
+  logger_.INFO() << "goalCB new goal received";
+
   if (has_goal_)
   {
-    gh.setRejected();
+    logger_.INFO() << "A goal was active.  Aborting.";
+    abortGoal();
+    // gh.setRejected();
   }
-  else
-  {
-    active_goal_ = gh;
-    has_goal_ = true;
-    test(gh);
-  }
+  // else
+  //{
+  active_goal_ = gh;
+  has_goal_ = true;
+  newGoal(gh);
+  //}
 }
 
 void JointTrajectoryAction::subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg)
 {
   if (has_goal_)
   {
-    if (msg->result_code != 0)  // If any message is an error, just stop
+    // If any message is an error, just stop
+    if (msg->result_code != CommandResultCodes::OK && msg->result_code != CommandResultCodes::ABORT_OK)
     {
-      abortGoal(-100, "subCB_CommandResult received a msg with non-zero result code");
+      abortGoal(-100, "subCB_CommandResult received a msg with a not-ok result code");
     }
-    else if (msg->command_id == cmd_id_)
+    else if (msg->command_id == last_cmd_id_)
     {
       active_goal_.setSucceeded();
       has_goal_ = false;
@@ -183,11 +187,11 @@ void JointTrajectoryAction::abortGoal(int32_t error_code, const std::string &err
   robot_movement_interface::CommandList cmd_list;
   robot_movement_interface::Command cmd;
   cmd.command_type = "ABORT";
-
   cmd_list.commands.push_back(cmd);
   cmd_list.replace_previous_commands = true;
 
   pub_rmi_.publish(cmd_list);
+  ros::Duration(0.2).sleep();  // Give it a chance to actually abort.  @todo rethink this
 
   if (has_goal_)
   {

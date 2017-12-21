@@ -57,7 +57,7 @@ class JointTrajectoryAction
 public:
   JointTrajectoryAction(std::string ns, const std::vector<std::string> &joint_names, JtaCommandHandler *jta_handler);
 
-  void test(JointTractoryActionServer::GoalHandle &gh);
+  void newGoal(JointTractoryActionServer::GoalHandle &gh);
 
   /**
     * \brief Action server goal callback method
@@ -103,7 +103,7 @@ protected:
 
   bool has_goal_;
 
-  int cmd_id_;
+  int last_cmd_id_;
 
   std::vector<std::string> conf_joint_names_;
 
