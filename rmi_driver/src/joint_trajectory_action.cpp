@@ -40,6 +40,7 @@ JointTrajectoryAction::JointTrajectoryAction(std::string ns, const std::vector<s
                    boost::bind(&JointTrajectoryAction::cancelCB, this, _1), false)
   , conf_joint_names_(joint_names)
   , ns_(ns)
+  , nh_(ns)
   , jta_handler_(jta_handler)
   , has_goal_(false)
   , logger_("JTA", ns)
