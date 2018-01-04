@@ -9,6 +9,7 @@ int main(int argc, char **argv)
 
   ros::NodeHandle nh;
 
+  ROS_INFO_STREAM("rmi_driver starting after 1 second delay");
   ros::Duration(1).sleep();  // Sleep to allow rqt_console to detect the new node
 
   rmi_driver::Driver driver;

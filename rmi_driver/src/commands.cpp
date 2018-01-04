@@ -295,6 +295,7 @@ JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_traj
 {
   robot_movement_interface::CommandList cmd_list;
 
+  // Process the first point
   if (joint_trajectory.points.size() >= 1)
     processFirstJtaPoint(joint_trajectory.points.front(), cmd_list);
   else
@@ -308,15 +309,9 @@ JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_traj
                   [&](const trajectory_msgs::JointTrajectoryPoint& pt) { processJtaPoint(pt, cmd_list); });
   }
 
-  // cmd_list.commands.emplace_back(processFirstJtaPoint(*joint_trajectory.points.begin()));
-
-  //  std::transform(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
-  //                 std::back_inserter(cmd_list.commands),
-  //                 [&](const trajectory_msgs::JointTrajectoryPoint& pt) { return processJtaPoint(pt); });
-
+  // Process the final point
   if (joint_trajectory.points.size() >= 2)
     processLastJtaPoint(joint_trajectory.points.back(), cmd_list);
-  // cmd_list.commands.emplace_back(processLastJtaPoint(joint_trajectory.points.back()));
 
   return cmd_list;
 }

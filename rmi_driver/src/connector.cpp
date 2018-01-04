@@ -410,7 +410,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       }
       else  // A Get was received as part of a CommandList.
       {
-        logger_.INFO() << "Got a high priority command via a message: " << robot_command_ptr->getCommand();
+        logger_.WARN() << "Got a high priority command via a message: " << robot_command_ptr->getCommand();
 
         // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
         auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
@@ -501,6 +501,7 @@ RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type
 
 void Connector::getThread()
 {
+  util::setThreadName("get_thr");
   ros::Rate rate(50);
 
   // Fetch the required RobotCommands from the plugin.
@@ -607,6 +608,7 @@ void Connector::getThread()
 
 void Connector::cmdThread()
 {
+  util::setThreadName("cmd_thr");
   ros::Rate rate(30);
   logger_.INFO() << " Connector::cmdThread() starting";
 

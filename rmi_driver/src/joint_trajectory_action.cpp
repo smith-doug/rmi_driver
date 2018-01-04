@@ -63,7 +63,6 @@ void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
 
   auto &joint_names = traj.joint_names;
 
-  std::vector<size_t> mapping;  // mapping[0] will contain the position of joint0 in the vectors
   if (joint_names.size() != conf_joint_names_.size())
   {
     reject(control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS, "joint_names.size() != conf_joint_names_.size()");
@@ -79,18 +78,23 @@ void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
     if (idx < joint_names.size())
       mapping.push_back(idx);
   }
+
+  // Make sure the mapping is valid
   if (mapping.size() != joint_names.size())
   {
     reject(control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS, "mapping.size() != joint_names.size()");
     return;
   }
-
-  robot_movement_interface::CommandList cmd_list;
+  if (*std::max_element(mapping.begin(), mapping.end()) >= mapping.size())
+  {
+    reject(control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS, "max element of mapping >= mapping size");
+    return;
+  }
 
   traj_sorted.header = traj.header;
   traj_sorted.joint_names = util::sortVectorByIndices<std::string>(mapping, traj.joint_names);
 
-  last_cmd_id_ = 0;
+  last_cmd_id_ = 0;  // Reset the target cmd_id
 
   try
   {
@@ -110,11 +114,10 @@ void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
   catch (const std::runtime_error &error)
   {
     reject(control_msgs::FollowJointTrajectoryResult::INVALID_GOAL, error.what());
-
     return;
   }
 
-  cmd_list = jta_handler_->processJta(traj_sorted);
+  robot_movement_interface::CommandList cmd_list = jta_handler_->processJta(traj_sorted);
 
   if (cmd_list.commands.empty())
   {
@@ -125,7 +128,6 @@ void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
   last_cmd_id_ = cmd_list.commands.back().command_id;  // Need to store it to know when the trajectory is complete
 
   gh.setAccepted();
-
   pub_rmi_.publish(cmd_list);
 }
 
@@ -137,7 +139,6 @@ void JointTrajectoryAction::goalCB(JointTractoryActionServer::GoalHandle gh)
   {
     logger_.INFO() << "A goal was active.  Aborting.";
     abortGoal();
-    // gh.setRejected();
   }
   // else
   //{

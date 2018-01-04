@@ -77,6 +77,13 @@ std::string vecToString(const std::vector<T>& vec)
   return oss.str();
 }
 
+/**
+ * \brief set the name of a thread
+ *
+ * @param thread_hdl handle of target thead
+ * @param name new name of thread
+ * @return true if successful
+ */
 #ifdef __linux__
 inline bool setThreadName(pthread_t thread_hdl, const char* name)
 {
@@ -165,6 +172,8 @@ bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* ent
  * data = {123, 456, 789}
  * sorted = {456, 789, 123}
  *
+ * \exception std::runtime_error unable to sort data
+ *
  * @param indices Indicates the order to rearrange the data by.
  * @param data The data to sort
  * @return Sorted vector.  Tsource must be able to be placed in Tdest.
@@ -185,7 +194,12 @@ std::vector<Tdest> sortVectorByIndices(const std::vector<size_t>& indices, const
 
   ret.reserve(indices.size());
 
-  std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) { return data[i]; });
+  std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) {
+    if (i > data.size())
+      throw std::runtime_error("index > data.size()");
+    else
+      return data[i];
+  });
 
   return ret;
 }

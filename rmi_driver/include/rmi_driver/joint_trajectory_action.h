@@ -68,7 +68,9 @@ public:
   void goalCB(JointTractoryActionServer::GoalHandle gh);
 
   /**
-   * \brief Action server cancel callback method
+   * \brief Action server cancel callback method.
+   *
+   * This method will call abortGoal if there is an active command.
    *
    * \param gh goal handle
    *
@@ -77,6 +79,14 @@ public:
 
   void subCB_CommandResult(const robot_movement_interface::ResultConstPtr &msg);
 
+  /**
+   * \brief Abort an active goal and send ABORT to the robot
+   *
+   * This method will send an ABORT command to the robot (always) and call setCanceled on the active goal (if active).
+   *
+   * @param error_code The error code to use in the result.
+   * @param error_msg The error message to use in the result.
+   */
   void abortGoal(int32_t error_code, const std::string &error_msg);
 
   void abortGoal();
