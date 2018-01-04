@@ -64,11 +64,20 @@ void JointTrajectoryAction::newGoal(JointTractoryActionServer::GoalHandle &gh)
   auto &joint_names = traj.joint_names;
 
   std::vector<size_t> mapping;  // mapping[0] will contain the position of joint0 in the vectors
+  if (joint_names.size() != conf_joint_names_.size())
+  {
+    reject(control_msgs::FollowJointTrajectoryResult::INVALID_JOINTS, "joint_names.size() != conf_joint_names_.size()");
+    return;
+  }
+
+  // mapping[0] will contain the position of joint0 in the vectors.  This way I only have to search once.
+  std::vector<size_t> mapping;
 
   for (auto &&name : conf_joint_names_)
   {
     auto idx = std::find(joint_names.begin(), joint_names.end(), name) - joint_names.begin();
-    mapping.push_back(idx);
+    if (idx < joint_names.size())
+      mapping.push_back(idx);
   }
   if (mapping.size() != joint_names.size())
   {
