@@ -300,8 +300,13 @@ JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_traj
   else
     return cmd_list;
 
-  std::for_each(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
-                [&](const trajectory_msgs::JointTrajectoryPoint& pt) { processJtaPoint(pt, cmd_list); });
+  // Need to have at least 3 points to have something other that a first/last.
+  if (joint_trajectory.points.size() >= 3)
+  {
+    // Process all the points except the first/last normally
+    std::for_each(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
+                  [&](const trajectory_msgs::JointTrajectoryPoint& pt) { processJtaPoint(pt, cmd_list); });
+  }
 
   // cmd_list.commands.emplace_back(processFirstJtaPoint(*joint_trajectory.points.begin()));
 
