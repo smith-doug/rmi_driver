@@ -101,8 +101,15 @@ void Driver::addConnection(std::string ns, std::string host, int port, std::vect
                                             config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
-  auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, commands->getJtaCommandHandler());
-  jta_map_.emplace(conn_num_, jta);
+  if (config_.use_rmi_driver_jta_)
+  {
+    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, commands->getJtaCommandHandler());
+    jta_map_.emplace(conn_num_, jta);
+  }
+  else
+  {
+    logger_.WARN() << "use_rmi_driver_jta disabled. " << ns << "/joint_trajectory_action will not be launched.";
+  }
 
   auto &conn = conn_map_.at(conn_num_);
   conn->connect();

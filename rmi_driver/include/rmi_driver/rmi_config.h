@@ -147,6 +147,9 @@ public:
 
   /// Connector::cmdThread() will clearCommands if it receives an error response
   bool clear_commands_on_error_ = true;
+
+  /// Use the rmi_driver joint_trajectory_action handler.  If false, you'll have to run your own handler.
+  bool use_rmi_driver_jta_ = true;
 };
 
 /**
