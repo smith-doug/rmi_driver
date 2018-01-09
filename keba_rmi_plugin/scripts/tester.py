@@ -56,14 +56,14 @@ except ImportError:
 #===============================================================================
 
 # settings
-dFast = DYNAMIC([100, 100, 100, 100, 500, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
+dFast = DYNAMIC([100, 100, 100, 100, 1000, 5000, 5000, 50000, 1000, 10000, 10000, 100000])
 dMedium = DYNAMIC([50, 50, 50, 50, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
 dSlow = DYNAMIC([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
 
 os200 = OVLSUPPOS(200)
 os0 = OVLSUPPOS(0)
 or200 = OVLREL(200)
-oa10 = OVLABS([20, 360, 40, 3, 0])
+oa10 = OVLABS([30, 360, 40, 4, 0])
 
 # Positions
 apHome = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000, -0.300])
@@ -163,21 +163,31 @@ def do_something():
     rob.ProgRun()
 
 
-def do_settings():
-
+def do_settings_rob1():
     rob.ProgStart()
     Dyn(dFast)
     Ovl(oa10)
     rob.ProgRun()
 
+
+def do_settings_rob2():
     rob2.ProgStart()
-    rob2.Settings(dFast, oa10)
+    rob2.Settings(dFast, os200)
     rob2.ProgRun()
+
+
+def do_settings_both():
+    t1 = threading.Thread(target=do_settings_rob1)
+    t2 = threading.Thread(target=do_settings_rob2)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
 
 
 def home_rob1():
     rob.ProgStart()
-    PTP(apHomeRob2, dFast)
+    PTP(apHome, dFast)
     rob.ProgRun()
 
 
@@ -200,12 +210,14 @@ def home_both():
 def cause_error():
 
     apBad = RmiPosJoints([0.0000, -2.100, -1.300, -1.400, 1.5000, 0.0000, -0.300])
-    apBad.pose.append(42)  # Make the pose too long (8 axes)
+    # apBad.pose.append(42)  # Make the pose too long (8 axes)
+    apBad.pose[0] = 100
 
     rob.ProgStart()
     PTP(apHome, dFast)
     PTP(apBad)
     PTP(apHome, dFast)
+    rob.WaitIsFinished()
     rob.ProgRun()
 
 
@@ -223,15 +235,32 @@ def rob2_do_stuff():
     rob2.ProgRun()
 
 
+def abort_rob1():
+    rob.Abort()
+
+
+def stress_rob1():
+    for i in range(0, 100):
+        print 'Stress loop # ' + str(i)
+        move_square()
+
+        if rospy.is_shutdown():
+            return
+
+
 function_map = {
     'move_square': move_square,
-    'do_settings': do_settings,
+    'do_settings_rob1': do_settings_rob1,
+    'do_settings_rob2': do_settings_rob2,
+    'do_settings_both': do_settings_both,
     'do_something': do_something,
     'home_rob1': home_rob1,
     'home_rob2': home_rob2,
     'home_both': home_both,
     'cause_error': cause_error,
-    'rob2_do_stuff': rob2_do_stuff, 
+    'rob2_do_stuff': rob2_do_stuff,
+    'abort_rob1': abort_rob1,
+    'stress_rob1': stress_rob1,
 
 }
 
