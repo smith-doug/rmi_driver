@@ -30,13 +30,18 @@
 #include "rmi_driver/driver.h"
 #include <future>
 #include <iostream>
+#include "rmi_driver/util.h"
 
 namespace rmi_driver
 {
-Driver::Driver() : work_(io_service_)
+Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
 {
   // boost::asio::io_service work(io_service_);
   io_service_thread_ = std::thread([&]() { io_service_.run(); });
+
+  util::setThreadName(io_service_thread_, "io_svc_thr");
+
+  util::setThreadName("driver_thr");
 
   ros::NodeHandle nh;
   config_.loadConfig(nh);
@@ -44,10 +49,10 @@ Driver::Driver() : work_(io_service_)
 
 void Driver::start()
 {
-  ROS_INFO_STREAM("There are " << config_.connections_.size() << " connections");
+  logger_.INFO() << "There are " << config_.connections_.size() << " connections";
   for (auto &&con_cfg : config_.connections_)
   {
-    ROS_INFO_STREAM("Loading plugin: " << con_cfg.rmi_plugin_package_);
+    logger_.INFO() << "Loading plugin: " << con_cfg.rmi_plugin_package_;
     try
     {
       // Will be stored in the Connector.  Making it here to keep Plugin loading stuff out of Connector.
@@ -57,13 +62,13 @@ void Driver::start()
       // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
       CommandRegisterPtr cmd_register = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
       cmd_register->initialize(con_cfg.joints_);
-      ROS_INFO_STREAM("Loaded the plugin successfully");
+      logger_.INFO() << "Loaded the plugin successfully";
 
       // Display some info about the loaded plugin
-      ROS_INFO_STREAM("There are " << cmd_register->handlers().size() << " handlers registered");
+      logger_.INFO() << "There are " << cmd_register->handlers().size() << " handlers registered";
       for (auto &cmh : cmd_register->handlers())
       {
-        ROS_INFO_STREAM(*cmh);
+        logger_.INFO() << *cmh;
       }
 
       // Add the connection from the current config
@@ -71,7 +76,7 @@ void Driver::start()
     }
     catch (pluginlib::PluginlibException &ex)
     {
-      ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
+      logger_.ERROR() << "The plugin failed to load for some reason. Error: %s", ex.what();
     }
   }
 
@@ -81,6 +86,7 @@ void Driver::start()
 
   // Publish joint states.  Will aggregate multiple robots.
   pub_thread_ = std::thread(&Driver::publishJointState, this);
+  util::setThreadName(pub_thread_, "pub_jt_state");
 
   return;
 }
@@ -95,6 +101,16 @@ void Driver::addConnection(std::string ns, std::string host, int port, std::vect
                                             config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
+  if (config_.use_rmi_driver_jta_)
+  {
+    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, commands->getJtaCommandHandler());
+    jta_map_.emplace(conn_num_, jta);
+  }
+  else
+  {
+    logger_.WARN() << "use_rmi_driver_jta disabled. " << ns << "/joint_trajectory_action will not be launched.";
+  }
+
   auto &conn = conn_map_.at(conn_num_);
   conn->connect();
 }
@@ -103,8 +119,7 @@ void Driver::publishJointState()
 {
   ros::Rate pub_rate(config_.publishing_rate_);
 
-  ROS_INFO_STREAM(__func__ << "Driver pub starting");
-  // ROS_INFO_NAMED("Driver", "publishJointState");
+  logger_.INFO() << "Driver pub starting";
 
   sensor_msgs::JointState stateFull;
   while (ros::ok())

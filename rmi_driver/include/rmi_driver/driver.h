@@ -35,7 +35,9 @@
 
 #include "rmi_driver/commands.h"
 #include "rmi_driver/connector.h"
+#include "rmi_driver/joint_trajectory_action.h"
 #include "rmi_driver/rmi_config.h"
+#include "rmi_driver/rmi_logger.h"
 
 #include <robot_movement_interface/CommandList.h>
 #include <robot_movement_interface/Result.h>
@@ -73,6 +75,8 @@ protected:
 
   std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 
+  std::unordered_map<int32_t, std::shared_ptr<JointTrajectoryAction>> jta_map_;
+
   // Connector connector_;
 
   int conn_num_ = 0;
@@ -87,6 +91,8 @@ protected:
   std::thread pub_thread_;
 
   std::thread io_service_thread_;
+
+  rmi_log::RmiLogger logger_;
 
   // std::vector<CommandHandler> cmd_handlers_;  //###testing
 

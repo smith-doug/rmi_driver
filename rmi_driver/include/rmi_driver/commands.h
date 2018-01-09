@@ -32,12 +32,27 @@
 
 #include <ros/ros.h>
 
-#include <robot_movement_interface/Command.h>
+#include <robot_movement_interface/CommandList.h>
+
+#include <control_msgs/FollowJointTrajectoryAction.h>
+//#include <rmi_driver/joint_trajectory_action.h>
 
 #include <string>
 
 namespace rmi_driver
 {
+struct CommandResultCodes
+{
+  enum
+  {
+    OK = 0,
+    FAILED_TO_FIND_HANDLER = 1,
+    ABORT_FAIL = 9998,
+    ABORT_OK = 9999,
+
+  };
+};
+
 /**
  * \brief Commands that will be sent to the robot controller as strings.
  *
@@ -336,6 +351,8 @@ public:
     command_register_ = commandRegister;
   }
 
+  friend std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh);
+
 protected:
   /// Pointer to the CommandRegister that owns this CommandHandler
   CommandRegister* command_register_ = nullptr;
@@ -350,10 +367,105 @@ protected:
   CommandHandlerFunc process_func_ = nullptr;
 };
 
-inline std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
+/**
+ * \brief Processes trajectory_msgs::JointTrajectory messages and turns them into a
+ * robot_movement_interface::CommandList
+ *
+ * \warning JtaCommandHandler expects the JointTrajectory message to be sorted.  The order of the joints must match the
+ * configured order in the driver.
+ *
+ * Call processJta() to process an entire trajectory.
+ */
+class JtaCommandHandler : public CommandHandler
 {
-  return cmdh.dump(o);
-}
+public:
+  JtaCommandHandler()
+  {
+    handler_name_ = "JTA Command";
+  }
+
+  virtual ~JtaCommandHandler()
+  {
+  }
+
+  /**
+   * \brief Get the command_id number that should be used next, starting at 0.
+   *
+   * @param cmd_list the command list
+   * @return the command id to use
+   */
+  uint32_t getNextCommandId(robot_movement_interface::CommandList& cmd_list);
+
+  /**
+   * \brief Create the full robot_movement_interface::CommandList based on the JointTrajectory.
+   *
+   * It will call processFirstJtaPoint() for the first point, processJtaPoint() for every remaining point except for the
+   * last, then processLastJtaPoint() for the final point.  This allows you to create multiple commands for the
+   * first/last
+   * points, to set any required settings or waits.
+   *
+   * @param joint_trajectory The full JointTrajectory message, with all values sorted in the same order as in this
+   * driver.
+   * @return The assembled CommandList to send
+   */
+  virtual robot_movement_interface::CommandList processJta(const trajectory_msgs::JointTrajectory& joint_trajectory);
+
+  /**
+   * \brief Process a point and append a Command to cmd_list.
+   *
+   * The default implementation will create a Command with:
+   * \code
+   * cmd.command_id = getNextCommandId();
+   * cmd.command_type = "PTP";
+   * cmd.pose_type = "JOINTS";
+   * cmd.pose = copy(point.positions);
+   * \endcode
+   *
+   * If point.accelerations, velocities, or effort is set, it will add:
+   * \code
+   * cmd.<param_type> = "ROS";
+   * cmd.<param> = copy(point.<param>);
+   * \endcode
+   *
+   * @param point The point to process
+   * @param cmd_list The CommandList that is being assembled.
+   */
+  virtual void processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                               robot_movement_interface::CommandList& cmd_list);
+
+  /**
+   * \brief Called by processJta() to handle the first point.
+   *
+   * Calls processJtaPoint() by default.  You can use this to perform any desired settings (changing modes, setting
+   * tools,
+   * etc) before the robot actually moves.
+   *
+   * @param point The point to process
+   * @param cmd_list The CommandList that is being assembled.
+   */
+  virtual void processFirstJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                    robot_movement_interface::CommandList& cmd_list)
+  {
+    processJtaPoint(point, cmd_list);
+  }
+
+  /**
+   * \brief Called by processJta() to handle the last point.
+   *
+   * Calls processJtaPoint() by default.  You can use this to perform any desired commands after the robot stops moving.
+   * For example, waiting until the robot has stopped moving.
+   *
+   * @param point The point to process
+   * @param cmd_list The CommandList that is being assembled.
+   */
+  virtual void processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                   robot_movement_interface::CommandList& cmd_list)
+  {
+    processJtaPoint(point, cmd_list);
+  }
+
+protected:
+};
 
 /**
  * \brief This class contains all the registered command handlers.
@@ -368,6 +480,7 @@ public:
 
   CommandRegister()
   {
+    jta_command_handler_.reset(new JtaCommandHandler);
   }
 
   virtual ~CommandRegister()
@@ -442,6 +555,28 @@ public:
    */
   const CommandHandler* findHandler(const robot_movement_interface::Command& msg_cmd);
 
+  /**
+   * \brief Get the configured command handler.
+   *
+   * It will be the base JtaCommandHandler by default.
+   * @return A pointer to the command handler.
+   */
+  virtual JtaCommandHandler* getJtaCommandHandler()
+  {
+    return jta_command_handler_.get();
+  }
+
+  /**
+   * \brief Set the joint_trajectory_action command handler to type T
+   *
+   * This will be used by rmi_driver::JointTrajectoryAction to create a CommandList.
+   */
+  template <typename T>
+  void setJtaCommandHandler()
+  {
+    jta_command_handler_.reset(new T);
+  }
+
 protected:
   /**
    * \brief Use addHandler to create and add new CommandHandlers to this register.
@@ -452,6 +587,8 @@ protected:
 
   /// Vector of all registered command handlers
   CommandHandlerPtrVec command_handlers_;
+
+  std::unique_ptr<JtaCommandHandler> jta_command_handler_ = std::unique_ptr<JtaCommandHandler>(new JtaCommandHandler);
 };
 
 using CommandRegisterPtr = std::shared_ptr<CommandRegister>;

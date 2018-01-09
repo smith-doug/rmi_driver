@@ -32,6 +32,7 @@
 
 #include <ros/ros.h>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace rmi_driver
@@ -76,6 +77,46 @@ std::string vecToString(const std::vector<T>& vec)
   return oss.str();
 }
 
+/**
+ * \brief set the name of a thread
+ *
+ * @param thread_hdl handle of target thead
+ * @param name new name of thread
+ * @return true if successful
+ */
+#ifdef __linux__
+inline bool setThreadName(pthread_t thread_hdl, const char* name)
+{
+  return ::pthread_setname_np(thread_hdl, name) == 0;
+}
+#else
+inline bool setThreadName(pthread_t thread_hdl, const char* name)
+{
+  return false;
+}
+#endif
+
+inline bool setThreadName(std::thread& th, const char* name)
+{
+  return setThreadName(th.native_handle(), name);
+}
+
+inline bool setThreadName(const std::thread& th, const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+
+  return setThreadName(th, name.c_str());
+}
+
+inline bool setThreadName(const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+
+  return setThreadName(::pthread_self(), name.c_str());
+}
+
 ///@{
 /*
  * \brief Check if the sample is used, then check if msg matches sample.
@@ -117,9 +158,51 @@ bool usedAndNotEqualIdx(int entry_index, const std::vector<float>& sample, const
  * @param sample Stored sample.  Can be 1 entry like "JOINTS" or multiple entries like "JOINTS|QUATERNION"
  * @param msg The received value
  * @param entry_index Optional.  Store the index of the entry that was found.
- * @return True if the sample
+ *
+ * @return True if the message disqualifies this as a match.
  */
 bool usedAndNotEqual(const std::string& sample, const std::string& msg, int* entry_index = 0);
+
+/**
+ * \brief Sort a vector of type Tsource by a vector of indices
+ *
+ * ret[n] = data[indices[n]];
+ *
+ * indices = {1, 2, 0}
+ * data = {123, 456, 789}
+ * sorted = {456, 789, 123}
+ *
+ * \exception std::runtime_error unable to sort data
+ *
+ * @param indices Indicates the order to rearrange the data by.
+ * @param data The data to sort
+ * @return Sorted vector.  Tsource must be able to be placed in Tdest.
+ */
+template <typename Tdest, typename Tsource>
+std::vector<Tdest> sortVectorByIndices(const std::vector<size_t>& indices, const std::vector<Tsource>& data)
+{
+  std::vector<Tdest> ret;
+  if (data.size() == 0)  // data isn't used
+    return ret;
+
+  if (indices.size() != data.size())  // sizes have to be equal to sort
+  {
+    std::stringstream ss;
+    ss << "sortVector failed: indices.size(" << indices.size() << ") != data.size(" << data.size() << ")";
+    throw std::runtime_error(ss.str());
+  }
+
+  ret.reserve(indices.size());
+
+  std::transform(indices.begin(), indices.end(), std::back_inserter(ret), [&](size_t i) {
+    if (i > data.size())
+      throw std::runtime_error("index > data.size()");
+    else
+      return data[i];
+  });
+
+  return ret;
+}
 
 ///@}
 

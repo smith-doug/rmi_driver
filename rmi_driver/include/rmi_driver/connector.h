@@ -32,6 +32,7 @@
 
 #include <ros/ros.h>
 #include "rmi_driver/commands.h"
+#include "rmi_driver/rmi_logger.h"
 
 #include <robot_movement_interface/EulerFrame.h>
 #include <robot_movement_interface/Result.h>
@@ -306,6 +307,8 @@ protected:
 
   /// Connector::cmdThread() will clearCommands if it receives an error response or disconnects
   bool clear_commands_on_error_ = true;
+
+  rmi_log::RmiLogger logger_;
 };
 
 }  // namespace rmi_driver

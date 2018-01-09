@@ -205,6 +205,30 @@ public:
 };
 
 /**
+ * \brief Handles any custom things needed for JointTrajectoryAction
+ *
+ * In this case, all I'm doing it adding a WaitIsFinished() to the end of the trajectory.  This makes it much simpler to
+ * tell when the trajectory is actually done.
+ */
+class KebaJtaCommandHandler : public JtaCommandHandler
+{
+public:
+  KebaJtaCommandHandler()
+  {
+    handler_name_ = "Keba JTA";
+  }
+
+  /**
+   * \brief Add a WaitIsFinished to the end of the trajectory.
+   *
+   * @param point Last point
+   * @param cmd_list Full command list
+   */
+  void processLastJtaPoint(const trajectory_msgs::JointTrajectoryPoint &point,
+                           robot_movement_interface::CommandList &cmd_list) override;
+};
+
+/**
  * \brief Class that holds all of the registered commands and some joint information.
  *
  *

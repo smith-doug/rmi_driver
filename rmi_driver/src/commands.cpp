@@ -200,6 +200,11 @@ bool CommandHandler::operator==(const robot_movement_interface::Command& cmd_msg
   return true;  // If it got this far it's a match
 }
 
+std::ostream& operator<<(std::ostream& o, const CommandHandler& cmdh)
+{
+  return cmdh.dump(o);
+}
+
 std::ostream& CommandHandler::dump(std::ostream& o) const
 {
   o << "CommandHandler " << getName() << " criteria: " << std::endl;
@@ -275,6 +280,73 @@ RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Comma
   auto ret = process_func_(cmd_msg);
 
   return ret;
+}
+
+uint32_t JtaCommandHandler::getNextCommandId(robot_movement_interface::CommandList& cmd_list)
+{
+  if (cmd_list.commands.size() > 0)
+    return cmd_list.commands.back().command_id + 1;
+  else
+    return 0;
+}
+
+robot_movement_interface::CommandList
+JtaCommandHandler::processJta(const trajectory_msgs::JointTrajectory& joint_trajectory)
+{
+  robot_movement_interface::CommandList cmd_list;
+
+  // Process the first point
+  if (joint_trajectory.points.size() >= 1)
+    processFirstJtaPoint(joint_trajectory.points.front(), cmd_list);
+  else
+    return cmd_list;
+
+  // Need to have at least 3 points to have something other that a first/last.
+  if (joint_trajectory.points.size() >= 3)
+  {
+    // Process all the points except the first/last normally
+    std::for_each(joint_trajectory.points.begin() + 1, joint_trajectory.points.end() - 1,
+                  [&](const trajectory_msgs::JointTrajectoryPoint& pt) { processJtaPoint(pt, cmd_list); });
+  }
+
+  // Process the final point
+  if (joint_trajectory.points.size() >= 2)
+    processLastJtaPoint(joint_trajectory.points.back(), cmd_list);
+
+  return cmd_list;
+}
+
+void JtaCommandHandler::processJtaPoint(const trajectory_msgs::JointTrajectoryPoint& point,
+                                        robot_movement_interface::CommandList& cmd_list)
+{
+  robot_movement_interface::Command cmd;
+
+  cmd.command_id = getNextCommandId(cmd_list);
+
+  cmd.command_type = "PTP";
+  cmd.pose_type = "JOINTS";
+
+  std::copy(point.positions.begin(), point.positions.end(), std::back_inserter(cmd.pose));
+
+  if (point.accelerations.size() > 0)
+  {
+    cmd.acceleration_type = "ROS";
+    std::copy(point.accelerations.begin(), point.accelerations.end(), std::back_inserter(cmd.acceleration));
+  }
+
+  if (point.velocities.size() > 0)
+  {
+    cmd.velocity_type = "ROS";
+    std::copy(point.velocities.begin(), point.velocities.end(), std::back_inserter(cmd.velocity));
+  }
+
+  if (point.effort.size() > 0)
+  {
+    cmd.effort_type = "ROS";
+    std::copy(point.effort.begin(), point.effort.end(), std::back_inserter(cmd.effort));
+  }
+
+  cmd_list.commands.push_back(cmd);
 }
 
 }  // namespace rmi_driver

@@ -32,6 +32,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/tokenizer.hpp>
 
+#include <boost/spirit/include/qi.hpp>
+
 namespace rmi_driver
 {
 namespace util
@@ -50,17 +52,74 @@ std::string floatToStringNoTrailing(float fval, int precision)
   return str;
 }
 
+using boost::spirit::qi::double_;
+using boost::spirit::qi::parse;
+
+namespace qi = boost::spirit::qi;
+
 std::vector<double> stringToDoubleVec(const std::string& s)
 {
   std::vector<double> doubleVec;
-  std::vector<std::string> strVec;
 
-  // Split the string at spaces into a vector of strings
-  boost::split(strVec, s, boost::is_any_of(" "), boost::token_compress_on);
+  // So, boost::split is the least efficient thing ever.  Use qi instead.
 
-  // Insert the double value of each entry
-  std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec),
-                 [](const std::string& val) { return boost::lexical_cast<double>(val); });
+  // std::vector<std::string> strVec;
+
+  //
+  //  // Split the string at spaces into a vector of strings
+  //  // boost::split(strVec, s, boost::is_any_of(" "), boost::token_compress_on);
+  //  boost::split(strVec, s, boost::is_space(), boost::token_compress_on);
+  //  t.stop();
+  //
+  //  auto time_total = t.getTime();
+  //  std::cout << "duration boost::split " << t.getTime() << " ";
+  //
+  //  t.reset();
+  //  t.start();
+  //  // Insert the double value of each entry
+  //
+  //  doubleVec.reserve(10);
+  //  std::transform(strVec.begin(), strVec.end(), std::back_inserter(doubleVec),
+  //                 [](const std::string& val) { return boost::lexical_cast<double>(val); });
+  //  t.stop();
+  //
+  //  time_total += t.getTime();
+  //  std::cout << "duration transform: " << t.getTime() << " total: " << time_total << " (" << s << ")" << std::endl;
+  //
+  //  // Clock::time_point t0 = Clock::now();
+  //
+  //  {
+  //    std::vector<double> doubleVec;
+  //    t.reset();
+  //    t.start();
+  //    auto s_trim = boost::trim_copy(s);
+  //    doubleVec.reserve(10);
+  //    std::stringstream ss(s_trim);
+  //
+  //    double d;
+  //    while (ss >> d)
+  //      doubleVec.push_back(d);
+  //
+  //    t.stop();
+  //    std::cout << "duration ss: " << t.getTime() << std::endl;
+  //  }
+
+  std::string::const_iterator start = s.begin();
+  std::string::const_iterator end = s.end();
+
+  std::string s_trim;
+
+  // If it starts or ends with whitespace, trim it
+  if (*start == ' ' || *end == ' ')
+  {
+    s_trim = boost::trim_copy(s);
+    start = s_trim.begin();
+    end = s_trim.end();
+  }
+
+  bool r;
+
+  r = qi::parse(start, end, (double_ % ' '), doubleVec);
 
   return doubleVec;
 }

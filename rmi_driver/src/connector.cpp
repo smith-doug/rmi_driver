@@ -52,6 +52,7 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   , nh_(ns)
   , cmh_loader_(cmh_loader)
   , clear_commands_on_error_(clear_commands_on_error)
+  , logger_("CONNECTOR", ns)
 
 {
   joint_names_ = joint_names;
@@ -60,6 +61,8 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   command_list_sub_ = nh_.subscribe("command_list", 1, &Connector::subCB_CommandList, this);
 
   tool_frame_pub_ = nh_.advertise<robot_movement_interface::EulerFrame>("tool_frame", 30);
+
+  logger_.INFO() << "Created a new Connector";
 }
 
 bool Connector::connect()
@@ -106,7 +109,8 @@ void Connector::cancelSocketCmd(int timeout)
   if (socket_cmd_mutex_.try_lock_for(std::chrono::milliseconds(timeout)))
   {
     socket_cmd_mutex_.unlock();
-    ROS_INFO_STREAM("cancelSocketCmd() lock successful, no need to cancel");
+
+    logger_.INFO() << "cancelSocketCmd() lock successful, no need to cancel";
   }
   else  // It failed to respond.
   {
@@ -115,7 +119,7 @@ void Connector::cancelSocketCmd(int timeout)
     flush_socket_cmd_ = true;
     cmdSocketFlusher();  // Launch the flusher to consume any messages that are sent late.
 
-    ROS_INFO_STREAM("cancelSocketCmd() lock failed, canceling");
+    logger_.INFO() << "cancelSocketCmd() lock failed, canceling";
   }
 }
 
@@ -158,7 +162,8 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          ROS_INFO_STREAM(ns_ << " Socket(" << con_type << ") Ec was set " << ec.message());
+          logger_.INFO() << "Socket(" << con_type << ") Ec was set " << ec.message();
+
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
         }
@@ -173,7 +178,7 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
             get_thread_ = std::thread(&Connector::getThread, this);
           }
 
-          ROS_INFO_STREAM(ns_ << " Async Socket(" << con_type << ") established to " << host << ":" << local_port);
+          logger_.INFO() << " Async Socket(" << con_type << ") established to " << host << ":" << local_port;
         }
 
       });
@@ -218,7 +223,7 @@ void Connector::cmdSocketFlusher()
 
           if (e)  // If there is an error code, this was either cancelled or disconnected.
           {
-            ROS_INFO_STREAM(ns_ << " Connector::cmdSocketFlusher() is exiting with ec: " << e.message());
+            logger_.INFO() << "Connector::cmdSocketFlusher() is exiting with ec: " << e.message();
             flush_socket_cmd_ = false;
             return;
           }
@@ -228,7 +233,7 @@ void Connector::cmdSocketFlusher()
             std::istream is(&socket_cmd_flush_buff_);
             std::getline(is, line);
 
-            ROS_INFO_STREAM(ns_ << " Connector::cmdSocketFlusher() flushed a message (" << size << "): " << line);
+            logger_.INFO() << "Connector::cmdSocketFlusher() flushed a message (" << size << "): " << line;
             if (flush_socket_cmd_)
               cmdSocketFlusher();
           }
@@ -352,14 +357,14 @@ void Connector::addCommand(RobotCommandPtr command)
   }
   else
   {
-    ROS_ERROR_STREAM(ns_ << " Connector::addCommand invalid command type");
+    logger_.ERROR() << "Connector::addCommand invalid command type";
   }
 }
 
 void Connector::clearCommands()
 {
   command_list_mutex_.lock();
-  ROS_INFO_STREAM(ns_ << " Connector::clearCommands clearing " << command_list_.size() << " entries");
+  logger_.INFO() << "Connector::clearCommands clearing " << command_list_.size() << " entries";
   command_list_ = std::queue<RobotCommandPtr>();
   command_list_mutex_.unlock();
 }
@@ -369,7 +374,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
   auto conn = this;
   auto cmd_register = this->getCommandRegister();
 
-  ROS_INFO_STREAM(ns_ << " Received a new command_list of size: " << msg.commands.size());
+  logger_.INFO() << "Received a new command_list of size: " << msg.commands.size();
 
   // Temporary vector to hold processed commands in.  This allows me to abort and not add any commands if 1 in the list
   // was bad.
@@ -385,13 +390,13 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
 
     if (handler)
     {
-      ROS_INFO_STREAM(ns_ << " Found cmd handler: " << handler->getName());
+      logger_.INFO() << "Found cmd handler: " << handler->getName();
 
       // Create a new CommandPtr with the found handler
       auto robot_command_ptr = handler->processMsg(msg_cmd);
       if (!robot_command_ptr)
       {
-        ROS_ERROR_STREAM(ns_ << " Connector::commandListCb got a null telnet_command_ptr");
+        logger_.ERROR() << "Connector::commandListCb got a null telnet_command_ptr";
         goto error_abort;
       }
 
@@ -405,7 +410,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
       }
       else  // A Get was received as part of a CommandList.
       {
-        ROS_INFO_STREAM(ns_ << " Got a high priority command via a message: " << robot_command_ptr->getCommand());
+        logger_.WARN() << "Got a high priority command via a message: " << robot_command_ptr->getCommand();
 
         // Call cancelSocketCmd with async.  It will block while it tries to acquire the mutex.
         auto fut = std::async(std::launch::async, &Connector::cancelSocketCmd, conn, 50);
@@ -414,20 +419,25 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
         boost::trim_right(send_response);
 
         // Publish the result  @todo is this really the right thing to do?  It will publish over the same channel.
-        // Maybe I should assume that there will be no response to the abort itself, only the command that was aborted?
-        publishRmiResult(robot_command_ptr->getCommandId(), 0, send_response);
+        auto abort_res_code = CommandResultCodes::ABORT_OK;
+        if (!boost::istarts_with(send_response, "aborted"))
+        {
+          abort_res_code = CommandResultCodes::ABORT_FAIL;
+        }
+        publishRmiResult(robot_command_ptr->getCommandId(), abort_res_code, send_response);
 
-        ROS_INFO_STREAM(ns_ << " High priority response: " << send_response);
+        logger_.INFO() << "High priority response: " << send_response;
+
         fut.wait();
       }
       continue;
     }
     else  // if (!handler)
     {
-      ROS_ERROR_STREAM(ns_ << " Failed to find cmd handler for: " << msg_cmd);
+      logger_.ERROR() << "Failed to find cmd handler for: " << msg_cmd;
 
       // Send a failure response
-      publishRmiResult(msg_cmd.command_id, 1, "Failed to find cmd handler");
+      publishRmiResult(msg_cmd.command_id, CommandResultCodes::FAILED_TO_FIND_HANDLER, "Failed to find cmd handler");
       /// @todo If I make an ABORT message mandatory, I could use that to actually make the robot stop.
       if (abort_on_fail_to_find_)
       {
@@ -444,7 +454,7 @@ bool Connector::commandListCb(const robot_movement_interface::CommandList &msg)
   return true;
 
 error_abort:
-  ROS_ERROR_STREAM(ns_ << " Not adding any commands from this list and clearing any existing commands!");
+  logger_.ERROR() << " Not adding any commands from this list and clearing any existing commands!";
   command_vect.clear();
   this->clearCommands();
   return true;
@@ -476,7 +486,7 @@ RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type
   auto get_handler = cmd_register_->findHandler(rmi_cmd);
   if (!get_handler)
   {
-    ROS_ERROR_STREAM(ns_ << " Failed to get handler for " << command_type << " " << pose_type);
+    logger_.ERROR() << "Failed to get handler for " << command_type << " " << pose_type;
     return nullptr;
   }
 
@@ -484,13 +494,14 @@ RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type
   auto robot_cmd = get_handler->processMsg(rmi_cmd);
   if (!robot_cmd)
   {
-    ROS_ERROR_STREAM(ns_ << "Failed to get a RobotCommand for " << command_type << " " << pose_type);
+    logger_.ERROR() << "Failed to get a RobotCommand for " << command_type << " " << pose_type;
   }
   return robot_cmd;
 }
 
 void Connector::getThread()
 {
+  util::setThreadName("get_thr");
   ros::Rate rate(50);
 
   // Fetch the required RobotCommands from the plugin.
@@ -501,7 +512,7 @@ void Connector::getThread()
   if (!get_joint_position || !get_version || !get_tool_frame)
   {
     /// @todo make a nice link to a section of docs
-    ROS_ERROR_STREAM("One of the getThread handlers failed to be found.  Your plugin MUST implement these!");
+    logger_.FATAL() << "One of the getThread handlers failed to be found.  Your plugin MUST implement these!";
 
     return;
   }
@@ -515,19 +526,19 @@ void Connector::getThread()
     response = sendCommand(*get_version);
     if (response.compare(cmd_register_->getVersion()) != 0)
     {
-      ROS_ERROR_STREAM(ns_ << " WARNING!  The version returned by the robot does NOT match the version of the active "
-                           << "command register!  Things may not work!");
-      ROS_ERROR_STREAM(ns_ << " Command register version: " << cmd_register_->getVersion()
-                           << ", robot version: " << response);
+      logger_.ERROR() << "WARNING!  The version returned by the robot does NOT match the version of the active "
+                      << "command register!  Things may not work!";
+
+      logger_.ERROR() << "Command register version: " << cmd_register_->getVersion() << ", robot version: " << response;
     }
     else
     {
-      ROS_INFO_STREAM(ns_ << " Command register version matches the robot: " << response);
+      logger_.INFO() << " Command register version matches the robot: " << response;
     }
   }
   catch (const boost::system::system_error &ex)
   {
-    ROS_INFO_STREAM(ns_ << " Connector::getThread exception: " << ex.what());
+    logger_.INFO() << "Connector::getThread exception: " << ex.what();
 
     if (ex.code() != boost::asio::error::operation_aborted)
     {
@@ -561,8 +572,8 @@ void Connector::getThread()
       pos_real = util::stringToDoubleVec(response);
       if (pos_real.size() != 6)
       {
-        ROS_ERROR_STREAM(ns_ << " ERROR: Connector::getThread GET TOOL_FRAME size wrong!  Expected 6, got "
-                             << pos_real.size() << ".  Raw msg: " << response);
+        logger_.ERROR() << " ERROR: Connector::getThread GET TOOL_FRAME size wrong!  Expected 6, got "
+                        << pos_real.size() << ".  Raw msg: " << response;
         continue;
       }
 
@@ -575,12 +586,13 @@ void Connector::getThread()
     }
     catch (const boost::bad_lexical_cast &)
     {
-      ROS_ERROR_STREAM(ns_ << " Connector::getThread: Unable to parse Get response: " << response);
+      logger_.ERROR() << " Connector::getThread: Unable to parse Get response: " << response;
+
       continue;
     }
     catch (const boost::system::system_error &ex)
     {
-      ROS_INFO_STREAM(ns_ << " Connector::getThread exception: " << ex.what());
+      logger_.INFO() << " Connector::getThread exception: " << ex.what();
 
       if (ex.code() != boost::asio::error::operation_aborted)
       {
@@ -596,8 +608,9 @@ void Connector::getThread()
 
 void Connector::cmdThread()
 {
+  util::setThreadName("cmd_thr");
   ros::Rate rate(30);
-  ROS_INFO_STREAM(ns_ << " Connector::cmdThread() starting");
+  logger_.INFO() << " Connector::cmdThread() starting";
 
   RobotCommandPtr cmd;
 
@@ -626,7 +639,7 @@ void Connector::cmdThread()
       oss << *cmd;
 
       auto cmd_str = oss.str();
-      ROS_INFO_STREAM(ns_ << " Connector::cmdThread Cmd (" << cmd_str.length() << "): " << cmd_str);
+      logger_.INFO() << " Connector::cmdThread Cmd (" << cmd_str.length() << "): " << cmd_str;
     }
     command_list_mutex_.unlock();
 
@@ -640,21 +653,23 @@ void Connector::cmdThread()
         result.command_id = cmd->getCommandId();
         if (cmd->checkResponse(response))
         {
-          ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand OK. Response: " << response << std::endl);
+          logger_.INFO() << " Connector::cmdThread sendCommand OK. Response: " << response << "\n";
           result.result_code = 0;
         }
         else
         {
           /// OK only indicates that the command was received and processed successfully and execution should continue,
           /// not that the actual result was good/true/whatever.  A not-OK response is always a problem.
-          ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
+          // ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
+          logger_.INFO() << " Connector::cmdThread sendCommand NOT OK. Response: " << response << "\n";
+
           result.result_code = 1;
 
           ///@todo think about how this might affect the order of responses.
           // Clear the list if set.
           if (clear_commands_on_error_)
           {
-            ROS_INFO_STREAM(ns_ << " Connector::cmdThread is clearing any remaining commands after receiving an error");
+            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands after receiving an error";
             clearCommands();
           }
         }
@@ -674,7 +689,7 @@ void Connector::cmdThread()
       }
       catch (const boost::system::system_error &ex)
       {
-        ROS_INFO_STREAM(ns_ << " Connector::cmdThread exception: " << ex.what());
+        logger_.INFO() << " Connector::cmdThread exception: " << ex.what();
 
         // If the error is cause by anything other than a cancel, reconnect
         if (ex.code() != boost::asio::error::operation_aborted)
@@ -686,7 +701,7 @@ void Connector::cmdThread()
 
           if (clear_commands_on_error_)
           {
-            ROS_INFO_STREAM(ns_ << " Connector::cmdThread is clearing any remaining commands due to the socket error");
+            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands due to the socket error";
             clearCommands();
           }
 

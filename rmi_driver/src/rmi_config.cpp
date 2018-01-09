@@ -41,6 +41,8 @@ bool DriverConfig::loadConfig(ros::NodeHandle& nh)
 
   loadParam(nh, "/rmi_driver/clear_commands_on_error", clear_commands_on_error_, true);
 
+  loadParam(nh, "/rmi_driver/use_rmi_driver_jta", use_rmi_driver_jta_, true);
+
   // Load the connections
   std::string config_name = "rmi_driver_map";
   return getListParam(config_name, connections_);

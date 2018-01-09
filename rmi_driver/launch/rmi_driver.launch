@@ -5,8 +5,8 @@
 
   <!-- <node name="rmi_driver" pkg="rmi_driver" type="rmi_driver_node" output="screen" /> -->
 
-  <node name="ur_joint_trajectory_action" pkg="rmi_driver" type="joint_trajectory_action.py" output="screen" />
-  <node name="ur_joint_trajectory_action2" pkg="rmi_driver" type="joint_trajectory_action2.py" output="screen" />
+  <!-- <node name="ur_joint_trajectory_action" pkg="rmi_driver" type="joint_trajectory_action.py" output="screen" />
+  <node name="ur_joint_trajectory_action2" pkg="rmi_driver" type="joint_trajectory_action2.py" output="screen" /> -->
     
   
 </launch>
