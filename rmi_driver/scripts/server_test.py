@@ -20,8 +20,6 @@ class RobotData():
 class RmiServer(SocketServer.StreamRequestHandler):
     allow_reuse_address = True
 
-    # def __init__(self, request, client_address, server):
-
     def handle(self):
 
         while True:
@@ -43,6 +41,8 @@ class RmiServer(SocketServer.StreamRequestHandler):
                     words = data.split(';')
                     values = words[0].split(':')[1].strip()
                     self.server.robot_data.joint_pos = values
+                else:
+                    send_data = 'ERROR not implemented'
 
                 if not send_data.endswith('\n'):
                     send_data += '\n'
@@ -50,6 +50,7 @@ class RmiServer(SocketServer.StreamRequestHandler):
                 self.wfile.write(send_data)
             except:
                 print 'except in RmiServer handle'
+
                 break
 
 
@@ -68,9 +69,9 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
 class RobotInstance():
 
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, num_joints):
 
-        self.robot_data = RobotData(7)
+        self.robot_data = RobotData(num_joints)
         self.server_cmd = ThreadedTCPServer((ip, port), RmiServer, self.robot_data)
         self.server_get = ThreadedTCPServer((ip, port + 1), RmiServer, self.robot_data)
 
@@ -102,20 +103,11 @@ threads = []
 try:
     SocketServer.TCPServer.allow_reuse_address = True
 
-#     server = ThreadedTCPServer((TCP_IP, TCP_PORT), RmiServer)
-#
-#     server2 = ThreadedTCPServer((TCP_IP, TCP_PORT + 1), RmiServer)
-#
-#     server_thread = threading.Thread(target=server.serve_forever)
-#     server_thread.daemon = True
-#     server_thread.start()
-#
-#     server2_thread = threading.Thread(target=server2.serve_forever)
-#     server2_thread.daemon = True
-#     server2_thread.start()
-
-    rob = RobotInstance(TCP_IP, TCP_PORT)
+    rob = RobotInstance(TCP_IP, TCP_PORT, 7)
     rob.start()
+
+    rob2 = RobotInstance(TCP_IP, TCP_PORT + 2, 6)
+    rob2.start()
 
     while(1):
         time.sleep(1)
@@ -124,6 +116,8 @@ try:
     # server2_thread.join()
 except KeyboardInterrupt:
     print 'KeyboardInterrupt'
+    rob.shutdown()
+    rob2.shutdown()
 
 
 # server.serve_forever()
