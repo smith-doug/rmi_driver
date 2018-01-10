@@ -352,7 +352,7 @@ void Connector::addCommand(RobotCommandPtr command)
   if (command->getType() == RobotCommand::CommandType::Cmd)
   {
     command_list_mutex_.lock();
-    command_list_.push(command);
+    command_list_.push_back(command);
     command_list_mutex_.unlock();
   }
   else
@@ -365,7 +365,7 @@ void Connector::clearCommands()
 {
   command_list_mutex_.lock();
   logger_.INFO() << "Connector::clearCommands clearing " << command_list_.size() << " entries";
-  command_list_ = std::queue<RobotCommandPtr>();
+  command_list_ = std::deque<RobotCommandPtr>();
   command_list_mutex_.unlock();
 }
 
@@ -677,7 +677,7 @@ void Connector::cmdThread()
         // Command was sent and responded to in some way.  Lock n' pop.
         command_list_mutex_.lock();
         if (command_list_.size() > 0)
-          command_list_.pop();
+          command_list_.pop_front();
         command_list_mutex_.unlock();
 
         result.additional_information = response;
