@@ -162,7 +162,13 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          logger_.INFO() << "Socket(" << con_type << ") Ec was set " << ec.message();
+          logger_.WARN() << "Socket(" << con_type << ") Ec was set " << ec.message();
+
+          if (command_list_.size() > 0 && cmd_type == RobotCommand::CommandType::Cmd)
+          {
+            clearCommands();
+            logger_.WARN() << "Clearing command list because the socket failed to connect while commands were waiting";
+          }
 
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
@@ -701,8 +707,17 @@ void Connector::cmdThread()
 
           if (clear_commands_on_error_)
           {
-            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands due to the socket error";
-            clearCommands();
+            // eof probably indicates that the server's socket was restarted.  Preserve the list and restart the cmd
+            // thread to reconnect.  It will pick it up when it comes back around.
+            if (ex.code() == boost::asio::error::eof)
+            {
+              logger_.INFO() << "Socket has to reconnect.  Not clearing command list.";
+            }
+            else
+            {
+              logger_.INFO() << " Connector::cmdThread is clearing any remaining commands due to the socket error";
+              clearCommands();
+            }
           }
 
           std::thread(&Connector::connectSocket, this, host_, port_, RobotCommand::CommandType::Cmd).detach();
