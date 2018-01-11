@@ -47,6 +47,7 @@ struct CommandResultCodes
   {
     OK = 0,
     FAILED_TO_FIND_HANDLER = 1,
+    SOCKET_FAILED_TO_CONNECT = 2,
     ABORT_FAIL = 9998,
     ABORT_OK = 9999,
 

@@ -162,7 +162,15 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          logger_.INFO() << "Socket(" << con_type << ") Ec was set " << ec.message();
+          logger_.ERROR() << "Socket(" << con_type << ") Ec was set " << ec.message();
+
+          if (command_list_.size() > 0 && cmd_type == RobotCommand::CommandType::Cmd)
+          {
+            publishRmiResult(command_list_.front()->getCommandId(), CommandResultCodes::SOCKET_FAILED_TO_CONNECT,
+                             "Cmd socket failed to connect, clearing commands");
+            clearCommands();
+            logger_.ERROR() << "Clearing command list because the socket failed to connect while commands were waiting";
+          }
 
           std::this_thread::sleep_for(std::chrono::seconds(1));
           connectSocket(host, local_port, cmd_type);
@@ -352,7 +360,7 @@ void Connector::addCommand(RobotCommandPtr command)
   if (command->getType() == RobotCommand::CommandType::Cmd)
   {
     command_list_mutex_.lock();
-    command_list_.push(command);
+    command_list_.push_back(command);
     command_list_mutex_.unlock();
   }
   else
@@ -365,7 +373,7 @@ void Connector::clearCommands()
 {
   command_list_mutex_.lock();
   logger_.INFO() << "Connector::clearCommands clearing " << command_list_.size() << " entries";
-  command_list_ = std::queue<RobotCommandPtr>();
+  command_list_ = std::deque<RobotCommandPtr>();
   command_list_mutex_.unlock();
 }
 
@@ -468,7 +476,7 @@ void Connector::publishRmiResult(int command_id, int result_code, std::string ad
   result.additional_information = additional_information;
   result.header.stamp = ros::Time::now();
 
-  command_result_pub_.publish(result);
+  publishRmiResult(result);
 }
 
 void Connector::publishRmiResult(const robot_movement_interface::Result &result) const
@@ -677,7 +685,7 @@ void Connector::cmdThread()
         // Command was sent and responded to in some way.  Lock n' pop.
         command_list_mutex_.lock();
         if (command_list_.size() > 0)
-          command_list_.pop();
+          command_list_.pop_front();
         command_list_mutex_.unlock();
 
         result.additional_information = response;
@@ -701,8 +709,17 @@ void Connector::cmdThread()
 
           if (clear_commands_on_error_)
           {
-            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands due to the socket error";
-            clearCommands();
+            // eof probably indicates that the server's socket was restarted.  Preserve the list and restart the cmd
+            // thread to reconnect.  It will pick it up when it comes back around.
+            if (ex.code() == boost::asio::error::eof)
+            {
+              logger_.INFO() << "Socket has to reconnect.  Not clearing command list.";
+            }
+            else
+            {
+              logger_.INFO() << " Connector::cmdThread is clearing any remaining commands due to the socket error";
+              clearCommands();
+            }
           }
 
           std::thread(&Connector::connectSocket, this, host_, port_, RobotCommand::CommandType::Cmd).detach();

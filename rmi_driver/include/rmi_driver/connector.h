@@ -265,7 +265,7 @@ protected:
   boost::asio::io_service& io_service_;
 
   /// Queue of all rmi_driver::RobotCommands to be sent by Connector::cmdThread().
-  std::queue<RobotCommandPtr> command_list_;
+  std::deque<RobotCommandPtr> command_list_;
 
   /// Receives the robot_movement_interface/CommandList for this namespace
   ros::Subscriber command_list_sub_;
