@@ -162,12 +162,14 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          logger_.WARN() << "Socket(" << con_type << ") Ec was set " << ec.message();
+          logger_.ERROR() << "Socket(" << con_type << ") Ec was set " << ec.message();
 
           if (command_list_.size() > 0 && cmd_type == RobotCommand::CommandType::Cmd)
           {
+            publishRmiResult(command_list_.front()->getCommandId(), CommandResultCodes::SOCKET_FAILED_TO_CONNECT,
+                             "Cmd socket failed to connect, clearing commands");
             clearCommands();
-            logger_.WARN() << "Clearing command list because the socket failed to connect while commands were waiting";
+            logger_.ERROR() << "Clearing command list because the socket failed to connect while commands were waiting";
           }
 
           std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -474,7 +476,7 @@ void Connector::publishRmiResult(int command_id, int result_code, std::string ad
   result.additional_information = additional_information;
   result.header.stamp = ros::Time::now();
 
-  command_result_pub_.publish(result);
+  publishRmiResult(result);
 }
 
 void Connector::publishRmiResult(const robot_movement_interface::Result &result) const
