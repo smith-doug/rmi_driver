@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <rosparam command="load" file="$(find rmi_driver)/config/rmi_driver_config.yaml" />
+  <node name="server_test" pkg="rmi_driver" type="server_test.py" output="log" />
+  <test test-name="unit_test_node" pkg="rmi_driver" type="utest_node"/>
+</launch>
