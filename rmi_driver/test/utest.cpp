@@ -38,16 +38,6 @@
 
 using namespace rmi_driver;
 
-class TestData
-{
-public:
-  DriverConfig config_;
-  /// The CommandRegister that was loaded by the plugin
-  CommandRegisterPtr cmd_register_;
-
-  /// "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
-  CmhLoaderPtr cmh_loader_;
-};
 namespace rmi_driver
 {
 class TestDriver : public Driver
@@ -70,7 +60,21 @@ public:
 };
 }
 
-TestDriver* pDriver_;
+class TestData
+{
+public:
+  DriverConfig config_;
+  bool config_loaded_ = false;
+  /// The CommandRegister that was loaded by the plugin
+  CommandRegisterPtr cmd_register_;
+
+  /// "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
+  CmdRegLoaderPtr cmh_loader_;
+
+  TestDriver* pDriver_;
+
+  std::shared_ptr<Connector> connector_;
+};
 
 class TestCommandRegister : public CommandRegister
 {
@@ -133,11 +137,13 @@ public:
 };
 
 TestData test_data_;
+boost::asio::io_service io_service_;
+boost::asio::io_service::work work_(io_service_);
+std::thread io_service_thread_;
 
-TEST(TestSuite, driver_connect)
+// TEST(TestSuite, DISABLED_driver_connect)
+void driver_connect()
 {
-  boost::asio::io_service io_service_;
-
   std::vector<std::string> joint_names = { "shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint",
                                            "wrist_2_joint",      "wrist_3_joint",       "rail_to_base" };
 
@@ -147,9 +153,9 @@ TEST(TestSuite, driver_connect)
   ros::NodeHandle nh;
   try
   {
-    pDriver_->start();
+    test_data_.pDriver_->start();
 
-    auto& conn_map = pDriver_->getConnMap();
+    auto& conn_map = test_data_.pDriver_->getConnMap();
     auto conn_ptr = conn_map.begin()->second;
 
     robot_movement_interface::Command cmd;
@@ -192,27 +198,40 @@ TEST(TestSuite, load_config)
 {
   ros::NodeHandle nh;
 
-  EXPECT_TRUE(test_data_.config_.loadConfig(nh));
+  test_data_.config_loaded_ = test_data_.config_.loadConfig(nh);
+  EXPECT_TRUE(test_data_.config_loaded_);
 }
 
 TEST(TestSuite, load_plugin)
 {
-  EXPECT_TRUE(test_data_.config_.is_loaded_);
+  EXPECT_TRUE(test_data_.config_loaded_);
 
   auto& con_cfg = test_data_.config_.connections_[0];
-  test_data_.cmh_loader_.reset(new CmhLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
-                                                                          "CommandRegister"));
 
-  test_data_.cmd_register_ = test_data_.cmh_loader_->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-  test_data_.cmd_register_->initialize(con_cfg.joints_);
+  test_data_.pDriver_->loadPlugin(con_cfg, test_data_.cmh_loader_, test_data_.cmd_register_);
+
+  try
+  {
+    TestData test_data_fail = test_data_;
+    auto con_cfg_copy = con_cfg;
+
+    con_cfg_copy.rmi_plugin_package_ = "invalid";
+    test_data_.pDriver_->loadPlugin(con_cfg_copy, test_data_fail.cmh_loader_, test_data_fail.cmd_register_);
+
+    FAIL() << "Expected an exception";
+  }
+  catch (...)
+  {
+  }
+
   EXPECT_TRUE(test_data_.cmd_register_->handlers().size() > 0);
 }
 
 TEST(TestSuite, test_plugin)
 {
-  EXPECT_TRUE(test_data_.config_.is_loaded_);
+  EXPECT_TRUE(test_data_.config_loaded_);
 
-  {
+  {  // required gets
     robot_movement_interface::Command cmd;
     cmd.command_type = "GET";
 
@@ -233,12 +252,64 @@ TEST(TestSuite, test_plugin)
     EXPECT_FALSE(cmd_handler);
   }
 
-  {
+  {  // ptp joints
     robot_movement_interface::Command cmd;
+    cmd.command_type = "PTP";
+    cmd.pose_type = "JOINTS";
+
+    auto& conn = test_data_.config_.connections_[0];
+    for (int i = 0; i < conn.joints_.size(); i++)
+    {
+      cmd.pose.push_back(i);
+    }
+
+    auto cmd_handler = test_data_.cmd_register_->findHandler(cmd);
+    EXPECT_TRUE(cmd_handler);
+
+    cmd.pose.push_back(42);
+    cmd_handler = test_data_.cmd_register_->findHandler(cmd);
+    EXPECT_FALSE(cmd_handler);
   }
 }
 
-TEST(TestSuite, test2)
+TEST(TestSuite, test_connection)
+{
+  EXPECT_TRUE(test_data_.config_loaded_);
+
+  auto& con_cfg = test_data_.config_.connections_[0];
+  test_data_.connector_ =
+      std::make_shared<Connector>(con_cfg.ns_, io_service_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_,
+                                  test_data_.cmd_register_, test_data_.cmh_loader_, true);
+
+  auto& shared = test_data_.connector_;
+  shared->connect();
+
+  // std::this_thread::sleep_for(std::chrono::seconds(4));
+
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "GET";
+
+  cmd.pose_type = "JOINT_POSITION";
+  auto cmd_handler = test_data_.cmd_register_->findHandler(cmd);
+  EXPECT_TRUE(cmd_handler);
+
+  auto robot_cmd = cmd_handler->processMsg(cmd);
+
+  EXPECT_TRUE(robot_cmd != nullptr);
+
+  auto res = shared->sendCommand(*robot_cmd);
+
+  EXPECT_TRUE(res.length() > 1) << "Blah " << res;
+
+  {
+    RobotCommand rob_cmd(RobotCommand::CommandType::Cmd, "ping", "");
+    res = shared->sendCommand(rob_cmd);
+
+    EXPECT_EQ("pong", res);
+  }
+}
+
+TEST(TestSuite, DISABLED_test2)
 {
   TestCommandRegister reg;
 
@@ -261,7 +332,8 @@ int main(int argc, char** argv)
   ros::Time::init();
   ros::Duration(1).sleep();  // Sleep to allow rqt_console to detect the new node
 
-  pDriver_ = new TestDriver();
+  io_service_thread_ = std::thread([&]() { io_service_.run(); });
+  test_data_.pDriver_ = new TestDriver();
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

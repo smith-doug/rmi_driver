@@ -99,6 +99,8 @@ class RmiServer(SocketServer.StreamRequestHandler):
                     # continue
 
                     #self.server.robot_data.joint_pos = values
+                elif data.startswith('ping'):
+                    send_data = 'pong'
                 elif data.startswith('wait is_finished'):
                     while self.server.robot_data.is_moving:
                         time.sleep(0.001)
@@ -111,7 +113,7 @@ class RmiServer(SocketServer.StreamRequestHandler):
 
                 self.wfile.write(send_data)
             except Exception as ex:
-                print 'except in RmiServer handle ' + str(ex)
+                # print 'except in RmiServer handle ' + str(ex)
 
                 break
 
