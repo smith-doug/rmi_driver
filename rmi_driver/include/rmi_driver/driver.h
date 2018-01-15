@@ -58,7 +58,16 @@ public:
   void start();
 
   void addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
-                     CommandRegisterPtr commands, CmhLoaderPtr cmh_loader);
+                     CommandRegisterPtr commands, CmdRegLoaderPtr cmh_loader);
+
+  /**
+   * \brief Load a plugin using pluginlib::ClassLoader for 1 connection
+   *
+   * @param con_cfg [in] The ConnectionConfig
+   * @param cmd_reg_loader [out] ClassLoader for pluginlib.  Must be stored to make pluginlib happy.
+   * @param cmd_register [out] The actual CommandRegister loaded from the plugin
+   */
+  void loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_reg_loader, CommandRegisterPtr &cmd_register);
 
   // void addConnection(ConnectionConfig con_cfg);
 

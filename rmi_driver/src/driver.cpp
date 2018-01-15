@@ -47,6 +47,27 @@ Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
   config_.loadConfig(nh);
 }
 
+void Driver::loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_reg_loader,
+                        CommandRegisterPtr &cmd_register)
+{
+  cmd_register.reset();
+
+  cmd_reg_loader.reset(new CmdRegLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
+                                                                     "CommandRegister"));
+
+  // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
+  cmd_register = cmd_reg_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+  cmd_register->initialize(con_cfg.joints_);
+  logger_.INFO() << "Loaded the plugin successfully";
+
+  // Display some info about the loaded plugin
+  logger_.INFO() << "There are " << cmd_register->handlers().size() << " handlers registered";
+  for (auto &cmh : cmd_register->handlers())
+  {
+    logger_.INFO() << *cmh;
+  }
+}
+
 void Driver::start()
 {
   logger_.INFO() << "There are " << config_.connections_.size() << " connections";
@@ -56,20 +77,10 @@ void Driver::start()
     try
     {
       // Will be stored in the Connector.  Making it here to keep Plugin loading stuff out of Connector.
-      CmhLoaderPtr cmh_loader(new CmhLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
-                                                                         "CommandRegister"));
+      CmdRegLoaderPtr cmh_loader;
+      CommandRegisterPtr cmd_register;
 
-      // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
-      CommandRegisterPtr cmd_register = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-      cmd_register->initialize(con_cfg.joints_);
-      logger_.INFO() << "Loaded the plugin successfully";
-
-      // Display some info about the loaded plugin
-      logger_.INFO() << "There are " << cmd_register->handlers().size() << " handlers registered";
-      for (auto &cmh : cmd_register->handlers())
-      {
-        logger_.INFO() << *cmh;
-      }
+      loadPlugin(con_cfg, cmh_loader, cmd_register);
 
       // Add the connection from the current config
       this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_register, cmh_loader);
@@ -92,7 +103,7 @@ void Driver::start()
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
-                           CommandRegisterPtr commands, CmhLoaderPtr cmh_loader)
+                           CommandRegisterPtr commands, CmdRegLoaderPtr cmh_loader)
 {
   conn_num_++;
 
