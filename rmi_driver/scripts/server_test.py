@@ -37,6 +37,9 @@ class RmiServer(SocketServer.StreamRequestHandler):
             pass
 
     def interpolate(self, target_pt, start_pt, step):
+        '''
+        Very basic interpolator so that the model won't jump instantly        
+        '''
         if step >= self.step_target:
             self.server.robot_data.is_moving = False
             return target_pt
@@ -123,8 +126,6 @@ class RmiServer(SocketServer.StreamRequestHandler):
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     daemon_threads = True
-    #     allow_reuse_address = True
-    #
 
     def __init__(self, server_address, RequestHandlerClass, robot_data):
         self.robot_data = robot_data
@@ -160,17 +161,18 @@ class RobotInstance():
         self.server_get.server_close()
 
 
+rob_list = []
+
 try:
     SocketServer.TCPServer.allow_reuse_address = True
 
     driver_map = rospy.get_param("/rmi_driver_map")
 
-    rob_list = []
-
     for driver in driver_map:
         ip = '0.0.0.0'
         port = driver['port']
         num_joints = len(driver['joints'])
+        print "Creating a robot at " + ip + ":" + str(port) + " with " + str(num_joints) + " joints"
         rob = RobotInstance(ip, port, num_joints)
         rob.start()
         rob_list.append(rob)
@@ -182,12 +184,5 @@ try:
     # server2_thread.join()
 except KeyboardInterrupt:
     print 'KeyboardInterrupt'
-    rob.shutdown()
-    rob2.shutdown()
-
-
-# server.serve_forever()
-
-
-# for t in threads:
-#    t.join()
+    for rob in rob_list:
+        rob.shutdown()
