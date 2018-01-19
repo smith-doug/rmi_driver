@@ -94,6 +94,12 @@ target_link_libraries(rmi_driver_node
 #target_link_libraries(rmi_driver_lib ${catkin_LIBRARIES})
 
 
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(utest_node test/utest_launch.test test/utest.cpp)
+  target_link_libraries(utest_node rmi_driver ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+
 
 
 ## Mark cpp header files for installation

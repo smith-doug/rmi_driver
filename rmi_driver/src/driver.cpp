@@ -36,19 +36,37 @@ namespace rmi_driver
 {
 Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
 {
-  // boost::asio::io_service work(io_service_);
-  io_service_thread_ = std::thread([&]() { io_service_.run(); });
-
-  util::setThreadName(io_service_thread_, "io_svc_thr");
-
-  util::setThreadName("driver_thr");
-
   ros::NodeHandle nh;
   config_.loadConfig(nh);
 }
 
+void Driver::loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_reg_loader,
+                        CommandRegisterPtr &cmd_register)
+{
+  cmd_register.reset();
+
+  cmd_reg_loader.reset(new CmdRegLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
+                                                                     "CommandRegister"));
+
+  // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
+  cmd_register = cmd_reg_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
+  cmd_register->initialize(con_cfg.joints_);
+  logger_.INFO() << "Loaded the plugin successfully";
+
+  // Display some info about the loaded plugin
+  logger_.INFO() << "There are " << cmd_register->handlers().size() << " handlers registered";
+  for (auto &cmh : cmd_register->handlers())
+  {
+    logger_.INFO() << *cmh;
+  }
+}
+
 void Driver::start()
 {
+  io_service_thread_ = std::thread([&]() { io_service_.run(); });
+  util::setThreadName(io_service_thread_, "io_svc_thr");
+  util::setThreadName("driver_thr");
+
   logger_.INFO() << "There are " << config_.connections_.size() << " connections";
   for (auto &&con_cfg : config_.connections_)
   {
@@ -56,23 +74,14 @@ void Driver::start()
     try
     {
       // Will be stored in the Connector.  Making it here to keep Plugin loading stuff out of Connector.
-      CmhLoaderPtr cmh_loader(new CmhLoader(con_cfg.rmi_plugin_package_, "rmi_driver::"
-                                                                         "CommandRegister"));
+      CmdRegLoaderPtr cmd_reg_loader;
+      CommandRegisterPtr cmd_register;
 
-      // cmh_loader->createInstance() returns a boost::shared_ptr but I want a std one.
-      CommandRegisterPtr cmd_register = cmh_loader->createUniqueInstance(con_cfg.rmi_plugin_lookup_name_);
-      cmd_register->initialize(con_cfg.joints_);
-      logger_.INFO() << "Loaded the plugin successfully";
-
-      // Display some info about the loaded plugin
-      logger_.INFO() << "There are " << cmd_register->handlers().size() << " handlers registered";
-      for (auto &cmh : cmd_register->handlers())
-      {
-        logger_.INFO() << *cmh;
-      }
+      loadPlugin(con_cfg, cmd_reg_loader, cmd_register);
 
       // Add the connection from the current config
-      this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_register, cmh_loader);
+      this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_reg_loader,
+                          cmd_register);
     }
     catch (pluginlib::PluginlibException &ex)
     {
@@ -92,18 +101,18 @@ void Driver::start()
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
-                           CommandRegisterPtr commands, CmhLoaderPtr cmh_loader)
+                           CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register)
 {
   conn_num_++;
 
   // Make a new Connector and add it
-  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands, cmh_loader,
+  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, cmd_reg_loader, cmd_register,
                                             config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
   if (config_.use_rmi_driver_jta_)
   {
-    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, commands->getJtaCommandHandler());
+    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, cmd_register->getJtaCommandHandler());
     jta_map_.emplace(conn_num_, jta);
   }
   else
@@ -139,11 +148,6 @@ void Driver::publishJointState()
     joint_state_publisher_.publish(stateFull);
     pub_rate.sleep();
   }
-}
-
-void Driver::loadConfig()
-{
-  ros::NodeHandle nh("~");
 }
 
 }  // namespace rmi_driver

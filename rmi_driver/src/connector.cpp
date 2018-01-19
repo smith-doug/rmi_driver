@@ -40,7 +40,7 @@ namespace rmi_driver
 using namespace boost::asio::ip;
 
 Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::string host, int port,
-                     StringVec joint_names, CommandRegisterPtr cmd_register, CmhLoaderPtr cmh_loader,
+                     StringVec joint_names, CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register,
                      bool clear_commands_on_error)
   : ns_(ns)
   , io_service_(io_service)
@@ -50,7 +50,7 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   , port_(port)
   , cmd_register_(cmd_register)
   , nh_(ns)
-  , cmh_loader_(cmh_loader)
+  , cmd_reg_loader_(cmd_reg_loader)
   , clear_commands_on_error_(clear_commands_on_error)
   , logger_("CONNECTOR", ns)
 
@@ -162,8 +162,12 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          logger_.ERROR() << "Socket(" << con_type << ") Ec was set " << ec.message();
+          // clang format loses its mind and reformats the entire function if I send this straight to ERROR()
+          std::stringstream ss;
+          ss << "Socket(" << con_type << " " << host << ":" << local_port << ") Ec was set " << ec.message();
+          logger_.ERROR() << ss.str();
 
+          // Clear the command list if connecting failed
           if (command_list_.size() > 0 && cmd_type == RobotCommand::CommandType::Cmd)
           {
             publishRmiResult(command_list_.front()->getCommandId(), CommandResultCodes::SOCKET_FAILED_TO_CONNECT,
@@ -669,7 +673,7 @@ void Connector::cmdThread()
           /// OK only indicates that the command was received and processed successfully and execution should continue,
           /// not that the actual result was good/true/whatever.  A not-OK response is always a problem.
           // ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
-          logger_.INFO() << " Connector::cmdThread sendCommand NOT OK. Response: " << response << "\n";
+          logger_.ERROR() << " Connector::cmdThread sendCommand NOT OK. Response: " << response << "\n";
 
           result.result_code = 1;
 
@@ -677,7 +681,7 @@ void Connector::cmdThread()
           // Clear the list if set.
           if (clear_commands_on_error_)
           {
-            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands after receiving an error";
+            logger_.ERROR() << " Connector::cmdThread is clearing any remaining commands after receiving an error";
             clearCommands();
           }
         }

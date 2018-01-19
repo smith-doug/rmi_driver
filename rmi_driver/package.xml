@@ -21,6 +21,7 @@
   <depend>trajectory_msgs</depend>
   <depend>robot_movement_interface</depend>  
   <depend>pluginlib</depend>
+  <depend>rostest</depend>
 
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>  
