@@ -669,7 +669,7 @@ void Connector::cmdThread()
           /// OK only indicates that the command was received and processed successfully and execution should continue,
           /// not that the actual result was good/true/whatever.  A not-OK response is always a problem.
           // ROS_INFO_STREAM(ns_ << " Connector::cmdThread sendCommand NOT OK. Response: " << response << std::endl);
-          logger_.INFO() << " Connector::cmdThread sendCommand NOT OK. Response: " << response << "\n";
+          logger_.ERROR() << " Connector::cmdThread sendCommand NOT OK. Response: " << response << "\n";
 
           result.result_code = 1;
 
@@ -677,7 +677,7 @@ void Connector::cmdThread()
           // Clear the list if set.
           if (clear_commands_on_error_)
           {
-            logger_.INFO() << " Connector::cmdThread is clearing any remaining commands after receiving an error";
+            logger_.ERROR() << " Connector::cmdThread is clearing any remaining commands after receiving an error";
             clearCommands();
           }
         }
