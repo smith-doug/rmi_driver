@@ -31,7 +31,10 @@ class RmiServer(SocketServer.StreamRequestHandler):
 
         self.step_target = 20.0  # number of steps to use in interpolation
 
-        SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
+        try:
+            SocketServer.StreamRequestHandler.__init__(self, request, client_address, server)
+        except:
+            pass
 
     def interpolate(self, target_pt, start_pt, step):
         if step >= self.step_target:
