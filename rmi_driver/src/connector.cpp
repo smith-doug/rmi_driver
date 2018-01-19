@@ -162,8 +162,12 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
         if (ec)  // If it failed, try again
         {
-          logger_.ERROR() << "Socket(" << con_type << ") Ec was set " << ec.message();
+          // clang format loses its mind and reformats the entire function if I send this straight to ERROR()
+          std::stringstream ss;
+          ss << "Socket(" << con_type << " " << host << ":" << local_port << ") Ec was set " << ec.message();
+          logger_.ERROR() << ss.str();
 
+          // Clear the command list if connecting failed
           if (command_list_.size() > 0 && cmd_type == RobotCommand::CommandType::Cmd)
           {
             publishRmiResult(command_list_.front()->getCommandId(), CommandResultCodes::SOCKET_FAILED_TO_CONNECT,
