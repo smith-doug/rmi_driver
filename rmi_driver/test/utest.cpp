@@ -65,14 +65,15 @@ class TestData
 public:
   DriverConfig config_;
   bool config_loaded_ = false;
-  /// The CommandRegister that was loaded by the plugin
+
+  // The CommandRegister that was loaded by the plugin
   CommandRegisterPtr cmd_register_;
+  // "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
+  CmdRegLoaderPtr cmd_reg_loader;
 
-  /// "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
-  CmdRegLoaderPtr cmh_loader_;
-
-  TestDriver* pDriver_;
-
+  // When a Driver or a Connector get destroyed before the end of a program, they make things very angry.  Keep them in
+  // here to keep them alive between tests.
+  std::shared_ptr<TestDriver> pDriver_;
   std::shared_ptr<Connector> connector_;
 };
 
@@ -168,24 +169,6 @@ void driver_connect()
     cmh = conn_ptr->getCommandRegister()->findHandler(cmd);
     EXPECT_FALSE(cmh);
 
-    // Driver driver_;
-    // driver_.start();
-    /*
-    auto& map = driver_.getConnMap();
-    auto conn = map.begin()->second;
-
-    robot_movement_interface::Command cmd;
-    cmd.command_type = "WAIT";
-    cmd.pose_type = "IS_FINISHED";
-    auto cmh = conn->getCommandRegister()->findHandler(cmd);
-    EXPECT_TRUE(cmh);
-
-    cmd.command_type = "INVALID";
-    cmh = conn->getCommandRegister()->findHandler(cmd);
-    EXPECT_FALSE(cmh);
-
-    // driver_.auto &conn = *driver_.conn_map_.begin()->second;
-  */
     EXPECT_TRUE(true);
   }
   catch (...)
@@ -208,7 +191,7 @@ TEST(TestSuite, load_plugin)
 
   auto& con_cfg = test_data_.config_.connections_[0];
 
-  test_data_.pDriver_->loadPlugin(con_cfg, test_data_.cmh_loader_, test_data_.cmd_register_);
+  test_data_.pDriver_->loadPlugin(con_cfg, test_data_.cmd_reg_loader, test_data_.cmd_register_);
 
   try
   {
@@ -216,7 +199,7 @@ TEST(TestSuite, load_plugin)
     auto con_cfg_copy = con_cfg;
 
     con_cfg_copy.rmi_plugin_package_ = "invalid";
-    test_data_.pDriver_->loadPlugin(con_cfg_copy, test_data_fail.cmh_loader_, test_data_fail.cmd_register_);
+    test_data_.pDriver_->loadPlugin(con_cfg_copy, test_data_fail.cmd_reg_loader, test_data_fail.cmd_register_);
 
     FAIL() << "Expected an exception";
   }
@@ -279,7 +262,7 @@ TEST(TestSuite, test_connection)
   auto& con_cfg = test_data_.config_.connections_[0];
   test_data_.connector_ =
       std::make_shared<Connector>(con_cfg.ns_, io_service_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_,
-                                  test_data_.cmd_register_, test_data_.cmh_loader_, true);
+                                  test_data_.cmd_reg_loader, test_data_.cmd_register_, true);
 
   auto& shared = test_data_.connector_;
   shared->connect();
@@ -333,7 +316,7 @@ int main(int argc, char** argv)
   ros::Duration(1).sleep();  // Sleep to allow rqt_console to detect the new node
 
   io_service_thread_ = std::thread([&]() { io_service_.run(); });
-  test_data_.pDriver_ = new TestDriver();
+  test_data_.pDriver_.reset(new TestDriver());
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
