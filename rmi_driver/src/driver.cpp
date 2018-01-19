@@ -36,13 +36,6 @@ namespace rmi_driver
 {
 Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
 {
-  // boost::asio::io_service work(io_service_);
-  io_service_thread_ = std::thread([&]() { io_service_.run(); });
-
-  util::setThreadName(io_service_thread_, "io_svc_thr");
-
-  util::setThreadName("driver_thr");
-
   ros::NodeHandle nh;
   config_.loadConfig(nh);
 }
@@ -70,6 +63,10 @@ void Driver::loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_re
 
 void Driver::start()
 {
+  io_service_thread_ = std::thread([&]() { io_service_.run(); });
+  util::setThreadName(io_service_thread_, "io_svc_thr");
+  util::setThreadName("driver_thr");
+
   logger_.INFO() << "There are " << config_.connections_.size() << " connections";
   for (auto &&con_cfg : config_.connections_)
   {
