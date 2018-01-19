@@ -46,19 +46,33 @@
 #include <boost/asio.hpp>
 #include <unordered_map>
 
-//#include <industrial_utils/param_utils.h>
-
 namespace rmi_driver
 {
 class Driver
 {
 public:
+  /**
+   * \brief Creates a Driver instance and loads the config
+   */
   Driver();
 
+  /**
+   * \brief Create io_service threads, load plugins, launch Connectors
+   */
   void start();
 
+  /**
+   * \brief Add a Connection to the connection/jta maps and connect
+   *
+   * @param ns Namespace for this connection
+   * @param host ip address of robot
+   * @param port base port for Cmd.  Get will be port+1
+   * @param joint_names Vector of joint names
+   * @param cmd_reg_loader The plugin loader that needs to be stored
+   * @param cmd_register CommandRegister loaded from plugin
+   */
   void addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
-                     CommandRegisterPtr commands, CmdRegLoaderPtr cmh_loader);
+                     CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register);
 
   /**
    * \brief Load a plugin using pluginlib::ClassLoader for 1 connection
@@ -69,43 +83,35 @@ public:
    */
   void loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_reg_loader, CommandRegisterPtr &cmd_register);
 
-  // void addConnection(ConnectionConfig con_cfg);
-
+  /**
+   * \brief Aggregate and publish the joint states
+   */
   void publishJointState();
 
-  void loadConfig();
-
-  DriverConfig config_;
+  DriverConfig config_;  /// Contains driver params and connection list params
 
 protected:
-  // std::unique_ptr<pluginlib::ClassLoader<CommandRegister>> cmh_loader_;
-
   ros::NodeHandle nh_;
 
+  /// Map of [conn_num, Connector].  The connection number currently isn't used.
   std::unordered_map<int32_t, std::shared_ptr<Connector>> conn_map_;
 
+  /// Map of [conn_num, jta_handler].  The connection number currently isn't used.  This should really be another node,
+  /// but I don't know how to dynamically launch nodes and I don't want to edit launch files when I change the rmi
+  /// config.
   std::unordered_map<int32_t, std::shared_ptr<JointTrajectoryAction>> jta_map_;
 
-  // Connector connector_;
+  int conn_num_ = 0;  /// used for the maps
 
-  int conn_num_ = 0;
+  boost::asio::io_service io_service_;  /// io_service that will be used for each Connector's asio stuff
+  boost::asio::io_service::work work_;  /// Keep the io_service from dying
+  std::thread io_service_thread_;       /// calls io_service_.run()
 
-  boost::asio::io_service io_service_;
-  boost::asio::io_service::work work_;
+  ros::Publisher joint_state_publisher_;  /// Publishes aggregated joint states
 
-  // ros::Subscriber command_list_sub_;
+  std::thread pub_thread_;  /// Aggregates and publishes
 
-  ros::Publisher joint_state_publisher_;
-
-  std::thread pub_thread_;
-
-  std::thread io_service_thread_;
-
-  rmi_log::RmiLogger logger_;
-
-  // std::vector<CommandHandler> cmd_handlers_;  //###testing
-
-  // std::shared_ptr<CommandRegister> cmd_register_;
+  rmi_log::RmiLogger logger_;  /// Easier logging
 };
 
 }  // namespace rmi_driver

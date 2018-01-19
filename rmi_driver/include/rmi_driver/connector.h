@@ -70,7 +70,7 @@ class Connector
 
 public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
-            CommandRegisterPtr cmd_register, CmdRegLoaderPtr cmh_loader, bool clear_commands_on_error);
+            CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register, bool clear_commands_on_error);
 
   /**
    * \brief Starts the asynchronous connect methods
@@ -294,7 +294,7 @@ protected:
   CommandRegisterPtr cmd_register_;
 
   /// "The ClassLoader must not go out scope while you are using the plugin."  Keep it alive.
-  CmdRegLoaderPtr cmh_loader_;
+  CmdRegLoaderPtr cmd_reg_loader_;
 
   ///\brief Used to read and consume and messages sent after a cancel.
   /// This was happening to me if I paused the PLC, aborted a command, then unpaused the PLC.

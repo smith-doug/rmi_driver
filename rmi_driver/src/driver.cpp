@@ -77,13 +77,14 @@ void Driver::start()
     try
     {
       // Will be stored in the Connector.  Making it here to keep Plugin loading stuff out of Connector.
-      CmdRegLoaderPtr cmh_loader;
+      CmdRegLoaderPtr cmd_reg_loader;
       CommandRegisterPtr cmd_register;
 
-      loadPlugin(con_cfg, cmh_loader, cmd_register);
+      loadPlugin(con_cfg, cmd_reg_loader, cmd_register);
 
       // Add the connection from the current config
-      this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_register, cmh_loader);
+      this->addConnection(con_cfg.ns_, con_cfg.ip_address_, con_cfg.port_, con_cfg.joints_, cmd_reg_loader,
+                          cmd_register);
     }
     catch (pluginlib::PluginlibException &ex)
     {
@@ -103,18 +104,18 @@ void Driver::start()
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
-                           CommandRegisterPtr commands, CmdRegLoaderPtr cmh_loader)
+                           CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register)
 {
   conn_num_++;
 
   // Make a new Connector and add it
-  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, commands, cmh_loader,
+  auto shared = std::make_shared<Connector>(ns, io_service_, host, port, joint_names, cmd_reg_loader, cmd_register,
                                             config_.clear_commands_on_error_);
   conn_map_.emplace(conn_num_, shared);
 
   if (config_.use_rmi_driver_jta_)
   {
-    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, commands->getJtaCommandHandler());
+    auto jta = std::make_shared<JointTrajectoryAction>(ns, joint_names, cmd_register->getJtaCommandHandler());
     jta_map_.emplace(conn_num_, jta);
   }
   else
@@ -150,11 +151,6 @@ void Driver::publishJointState()
     joint_state_publisher_.publish(stateFull);
     pub_rate.sleep();
   }
-}
-
-void Driver::loadConfig()
-{
-  ros::NodeHandle nh("~");
 }
 
 }  // namespace rmi_driver
