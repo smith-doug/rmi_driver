@@ -160,21 +160,20 @@ class RobotInstance():
         self.server_get.server_close()
 
 
-TCP_IP = '0.0.0.0'
-TCP_PORT = 30000
-
-
-threads = []
-
-
 try:
     SocketServer.TCPServer.allow_reuse_address = True
 
-    rob = RobotInstance(TCP_IP, TCP_PORT, 7)
-    rob.start()
+    driver_map = rospy.get_param("/rmi_driver_map")
 
-    rob2 = RobotInstance(TCP_IP, TCP_PORT + 2, 6)
-    rob2.start()
+    rob_list = []
+
+    for driver in driver_map:
+        ip = '0.0.0.0'
+        port = driver['port']
+        num_joints = len(driver['joints'])
+        rob = RobotInstance(ip, port, num_joints)
+        rob.start()
+        rob_list.append(rob)
 
     while(1):
         time.sleep(1)

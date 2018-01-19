@@ -1,0 +1,20 @@
+rmi_driver:
+  publish_rate: 30
+rmi_driver_map:
+  - connection: 1    
+    ns: "/"
+    ip_address: "127.0.0.1"
+    port: 30000
+    rmi_plugin_package: "keba_rmi_plugin"
+    rmi_plugin_lookup_name: "keba_rmi_plugin::KebaCommandRegister"
+    joints: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint, rail_to_base]
+  - connection: 2    
+    ns: "/rob2"
+    ip_address: "127.0.0.1"
+    port: 30002
+    rmi_plugin_package: "keba_rmi_plugin"
+    rmi_plugin_lookup_name: "keba_rmi_plugin::KebaCommandRegister"
+    joints: [rob2_shoulder_pan_joint, rob2_shoulder_lift_joint, rob2_elbow_joint, rob2_wrist_1_joint, rob2_wrist_2_joint, rob2_wrist_3_joint]
+
+
+
