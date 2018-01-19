@@ -70,38 +70,6 @@ bool Connector::connect()
   return connect(host_, port_);
 }
 
-// bool Connector::connectCmd(std::string host, int port)
-//{
-//  int local_port = port;
-//  tcp::resolver resolver(io_service_);
-//
-//  tcp::resolver::query query(host, boost::lexical_cast<std::string>(local_port));
-//  tcp::resolver::iterator endpointIterator = resolver.resolve(query);
-//
-//  if (cmd_thread_.joinable())
-//    cmd_thread_.join();
-//
-//  boost::asio::async_connect(socket_cmd_, endpointIterator,
-//                             [this, host, local_port](const boost::system::error_code &ec, tcp::resolver::iterator i)
-//                             {
-//                               if (ec)
-//                               {
-//                                 ROS_INFO_STREAM("Ec was set " << ec.message());
-//                                 std::this_thread::sleep_for(std::chrono::seconds(1));
-//                                 connectCmd(host, local_port);
-//                               }
-//                               else
-//                               {
-//                                 ROS_INFO_STREAM("Async cmd establisted to " << host << ":" << local_port);
-//
-//                                 cmd_thread_ = std::thread(&Connector::cmdThread, this);
-//                               }
-//
-//                             });
-//
-//  return true;
-//}
-
 void Connector::cancelSocketCmd(int timeout)
 {
   // Give the socket a chance to finish.  If an abort is sent, active motion commands may be able to finish naturally
@@ -205,20 +173,8 @@ bool Connector::connect(std::string host, int port)
   tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
   tcp::resolver::iterator endpointIterator = resolver.resolve(query);
 
-  // socket_cmd_.connect(*endpointIterator);
-  // ROS_INFO_NAMED("connector", "cmd connection established to %s:%i", host.c_str(), port);
-  // cmd_thread_ = std::thread(&Connector::cmdThread, this);
-
-  // connectCmd(host, port);
   connectSocket(host, port, RobotCommand::CommandType::Cmd);
   connectSocket(host, port + 1, RobotCommand::CommandType::Get);
-
-  //  query = tcp::resolver::query(host, boost::lexical_cast<std::string>(port + 1));
-  //  endpointIterator = resolver.resolve(query);
-  //  socket_get_.connect(*endpointIterator);
-  //  ROS_INFO_NAMED("connector", "get connection established to %s:%i", host.c_str(), port + 1);
-  //
-  //  get_thread_ = std::thread(&Connector::getThread, this);
 
   return true;
 }
