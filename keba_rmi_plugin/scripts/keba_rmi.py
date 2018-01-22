@@ -43,6 +43,17 @@ import functools
 
 # Positions
 
+class RmiFrame(object):
+    def __init__(self, frame):
+        '''
+
+        :param frame: The frame
+        :type frame: list[float]
+        '''
+        assert(len(frame) == 6)
+
+        self.frame = frame
+
 
 class RmiPos(object):
     '''
@@ -331,6 +342,19 @@ class RobotPost(object):
         self.AddCommand(cmd)
 
         self.ProgRun()
+
+    def Tool(self, frame):
+        '''
+
+        :param frame: the tool frame
+        :type frame: RmiFrame
+        '''
+
+        cmd = rmi_msg.Command()
+        cmd.command_type = 'FRAME'
+        cmd.pose_reference = 'TOOL'
+        cmd.pose = frame.frame
+        self.AddCommand(cmd)
 
 
 

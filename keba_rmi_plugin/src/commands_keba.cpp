@@ -65,6 +65,7 @@ void KebaCommandRegister::registerCommandHandlers()
 
   // Settings
   this->addHandler<KebaCommandSetting>();
+  this->addHandler<KebaCommandSetFrame>();
 
   // Other
   this->addHandler<KebaCommandAbort>();
@@ -276,6 +277,7 @@ RobotCommandPtr KebaCommandSetting::processMsg(const robot_movement_interface::C
 
   bool has_dyn = false;
   bool has_ovl = false;
+  bool has_frame = false;
 
   cmd_ptr->setCommand(command_str, "");
 
@@ -367,6 +369,32 @@ void KebaJtaCommandHandler::processLastJtaPoint(const trajectory_msgs::JointTraj
   cmd.pose_type = "IS_FINISHED";  // Can add more types later
 
   cmd_list.commands.push_back(cmd);
+}
+
+KebaCommandSetFrame::KebaCommandSetFrame()
+{
+  handler_name_ = "KebaCommandSetFrame";
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "FRAME";
+  cmd.pose_reference = "TOOL";
+  cmd.pose = { 6 };
+  sample_command_ = cmd;
+}
+
+RobotCommandPtr KebaCommandSetFrame::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
+
+  bool is_tool = boost::iequals(cmd_msg.pose_reference, "TOOL");
+
+  if (is_tool)
+  {
+    cmd_ptr->setCommand("frame", "");
+    if (!processKebaFrame(cmd_msg, *cmd_ptr))
+      return nullptr;
+  }
+
+  return cmd_ptr;
 }
 
 }  // namespace keba_rmi_plugin
