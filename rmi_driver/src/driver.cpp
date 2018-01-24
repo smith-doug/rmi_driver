@@ -138,13 +138,16 @@ void Driver::publishJointState()
     {
       auto lastState = conn.second->getLastJointState();
       stateFull.header = lastState.header;
+
       stateFull.position.insert(stateFull.position.end(), lastState.position.begin(), lastState.position.end());
       stateFull.name.insert(stateFull.name.end(), lastState.name.begin(), lastState.name.end());
+      stateFull.velocity.insert(stateFull.velocity.begin(), 0, lastState.name.size());
+      stateFull.effort.insert(stateFull.effort.begin(), 0, lastState.name.size());
 
       // Publish the individual state topics for this connection (tool_frame)
       conn.second->publishState();
     }
-
+    stateFull.header.stamp = ros::Time::now();
     joint_state_publisher_.publish(stateFull);
     pub_rate.sleep();
   }
