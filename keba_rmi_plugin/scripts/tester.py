@@ -42,6 +42,7 @@ import threading
 
 
 from keba_rmi import *
+from genpy import dynamic
 
 argcomplete_available = False
 try:
@@ -198,6 +199,13 @@ def home_rob2():
     rob2.ProgRun()
 
 
+def home_comau():
+    apHomeComau = RmiPosJoints([0.0, 0.1487, -1.5906, -0.0, 1.4023, 0.0])
+    rob.ProgStart()
+    rob.MoveJ(apHomeComau, dynamic=dFast)
+    rob.ProgRun()
+
+
 def home_both():
     t1 = threading.Thread(target=home_rob1)
     t2 = threading.Thread(target=home_rob2)
@@ -261,6 +269,8 @@ function_map = {
     'rob2_do_stuff': rob2_do_stuff,
     'abort_rob1': abort_rob1,
     'stress_rob1': stress_rob1,
+    'tool_rob1': tool_rob1,
+    'home_comau': home_comau,
 
 }
 
