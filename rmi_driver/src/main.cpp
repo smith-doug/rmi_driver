@@ -8,6 +8,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "rmi_driver");
 
   ros::NodeHandle nh;
+  ros::AsyncSpinner spinner(4);
+  spinner.start();
 
   ROS_INFO_STREAM("rmi_driver starting after 1 second delay");
   ros::Duration(1).sleep();  // Sleep to allow rqt_console to detect the new node
@@ -16,7 +18,8 @@ int main(int argc, char **argv)
 
   driver.start();
 
-  ros::spin();
+  ros::waitForShutdown();
+  // ros::spin();
 
   return 0;
 }
