@@ -172,6 +172,7 @@ using namespace rmi_driver;
  * SETTING KebaCommandSetting\n
  * WAIT KebaCommandWait\n
  * SYNC KebaCommandSync\n
+ * FRAME KebaCommandSetFrame\n
  */
 namespace keba_rmi_plugin
 {
@@ -498,6 +499,24 @@ public:
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+/**
+ * \brief Call Kairo Wait functions
+ *
+ * This handler is used to call functions that begin with "Wait", like WaitIsFinished.  It currently only supports
+ * WaitIsFinished.
+ *
+ * \par REQUIRED:
+ * command_type: WAIT\n
+ * pose_type: IS_FINISHED
+ *
+ * \par Examples
+ * 1. Call WaitIsFinished()\n
+ * \code
+ * command_type: WAIT
+ * pose_type: IS_FINISHED
+ * \endcode
+ * Command::toString(): "wait is_finished;"
+ */
 class KebaCommandWait : public KebaCommandHandler
 {
 public:
@@ -506,6 +525,28 @@ public:
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
 
+/**
+ * Call Kairo functions that involve setting frames
+ *
+ * This handler is used to call functions that operate on frames, like Tool or RefSys.  Currently only Tool is
+ * supported.
+ *
+ * \par REQUIRED:
+ * command_type: FRAME\n
+ * pose_reference: TOOL\n
+ * pose: [x, y, z, a, b, c] in meters/radians.  The orientation is Keba ZYZ.  The units will be converted to mm/degrees
+ * before sending.  @todo make the input in keba units too?  It's directly calling Tool with the values passed.
+ *
+ * \par Examples
+ * 1. Call Tool() with a straight 50mm tool.
+ * \code
+ * command_type: FRAME
+ * pose_reference: TOOL
+ * pose: [0, 0, .050, 0, 0, 0]
+ * \endcode
+ * Command::toString(): "frame;tool : 0 0 50 0 0 0;"
+ *
+ */
 class KebaCommandSetFrame : public KebaCommandHandler
 {
 public:

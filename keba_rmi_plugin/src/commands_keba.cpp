@@ -384,12 +384,12 @@ KebaCommandSetFrame::KebaCommandSetFrame()
 RobotCommandPtr KebaCommandSetFrame::processMsg(const robot_movement_interface::Command &cmd_msg) const
 {
   RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
+  cmd_ptr->setCommand("frame", "");
 
   bool is_tool = boost::iequals(cmd_msg.pose_reference, "TOOL");
 
   if (is_tool)
   {
-    cmd_ptr->setCommand("frame", "");
     if (!processKebaFrame(cmd_msg, *cmd_ptr))
       return nullptr;
   }
