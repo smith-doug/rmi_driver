@@ -57,7 +57,7 @@ except ImportError:
 #===============================================================================
 
 # settings
-dFast = DYNAMIC([100, 100, 100, 100, 1000, 5000, 5000, 500000, 1000, 10000, 10000, 100000])
+dFast = DYNAMIC([100, 100, 100, 100, 1000, 5000, 5000, 100000, 1000, 10000, 10000, 100000])
 dMedium = DYNAMIC([50, 50, 50, 50, 250, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
 dSlow = DYNAMIC([10, 10, 10, 100, 50, 1000, 1000, 10000, 1000, 10000, 10000, 100000])
 
@@ -206,6 +206,15 @@ def home_comau():
     rob.ProgRun()
 
 
+def do_settings_comau():
+    rob.ProgStart()
+    Dyn(dFast)
+    Ovl(oa10)
+    t0 = RmiFrame([0.0, 0.0, 0.030, 0, 0, 0])
+    rob.Tool(t0)
+    rob.ProgRun()
+
+
 def home_both():
     t1 = threading.Thread(target=home_rob1)
     t2 = threading.Thread(target=home_rob2)
@@ -254,6 +263,19 @@ def abort_rob1():
     rob.Abort()
 
 
+def abort_rob2():
+    rob2.Abort()
+
+
+def abort_both():
+    t1 = threading.Thread(target=abort_rob1)
+    t2 = threading.Thread(target=abort_rob2)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+
 def stress_rob1():
     for i in range(0, 100):
         print 'Stress loop # ' + str(i)
@@ -263,30 +285,118 @@ def stress_rob1():
             return
 
 
-function_map = {
-    'move_square': move_square,
-    'do_settings_rob1': do_settings_rob1,
-    'do_settings_rob2': do_settings_rob2,
-    'do_settings_both': do_settings_both,
-    'do_something': do_something,
-    'home_rob1': home_rob1,
-    'home_rob2': home_rob2,
-    'home_both': home_both,
-    'cause_error': cause_error,
-    'rob2_do_stuff': rob2_do_stuff,
-    'abort_rob1': abort_rob1,
-    'stress_rob1': stress_rob1,
-    'tool_rob1': tool_rob1,
-    'home_comau': home_comau,
+# function_map = {
+#     'move_square': move_square,
+#     'do_settings_rob1': do_settings_rob1,
+#     'do_settings_rob2': do_settings_rob2,
+#     'do_settings_both': do_settings_both,
+#     'do_something': do_something,
+#     'home_rob1': home_rob1,
+#     'home_rob2': home_rob2,
+#     'home_both': home_both,
+#     'cause_error': cause_error,
+#     'rob2_do_stuff': rob2_do_stuff,
+#     'abort_rob1': abort_rob1,
+#     'stress_rob1': stress_rob1,
+#     'tool_rob1': tool_rob1,
+#     'home_comau': home_comau,
+#     'do_settings_comau': do_settings_comau,
+# }
 
+function_map_comau = {
+    'do_settings': do_settings_comau,
+    'home': home_comau,
+    'tool': tool_rob1,
+}
+
+function_map_rob1 = {
+    'do_settings_rob1': do_settings_rob1,
+    'home_rob1': home_rob1,
+    'abort_rob1': abort_rob1,
 }
 
 parser = argparse.ArgumentParser(description='Python tester.')
 
-func_names = list(function_map.keys())
-func_names.sort()
+# func_names = list(function_map.keys())
+# func_names.sort()
 
-parser.add_argument('command', nargs='?', choices=func_names)
+
+class SubCmdBase(object):
+    '''
+    SubCmdBase borrowed from industrial_experimental   
+    '''
+
+    def __init__(self):
+        self.function_map = {}
+        self.name = 'not_set'
+
+    def add_to_subparser(self, subparser):
+        parser_support = subparser.add_parser(self.name)
+        parser_support.add_argument('command', nargs='?', choices=self.function_map)
+        parser_support.set_defaults(func=self._execute)
+
+    def _execute(self, args):
+        print(self.name + ' ' + args.command)
+
+        if args.command in self.function_map.keys():
+            func = self.function_map[args.command]
+            func()
+        else:
+            print 'Error function not found'
+
+
+class ComauSubCmd(SubCmdBase):
+    def __init__(self):
+        self.name = 'comau'
+        self.function_map = {
+            'do_settings': do_settings_comau,
+            'home': home_comau,
+            'abort': abort_rob1,
+            'tool': tool_rob1,
+        }
+
+
+class Rob1SubCmd(SubCmdBase):
+    def __init__(self):
+        self.name = 'rob1'
+        self.function_map = {
+            'move_square': move_square,
+            'do_settings_rob1': do_settings_rob1,
+            'home': home_rob1,
+            'cause_error': cause_error,
+            'abort': abort_rob1,
+            'stress': stress_rob1,
+            'tool': tool_rob1,
+        }
+
+
+class Rob2SubCmd(SubCmdBase):
+    def __init__(self):
+        self.name = 'rob2'
+        self.function_map = {
+            'do_settings': do_settings_rob2,
+            'home': home_rob2,
+            'abort': abort_rob2,
+        }
+
+
+class BothUR5sSubCmd(SubCmdBase):
+    def __init__(self):
+        self.name = 'both'
+        self.function_map = {
+            'do_settings': do_settings_both,
+            'do_something': do_something,
+            'home': home_both,
+        }
+
+
+sub_robots = parser.add_subparsers(title='Robots')
+
+ComauSubCmd().add_to_subparser(sub_robots)
+Rob1SubCmd().add_to_subparser(sub_robots)
+Rob2SubCmd().add_to_subparser(sub_robots)
+BothUR5sSubCmd().add_to_subparser(sub_robots)
+
 
 if argcomplete_available:
     argcomplete.autocomplete(parser)
@@ -299,16 +409,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     cmd = args.command
     if cmd is not None:
-        if cmd in function_map:
-            func = function_map[args.command]
-            func()
-        else:
-            rospy.logout('command "' + cmd + '" does not exist')
+        args.func(args)
+
     else:
         print "Missing argument"
-        # home_both()
-
-    # do_settings()
 
 
 #------------------------------------------------------------------------------
