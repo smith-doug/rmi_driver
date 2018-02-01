@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	rospy
 	sensor_msgs
-	tf
+	tf2
 	message_generation
 	control_msgs  
 	robot_movement_interface  
@@ -45,7 +45,7 @@ catkin_package(
         roscpp
         rospy
         sensor_msgs
-        tf        
+        tf2        
 		    robot_movement_interface        
         pluginlib 
     DEPENDS Boost
