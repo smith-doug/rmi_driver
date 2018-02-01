@@ -53,7 +53,18 @@ public:
   static tf2::Matrix3x3 rotZYZ(const tf2Scalar& Z, const tf2Scalar& Y, const tf2Scalar& ZZ);
 
   static tf2::Quaternion quatFromZYZ(const tf2Scalar& Z, const tf2Scalar& Y, const tf2Scalar& ZZ);
+
+  static bool approxEqual(tf2::Quaternion quat1, tf2::Quaternion quat2, double range = 0.01);
+
+  static std::string quatToString(const tf2::Quaternion& quat);
 };
+
+inline std::ostream& operator<<(std::ostream& o, const tf2::Quaternion& quat)
+{
+  auto quat_str = RotationUtils::quatToString(quat);
+  o << quat_str;
+  return o;
+}
 
 }  // namespace util
 } /* namespace rmi_driver */

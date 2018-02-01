@@ -80,7 +80,25 @@ tf2::Quaternion RotationUtils::quatFromZYZ(const tf2Scalar& Z, const tf2Scalar& 
   auto rot = RotationUtils::rotZYZ(Z, Y, ZZ);
   tf2::Quaternion quat;
   rot.getRotation(quat);
-  return quat;
+  return quat.normalize();
+}
+
+bool RotationUtils::approxEqual(tf2::Quaternion quat1, tf2::Quaternion quat2, double range)
+{
+  // https://answers.unity.com/questions/288338/how-do-i-compare-quaternions.html
+  auto quat1_norm = quat1.normalize();
+  auto quat2_norm = quat2.normalize();
+
+  return quat1_norm.dot(quat2_norm) > 1 - range;
+}
+
+std::string RotationUtils::quatToString(const tf2::Quaternion& quat)
+{
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(3) << "[X:" << quat.getX() << " Y:" << quat.getY() << " Z:" << quat.getZ()
+     << " W:" << quat.getW() << "] ";
+
+  return ss.str();
 }
 
 }  // namespace util
