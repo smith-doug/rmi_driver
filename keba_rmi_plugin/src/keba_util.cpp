@@ -91,6 +91,34 @@ bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotComma
   return true;
 }
 
+bool processKebaFrame(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
+{
+  if (cmd_msg.pose_reference.length() < 1)
+    return false;
+
+  auto pose_reference = boost::to_lower_copy(cmd_msg.pose_reference);
+
+  auto pose_copy = cmd_msg.pose;
+
+  if (boost::iequals(pose_reference, "TOOL") && pose_copy.size() == 6)
+  {
+    pose_copy[0] *= 1000.0;
+    pose_copy[1] *= 1000.0;
+    pose_copy[2] *= 1000.0;
+    pose_copy[3] = radToDeg(pose_copy[3]);
+    pose_copy[4] = radToDeg(pose_copy[4]);
+    pose_copy[5] = radToDeg(pose_copy[5]);
+
+    telnet_cmd.addParam("tool", RobotCommand::paramsToString(pose_copy, 2));
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
+}
+
 bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd)
 {
   bool ret = false;
@@ -105,6 +133,11 @@ bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotComman
     ret = true;
   }
   return ret;
+}
+
+double radToDeg(double rad)
+{
+  return rad * (180.0 / M_PI);
 }
 
 // Process any Aux joint values

@@ -54,6 +54,8 @@ bool processKebaDyn(const robot_movement_interface::Command &cmd_msg, RobotComma
  */
 bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd);
 
+bool processKebaFrame(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd);
+
 /**
  * Check for velo/accel types to be ROS  @todo should I require both?
  * @param cmd_msg
@@ -61,6 +63,8 @@ bool processKebaOvl(const robot_movement_interface::Command &cmd_msg, RobotComma
  * @return
  */
 bool processRosDyn(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd);
+
+double radToDeg(double rad);
 
 /**
  * \brief Process any Aux joint values
