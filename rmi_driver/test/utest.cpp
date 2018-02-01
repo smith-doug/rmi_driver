@@ -30,11 +30,13 @@
 #include <gtest/gtest.h>
 #include <ros/ros.h>
 
+#include <iostream>
 #include <memory>
 
 #include <rmi_driver/commands.h>
 #include <rmi_driver/connector.h>
 #include <rmi_driver/driver.h>
+#include <rmi_driver/rotation_utils.h>
 
 using namespace rmi_driver;
 
@@ -290,6 +292,54 @@ TEST(TestSuite, test_connection)
 
     EXPECT_EQ("pong", res);
   }
+}
+
+bool testQuat(tf2::Quaternion& quat1, tf2::Quaternion& quat2, double range)
+{
+  using namespace util;
+
+  auto quat1_norm = quat1.normalize();
+  auto quat2_norm = quat2.normalize();
+
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(3) << "[X:" << quat1_norm.getX() << " Y:" << quat1_norm.getY()
+     << " Z:" << quat1_norm.getZ() << " W:" << quat1_norm.getW() << "] ";
+
+  ss << std::fixed << std::setprecision(3) << "[X:" << quat2_norm.getX() << " Y:" << quat2_norm.getY()
+     << " Z:" << quat2_norm.getZ() << " W:" << quat2_norm.getW() << "] ";
+
+  std::cout << ss.str() << std::endl;
+
+  return quat1_norm.dot(quat2_norm) > 1 - range;
+}
+
+tf2::Quaternion quatFromZYZDeg(double Z, double Y, double ZZ)
+{
+  using namespace util;
+  return RotationUtils::quatFromZYZ(degToRad(Z), degToRad(Y), degToRad(ZZ));
+}
+
+TEST(TestSuite, rotations)
+{
+  using namespace util;
+
+  tf2::Quaternion quat_to_comp;  // Manually set this to stuff
+  tf2::Quaternion quat;
+
+  double Z = degToRad(180.0);
+  double Y = degToRad(180.0);
+  double ZZ = degToRad(0.0);
+
+  quat_to_comp.setValue(1, 0, 0, 0);
+  quat = RotationUtils::quatFromZYZ(Z, Y, ZZ);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.01));
+
+  quat_to_comp.setY(1);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.01));
+
+  quat_to_comp = tf2::Quaternion(0.985, 0.006, -0.112, -0.128);
+  quat = quatFromZYZDeg(131.419, 160.437, -49.355);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.01));
 }
 
 TEST(TestSuite, DISABLED_test2)
