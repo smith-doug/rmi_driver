@@ -38,6 +38,16 @@ namespace rmi_driver
 {
 namespace util
 {
+double radToDeg(double rad)
+{
+  return rad * (180.0 / M_PI);
+}
+
+double degToRad(double degrees)
+{
+  return degrees * (M_PI / 180.0);
+}
+
 std::string floatToStringNoTrailing(float fval, int precision)
 {
   // Convert the value to a string with fixed precision
