@@ -218,37 +218,37 @@ std::ostream& CommandHandler::dump(std::ostream& o) const
   if (sample_command_.pose_type.length() > 0)
     o << "pose_type:" << sample_command_.pose_type << std::endl;
   if (sample_command_.pose.size() > 0)
-    o << "pose (sizes):" << util::vecToString(sample_command_.pose) << std::endl;
+    o << "pose (sizes):" << util::vecToPrettyString(sample_command_.pose) << std::endl;
 
   // Velocity
   if (sample_command_.velocity_type.length() > 0)
     o << "velocity_type:" << sample_command_.velocity_type << std::endl;
   if (sample_command_.velocity.size() > 0)
-    o << "velocity (sizes):" << util::vecToString(sample_command_.velocity) << std::endl;
+    o << "velocity (sizes):" << util::vecToPrettyString(sample_command_.velocity) << std::endl;
 
   // Acceleration
   if (sample_command_.acceleration_type.length() > 0)
     o << "velocity_type:" << sample_command_.acceleration_type << std::endl;
   if (sample_command_.acceleration.size() > 0)
-    o << "velocity (sizes):" << util::vecToString(sample_command_.acceleration) << std::endl;
+    o << "velocity (sizes):" << util::vecToPrettyString(sample_command_.acceleration) << std::endl;
 
   // force threshold
   if (sample_command_.force_threshold_type.length() > 0)
     o << "force_threshold_type:" << sample_command_.force_threshold_type << std::endl;
   if (sample_command_.force_threshold.size() > 0)
-    o << "force_threshold (sizes):" << util::vecToString(sample_command_.force_threshold) << std::endl;
+    o << "force_threshold (sizes):" << util::vecToPrettyString(sample_command_.force_threshold) << std::endl;
 
   // effort
   if (sample_command_.effort_type.length() > 0)
     o << "effort_type:" << sample_command_.effort_type << std::endl;
   if (sample_command_.effort.size() > 0)
-    o << "effort (sizes):" << util::vecToString(sample_command_.effort) << std::endl;
+    o << "effort (sizes):" << util::vecToPrettyString(sample_command_.effort) << std::endl;
 
   // blending
   if (sample_command_.blending_type.length() > 0)
     o << "blending_type:" << sample_command_.blending_type << std::endl;
   if (sample_command_.blending.size() > 0)
-    o << "blending (sizes):" << util::vecToString(sample_command_.blending) << std::endl;
+    o << "blending (sizes):" << util::vecToPrettyString(sample_command_.blending) << std::endl;
 
   return o;
 }

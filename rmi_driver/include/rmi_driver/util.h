@@ -77,7 +77,7 @@ std::vector<double> stringToDoubleVec(const std::string& s);
  * @return formatted string
  */
 template <typename T>
-std::string vecToString(const std::vector<T>& vec)
+std::string vecToPrettyString(const std::vector<T>& vec)
 {
   std::ostringstream oss;
   oss << "{";
