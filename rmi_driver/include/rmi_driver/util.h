@@ -63,7 +63,9 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
 std::string floatToStringNoTrailing(float fval, int precision = 4);
 
 /**
- * Convert a string of numbers separated by spaces into a vector of doubles.
+ * \brief Convert a string of numbers separated by spaces into a vector of doubles.
+ *
+ * \exception boost::bad_lexical_cast
  * @param s string of numbers.  "1 2 3.53 56.563"
  * @return Vector of doubles {1, 2, 3.53, 56.563}
  */
@@ -88,6 +90,24 @@ std::string vecToPrettyString(const std::vector<T>& vec)
   }
   oss << "}";
 
+  return oss.str();
+}
+
+template <typename T, typename = std::enable_if<std::is_floating_point<T>::value> >
+std::string vecToString(const std::vector<T>& vec, int precision)
+{
+  if (vec.empty())
+    return "";
+
+  std::ostringstream oss;
+
+  if (vec.size() > 1)
+  {
+    std::for_each(vec.begin(), vec.end() - 1,
+                  [&](const T& val) { oss << util::floatToStringNoTrailing(val, precision) << " "; });
+  }
+
+  oss << util::floatToStringNoTrailing(vec.back(), precision);
   return oss.str();
 }
 

@@ -46,22 +46,7 @@ const robot_movement_interface::Command& CommandHandler::getSampleCommand() cons
 
 std::string RobotCommand::paramsToString(const std::vector<float>& floatVec, int precision)
 {
-  if (floatVec.empty())
-    return "";
-
-  std::ostringstream oss;
-
-  std::for_each(floatVec.begin(), floatVec.end() - 1, [&](const float& fval) {
-    auto str_val = util::floatToStringNoTrailing(fval, precision);
-    oss << str_val << " ";
-
-  });
-
-  oss << util::floatToStringNoTrailing(floatVec.back(), precision);
-
-  auto out_str = oss.str();
-
-  return out_str;
+  return util::vecToString(floatVec, precision);
 }
 
 std::string RobotCommand::toString(bool append_newline) const
