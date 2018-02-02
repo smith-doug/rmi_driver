@@ -238,7 +238,7 @@ protected:
    * @param pose_type Currently JOINT_POSITION, TOOL_FRAME, VERSION
    * @return a RobotCommandPtr for specified command and pose type.
    */
-  RobotCommandPtr findGetCommandHandler(const std::string& command_type, const std::string& pose_type);
+  RobotCommandPtr findGetCommand(const std::string& command_type, const std::string& pose_type);
 
   std::string ns_;  ///< Namespace of this connection
 

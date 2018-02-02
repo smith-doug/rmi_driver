@@ -444,7 +444,7 @@ void Connector::publishRmiResult(const robot_movement_interface::Result &result)
   command_result_pub_.publish(result);
 }
 
-RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type, const std::string &pose_type)
+RobotCommandPtr Connector::findGetCommand(const std::string &command_type, const std::string &pose_type)
 {
   robot_movement_interface::Command rmi_cmd;
   rmi_cmd.command_type = command_type;
@@ -473,9 +473,9 @@ void Connector::getThread()
   ros::Rate rate(50);
 
   // Fetch the required RobotCommands from the plugin.
-  auto get_joint_position = findGetCommandHandler("GET", "JOINT_POSITION");
-  auto get_version = findGetCommandHandler("GET", "VERSION");
-  auto get_tool_frame = findGetCommandHandler("GET", "TOOL_FRAME");
+  auto get_joint_position = findGetCommand("GET", "JOINT_POSITION");
+  auto get_version = findGetCommand("GET", "VERSION");
+  auto get_tool_frame = findGetCommand("GET", "TOOL_FRAME");
 
   if (!get_joint_position || !get_version || !get_tool_frame)
   {
