@@ -161,7 +161,9 @@ public:
   virtual std::string toString(bool append_newline = true) const;
 
   /**
-   * Check the response of a command.  By default it just checks if the response starts with "error".
+   * \brief Check the response of a command.  It will call processResponse()
+   *
+   * By default it just checks if the response starts with "error".
    *
    * @param response The string returned by the robot
    * @return True if the response is OK

@@ -69,6 +69,7 @@ std::string RobotCommand::toString(bool append_newline) const
 
 bool RobotCommand::checkResponse(std::string& response) const
 {
+  processResponse(response);
   return !boost::istarts_with(response, "error");
 }
 
