@@ -33,6 +33,7 @@
 #include <chrono>
 #include <future>
 #include <memory>
+#include "rmi_driver/rotation_utils.h"
 #include "rmi_driver/util.h"
 
 namespace rmi_driver
@@ -61,6 +62,8 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
   command_list_sub_ = nh_.subscribe("command_list", 1, &Connector::subCB_CommandList, this);
 
   tool_frame_pub_ = nh_.advertise<robot_movement_interface::EulerFrame>("tool_frame", 30);
+
+  tool_frame_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("tool_frame_pose", 30);
 
   logger_.INFO() << "Created a new Connector";
 }
@@ -561,6 +564,8 @@ void Connector::getThread()
       last_tool_frame_.alpha = pos_real[3];
       last_tool_frame_.beta = pos_real[4];
       last_tool_frame_.gamma = pos_real[5];
+
+      last_tool_frame_pose_.header.stamp = ros::Time::now();
     }
     catch (const boost::bad_lexical_cast &)
     {
@@ -708,6 +713,26 @@ void Connector::cmdThread()
 void Connector::publishState()
 {
   tool_frame_pub_.publish(last_tool_frame_);
+
+  last_tool_frame_pose_.header.frame_id = "";  //@todo do something with this.  I've never gotten end effectors to
+                                               // actually work so I'm not sure how to monitor the active tcp
+
+  last_tool_frame_pose_.pose.position.x = last_tool_frame_.x;
+  last_tool_frame_pose_.pose.position.y = last_tool_frame_.y;
+  last_tool_frame_pose_.pose.position.z = last_tool_frame_.z;
+
+  tf2::Matrix3x3 matrix;
+  matrix.setEulerYPR(last_tool_frame_.alpha, last_tool_frame_.beta, last_tool_frame_.gamma);
+
+  tf2::Quaternion quat;
+  matrix.getRotation(quat);
+
+  last_tool_frame_pose_.pose.orientation.w = quat.w();
+  last_tool_frame_pose_.pose.orientation.x = quat.x();
+  last_tool_frame_pose_.pose.orientation.y = quat.y();
+  last_tool_frame_pose_.pose.orientation.z = quat.z();
+
+  tool_frame_pose_pub_.publish(last_tool_frame_pose_);
 }
 
 }  // namespace rmi_driver

@@ -37,6 +37,7 @@
 #include <robot_movement_interface/EulerFrame.h>
 #include <robot_movement_interface/Result.h>
 
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/JointState.h>
 
 #include <pluginlib/class_loader.h>
@@ -273,6 +274,8 @@ protected:
   ros::Publisher command_result_pub_;
   /// Publishes the robot_movement_interface::EulerFrame for this namespace
   ros::Publisher tool_frame_pub_;
+
+  ros::Publisher tool_frame_pose_pub_;
   /// NodeHandle for this namespace
   ros::NodeHandle nh_;
 
@@ -286,6 +289,8 @@ protected:
 
   /// The last known tool frame.  Published by publishState(), called from Driver.
   robot_movement_interface::EulerFrame last_tool_frame_;
+
+  geometry_msgs::PoseStamped last_tool_frame_pose_;
 
   /// List of joint names for this robot.
   std::vector<std::string> joint_names_;
