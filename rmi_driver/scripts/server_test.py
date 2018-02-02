@@ -76,7 +76,7 @@ class RmiServer(SocketServer.StreamRequestHandler):
                     send_data = 'aborted'
 
                 if data.startswith('get version'):
-                    send_data = '0.0.7'
+                    send_data = '0.0.8'
                 elif data.startswith('get joint position'):
 
                     self.server.robot_data.joint_pos = self.interpolate(self.server.robot_data.target_pos,

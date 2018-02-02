@@ -298,25 +298,24 @@ bool testQuat(tf2::Quaternion& quat1, tf2::Quaternion& quat2, double range)
 {
   using namespace util;
 
-  auto quat1_norm = quat1.normalize();
-  auto quat2_norm = quat2.normalize();
+  bool is_close = RotationUtils::approxEqual(quat1, quat2, 0.001);
+  if (is_close)
+    std::cout << quat1 << "== " << quat2 << std::endl;
+  else
+    std::cout << quat1 << "!= " << quat2 << std::endl;
 
-  std::stringstream ss;
-  ss << std::fixed << std::setprecision(3) << "[X:" << quat1_norm.getX() << " Y:" << quat1_norm.getY()
-     << " Z:" << quat1_norm.getZ() << " W:" << quat1_norm.getW() << "] ";
-
-  ss << std::fixed << std::setprecision(3) << "[X:" << quat2_norm.getX() << " Y:" << quat2_norm.getY()
-     << " Z:" << quat2_norm.getZ() << " W:" << quat2_norm.getW() << "] ";
-
-  std::cout << ss.str() << std::endl;
-
-  return quat1_norm.dot(quat2_norm) > 1 - range;
+  return is_close;
 }
 
 tf2::Quaternion quatFromZYZDeg(double Z, double Y, double ZZ)
 {
   using namespace util;
   return RotationUtils::quatFromZYZ(degToRad(Z), degToRad(Y), degToRad(ZZ));
+}
+
+tf2::Quaternion setQuat(double x, double y, double z, double w)
+{
+  return tf2::Quaternion(x, y, z, w).normalize();
 }
 
 TEST(TestSuite, rotations)
@@ -326,20 +325,19 @@ TEST(TestSuite, rotations)
   tf2::Quaternion quat_to_comp;  // Manually set this to stuff
   tf2::Quaternion quat;
 
-  double Z = degToRad(180.0);
-  double Y = degToRad(180.0);
-  double ZZ = degToRad(0.0);
+  quat_to_comp = setQuat(1, 0, 0, 0);
+  quat = quatFromZYZDeg(180.0, 180.0, 0.0);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.001));
 
-  quat_to_comp.setValue(1, 0, 0, 0);
-  quat = RotationUtils::quatFromZYZ(Z, Y, ZZ);
-  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.01));
+  quat_to_comp = setQuat(1, 1, 0, 0);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.001));
 
-  quat_to_comp.setY(1);
-  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.01));
-
-  quat_to_comp = tf2::Quaternion(0.985, 0.006, -0.112, -0.128);
+  quat_to_comp = setQuat(0.985, 0.006, -0.112, -0.128);
   quat = quatFromZYZDeg(131.419, 160.437, -49.355);
-  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.01));
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.001));
+
+  quat_to_comp = setQuat(0.885, 0.106, -0.112, -0.128);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.001));
 }
 
 TEST(TestSuite, DISABLED_test2)
