@@ -522,6 +522,11 @@ void Connector::getThread()
     {
       // Get the joint positions
       response = sendCommand(*get_joint_position);
+      if (!get_joint_position->checkResponse(response))
+      {
+        logger_.ERROR() << "Failed to check joint position.  This is bad: " << response;
+        continue;
+      }
       pos_real = util::stringToDoubleVec(response);
 
       last_joint_state_.header.stamp = ros::Time::now();
@@ -537,6 +542,11 @@ void Connector::getThread()
 
       // Get the tool frame in euler zyx
       response = sendCommand(*get_tool_frame);
+      if (!get_tool_frame->checkResponse(response))
+      {
+        logger_.ERROR() << "Failed to check tool frame.  This is bad: " << response;
+        continue;
+      }
       pos_real = util::stringToDoubleVec(response);
       if (pos_real.size() != 6)
       {

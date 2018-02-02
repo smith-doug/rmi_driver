@@ -34,6 +34,8 @@
 #include <vector>
 #include "keba_rmi_plugin/keba_util.h"
 
+#include <rmi_driver/rotation_utils.h>
+
 namespace keba_rmi_plugin
 {
 KebaCommandRegister::KebaCommandRegister() : commands_registered_(0), num_aux_joints_(0), num_main_joints_(0)
@@ -58,6 +60,7 @@ void KebaCommandRegister::registerCommandHandlers()
 
   // Add the required Connector::getThread handler
   this->addHandler<KebaCommandGet>();
+  this->addHandler<KebaCommandGetToolFrame>();
 
   // Motion commands
   this->addHandler<KebaCommandPtp>();
@@ -94,7 +97,7 @@ KebaCommandGet::KebaCommandGet()
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "GET";
-  cmd.pose_type = "JOINT_POSITION|TOOL_FRAME|VERSION";
+  cmd.pose_type = "JOINT_POSITION|VERSION";
 
   sample_command_ = cmd;
 }
@@ -111,6 +114,66 @@ RobotCommandPtr KebaCommandGet::processMsg(const robot_movement_interface::Comma
     cmd_str += "version";
   else
     return nullptr;
+
+  cmd_ptr->setCommand(cmd_str, "");
+  return cmd_ptr;
+}
+
+KebaCommandGetToolFrame::KebaCommandGetToolFrame()
+{
+  handler_name_ = "KebaCommandGetToolFrame";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "GET";
+  cmd.pose_type = "TOOL_FRAME";
+
+  sample_command_ = cmd;
+}
+
+KebaCommandGetToolFrame::KebaCommandToolFrame::KebaCommandToolFrame(CommandType type) : KebaCommand(type)
+{
+}
+
+void KebaCommandGetToolFrame::KebaCommandToolFrame::processResponse(std::string &response) const
+{
+  try
+  {
+    auto vals = util::stringToDoubleVec(response);  // x y z rotZ rotY rotZ'
+    if (vals.size() != 6)
+    {
+      response = "error";
+      return;
+    }
+    auto Z = vals[3];
+    auto Y = vals[4];
+    auto ZZ = vals[5];
+
+    // I'm bad at rotation math so I make a rotation matrix in ZYZ (easy to make) then use the built in getEulerYPR
+    // function (hard to make) which is the same as ZYX.
+    auto rot_zyz = util::RotationUtils::rotZYZ(Z, Y, ZZ);
+    tf2::Matrix3x3 roz_xyz;
+
+    tf2Scalar euler_Z, euler_Y, euler_X;
+    rot_zyz.getEulerYPR(euler_Z, euler_Y, euler_X);
+
+    vals[3] = euler_Z;
+    vals[4] = euler_Y;
+    vals[5] = euler_X;
+
+    response = util::vecToString(vals, 4);
+  }
+  catch (const boost::bad_lexical_cast &)
+  {
+    response = "error";
+  }
+}
+
+RobotCommandPtr KebaCommandGetToolFrame::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  std::string cmd_str = "get tool frame ros";
+  RobotCommandPtr cmd_ptr =
+      std::make_shared<KebaCommandGetToolFrame::KebaCommandToolFrame>(RobotCommand::RobotCommand::CommandType::Get);
 
   cmd_ptr->setCommand(cmd_str, "");
   return cmd_ptr;

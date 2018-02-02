@@ -171,6 +171,16 @@ public:
   virtual bool checkResponse(std::string& response) const;
 
   /**
+   * \brief Modify the response as needed.
+   *
+   * This can be used to do things like convert degrees to radians, reorder rotations, etc.  Does nothing by defaults.
+   * @param response [in,out]
+   */
+  virtual void processResponse(std::string& response) const
+  {
+  }
+
+  /**
    * Converts a float vector into a string of values separated by spaces.  Removes trailing zeroes
    *
    * @param floatVec vector of floats
