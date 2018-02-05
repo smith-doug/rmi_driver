@@ -39,23 +39,68 @@ namespace rmi_driver
 namespace util
 {
 /**
- *
+ * \brief Create rotations for different Euler rotation orders
  *
  * Transformation formulas from "Introduction to Robotics"
  */
 class RotationUtils
 {
 public:
+  /**
+   * \brief Create a rotation matrix rotated around Z
+   * @param th angle in radians
+   * @return Rotation matrix
+   */
   static tf2::Matrix3x3 rotZ(double th);
+
+  /**
+   * \brief Create a rotation matrix rotated around Y
+   * @param th angle in radians
+   * @return Rotation matrix
+   */
   static tf2::Matrix3x3 rotY(double th);
+
+  /**
+   * \brief Create a rotation matrix rotated around X
+   * @param th angle in radians
+   * @return Rotation matrix
+   */
   static tf2::Matrix3x3 rotX(double th);
 
+  /**
+   * \brief Create a rotation matrix from Euler ZYZ' angles
+   * @param Z Z rotation in radians
+   * @param Y Y rotation in radians
+   * @param ZZ Z' rotation in radians
+   * @return Rotation matrix equivalent to ZYZ'
+   */
   static tf2::Matrix3x3 rotZYZ(const tf2Scalar& Z, const tf2Scalar& Y, const tf2Scalar& ZZ);
 
+  /**
+   * \brief Create a normalized Quaternion from Euler ZYZ' angles
+   * @param Z Z rotation in radians
+   * @param Y Y rotation in radians
+   * @param ZZ Z' rotation in radians
+   * @return Quaternion equivalent to ZYZ'
+   */
   static tf2::Quaternion quatFromZYZ(const tf2Scalar& Z, const tf2Scalar& Y, const tf2Scalar& ZZ);
 
-  static bool approxEqual(tf2::Quaternion quat1, tf2::Quaternion quat2, double range = 0.01);
+  /**
+   * \brief Check if 2 quaternions are approximately equal.
+   *
+   * The quaternions will be normalized before comparing.
+   * @param quat1 Quaternion 1
+   * @param quat2 Quaternion 2
+   * @param range How close they have to be
+   * @return True if they are close
+   */
+  static bool approxEqual(const tf2::Quaternion& quat1, const tf2::Quaternion& quat2, double range = 0.001);
 
+  /**
+   * \brief Format the quaternion as a nice string
+   * @param quat the quaternion
+   * @return formatted string
+   */
   static std::string quatToString(const tf2::Quaternion& quat);
 };
 
