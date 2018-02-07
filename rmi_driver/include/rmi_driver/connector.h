@@ -40,6 +40,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/JointState.h>
 
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <pluginlib/class_loader.h>
 #include <boost/asio.hpp>
 #include <chrono>
@@ -276,6 +278,8 @@ protected:
   ros::Publisher tool_frame_pub_;
 
   ros::Publisher tool_frame_pose_pub_;
+  tf2_ros::TransformBroadcaster tool_frame_pose_br_;
+
   /// NodeHandle for this namespace
   ros::NodeHandle nh_;
 
@@ -290,6 +294,7 @@ protected:
   /// The last known tool frame.  Published by publishState(), called from Driver.
   robot_movement_interface::EulerFrame last_tool_frame_;
 
+  /// The last known tool frame from the robot.
   geometry_msgs::PoseStamped last_tool_frame_pose_;
 
   /// List of joint names for this robot.

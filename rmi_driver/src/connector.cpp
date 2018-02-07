@@ -565,6 +565,7 @@ void Connector::getThread()
       last_tool_frame_.beta = pos_real[4];
       last_tool_frame_.gamma = pos_real[5];
 
+      // No need to calculate the Pose every time, but I should save the time
       last_tool_frame_pose_.header.stamp = ros::Time::now();
     }
     catch (const boost::bad_lexical_cast &)
@@ -733,6 +734,24 @@ void Connector::publishState()
   last_tool_frame_pose_.pose.orientation.z = quat.z();
 
   tool_frame_pose_pub_.publish(last_tool_frame_pose_);
+
+  geometry_msgs::TransformStamped tf;
+  tf.header.stamp = last_tool_frame_pose_.header.stamp;
+  tf.header.frame_id = "world";
+  if (ns_ != "/")
+    tf.child_frame_id = ns_ + "_tool_frame_pose";
+  else
+    tf.child_frame_id = ns_ + "tool_frame_pose";
+
+  tf.transform.translation.x = last_tool_frame_pose_.pose.position.x;
+  tf.transform.translation.y = last_tool_frame_pose_.pose.position.y;
+  tf.transform.translation.z = last_tool_frame_pose_.pose.position.z;
+  tf.transform.rotation = last_tool_frame_pose_.pose.orientation;
+  tool_frame_pose_br_.sendTransform(tf);
+
+
+
+
 }
 
 }  // namespace rmi_driver
