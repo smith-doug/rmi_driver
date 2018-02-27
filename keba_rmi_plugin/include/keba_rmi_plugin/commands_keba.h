@@ -111,9 +111,11 @@ using namespace rmi_driver;
  * \par pose_type:
  * QUATERNION:  A cartesian position with position values and orientation both in
  * ROS units (meters, quaternion).  [x, y, z, rw, rx, ry, rz].\n
- * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation represented by a
+ * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation
+ represented by a
  * Euler rotation in degrees. [x, y, z, rz, ry, rz']\n
- * JOINTS: Joints positions in ROS units.
+ * JOINTS: Joints positions in ROS units.\n
+ * @todo it's ZYZ, check it
  *
  * \section KebaRmiTypesDynamics Types of speeds/accelerations
  * \par velocity_type:

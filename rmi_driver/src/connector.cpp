@@ -713,8 +713,11 @@ void Connector::cmdThread()
 
 void Connector::publishState()
 {
+  // Publish the required YPR pose as-is
   tool_frame_pub_.publish(last_tool_frame_);
 
+  // Publish the reported tcp as a PoseStamped.  This makes it easier to use in other tools like RmiCommander or
+  // monitoring.
   last_tool_frame_pose_.header.frame_id = "";  //@todo do something with this.  I've never gotten end effectors to
                                                // actually work so I'm not sure how to monitor the active tcp
 
@@ -722,6 +725,7 @@ void Connector::publishState()
   last_tool_frame_pose_.pose.position.y = last_tool_frame_.y;
   last_tool_frame_pose_.pose.position.z = last_tool_frame_.z;
 
+  // Change the reported pose's orientation into a quaternion.
   tf2::Matrix3x3 matrix;
   matrix.setEulerYPR(last_tool_frame_.alpha, last_tool_frame_.beta, last_tool_frame_.gamma);
 
@@ -735,6 +739,7 @@ void Connector::publishState()
 
   tool_frame_pose_pub_.publish(last_tool_frame_pose_);
 
+  // Publish it as a transform for other ROS stuff that can handle tf
   geometry_msgs::TransformStamped tf;
   tf.header.stamp = last_tool_frame_pose_.header.stamp;
   tf.header.frame_id = "world";
@@ -748,10 +753,6 @@ void Connector::publishState()
   tf.transform.translation.z = last_tool_frame_pose_.pose.position.z;
   tf.transform.rotation = last_tool_frame_pose_.pose.orientation;
   tool_frame_pose_br_.sendTransform(tf);
-
-
-
-
 }
 
 }  // namespace rmi_driver
