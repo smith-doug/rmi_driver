@@ -284,7 +284,7 @@ TEST(TestSuite, test_connection)
 
   auto res = shared->sendCommand(*robot_cmd);
 
-  EXPECT_TRUE(res.length() > 1) << "Blah " << res;
+  EXPECT_TRUE(res.length() > 1) << res;
 
   {
     RobotCommand rob_cmd(RobotCommand::CommandType::Cmd, "ping", "");
@@ -298,11 +298,13 @@ bool testQuat(tf2::Quaternion& quat1, tf2::Quaternion& quat2, double range)
 {
   using namespace util;
 
+  auto dot_val = quat1.dot(quat2);
+  std::cout << dot_val << "?" << 1.0 - range << " ";
   bool is_close = RotationUtils::approxEqual(quat1, quat2, 0.001);
   if (is_close)
-    std::cout << quat1 << "== " << quat2 << std::endl;
+    std::cout << quat1 << " == " << quat2 << std::fixed << std::endl;
   else
-    std::cout << quat1 << "!= " << quat2 << std::endl;
+    std::cout << quat1 << " != " << quat2 << std::fixed << std::endl;
 
   return is_close;
 }
@@ -336,8 +338,18 @@ TEST(TestSuite, rotations)
   quat = quatFromZYZDeg(131.419, 160.437, -49.355);
   EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.001));
 
+  quat_to_comp = quatFromZYZDeg(145.419, 160.437, -49.355);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.0001));
+
   quat_to_comp = setQuat(0.885, 0.106, -0.112, -0.128);
-  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.001));
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.0001));
+
+  tf2::Matrix3x3 mat;
+  mat.setEulerYPR(0, 0, -3.141);
+  mat.getRotation(quat_to_comp);
+
+  quat = setQuat(1, 0, 0, 0);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.0001));
 }
 
 TEST(TestSuite, DISABLED_test2)
