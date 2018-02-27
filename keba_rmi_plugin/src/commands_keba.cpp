@@ -191,6 +191,13 @@ void KebaCommandLin::initialize()
   cmd.command_type = "LIN";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
 
+  // blending and dyn are both optional
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
+  cmd.blending = { 0, 1, 1, 1, 5 };
+
+  cmd.velocity_type = "|DYN";
+  cmd.velocity = { 0, 12 };
+
   sample_command_ = cmd;
   auto num_joints = getCommandRegister()->joint_names_.size();
   sample_command_.pose = { 7, 6, (float)num_joints };
@@ -257,19 +264,27 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
 
 KebaCommandPtp::KebaCommandPtp()
 {
+}
+
+void KebaCommandPtp::initialize()
+{
   handler_name_ = "KebaCommandPtp";
 
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
 
-  sample_command_ = cmd;
-}
+  // blending and dyn are both optional
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
+  cmd.blending = { 0, 1, 1, 1, 5 };
 
-void KebaCommandPtp::initialize()
-{
+  cmd.velocity_type = "|DYN|ROS";
+
   auto num_joints = getCommandRegister()->joint_names_.size();
-  sample_command_.pose = { 7, 6, (float)num_joints };
+  cmd.velocity = { 0, 12, (float)num_joints };
+  cmd.pose = { 7, 6, (float)num_joints };
+
+  sample_command_ = cmd;
 }
 
 RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
