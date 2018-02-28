@@ -61,6 +61,7 @@ void KebaCommandRegister::registerCommandHandlers()
   // Add the required Connector::getThread handler
   this->addHandler<KebaCommandGet>();
   this->addHandler<KebaCommandGetToolFrame>();
+  this->addHandler<KebaCommandGetStatus>();
 
   // Motion commands
   this->addHandler<KebaCommandPtp>();
@@ -137,36 +138,7 @@ KebaCommandGetToolFrame::KebaCommandToolFrame::KebaCommandToolFrame(CommandType 
 
 void KebaCommandGetToolFrame::KebaCommandToolFrame::processResponse(std::string &response) const
 {
-  try
-  {
-    auto vals = util::stringToDoubleVec(response);  // x y z rotZ rotY rotZ'
-    if (vals.size() != 6)
-    {
-      response = "error";
-      return;
-    }
-    auto Z = vals[3];
-    auto Y = vals[4];
-    auto ZZ = vals[5];
-
-    // I'm bad at rotation math so I make a rotation matrix in ZYZ (easy to make) then use the built in getEulerYPR
-    // function (hard to make) which is the same as ZYX.
-    auto rot_zyz = util::RotationUtils::rotZYZ(Z, Y, ZZ);
-    tf2::Matrix3x3 roz_xyz;
-
-    tf2Scalar euler_Z, euler_Y, euler_X;
-    rot_zyz.getEulerYPR(euler_Z, euler_Y, euler_X);
-
-    vals[3] = euler_Z;
-    vals[4] = euler_Y;
-    vals[5] = euler_X;
-
-    response = util::vecToString(vals, 4);
-  }
-  catch (const boost::bad_lexical_cast &)
-  {
-    response = "error";
-  }
+  response = convertToolFrameStr(response);
 }
 
 RobotCommandPtr KebaCommandGetToolFrame::processMsg(const robot_movement_interface::Command &cmd_msg) const
@@ -177,6 +149,51 @@ RobotCommandPtr KebaCommandGetToolFrame::processMsg(const robot_movement_interfa
 
   cmd_ptr->setCommand(cmd_str, "");
   return cmd_ptr;
+}
+
+KebaCommandGetStatus::KebaCommandGetStatus()
+{
+  handler_name_ = "KebaCommandGetStatus";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "GET";
+  cmd.pose_type = "STATUS";
+
+  sample_command_ = cmd;
+}
+
+KebaCommandGetStatus::KebaCommandStatus::KebaCommandStatus(CommandType type) : RobotCommandStatus(type)
+{
+}
+
+RobotCommandPtr KebaCommandGetStatus::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  std::string cmd_str = "get status";
+  RobotCommandPtr cmd_ptr =
+      std::make_shared<KebaCommandGetStatus::KebaCommandStatus>(RobotCommand::RobotCommand::CommandType::Get);
+
+  cmd_ptr->setCommand(cmd_str, "");
+  return cmd_ptr;
+}
+
+void KebaCommandGetStatus::KebaCommandStatus::processResponse(std::string &response) const
+{
+}
+
+void KebaCommandGetStatus::KebaCommandStatus::updateData(std::string &response)
+{
+  std::vector<std::string> strVec;
+  boost::split(strVec, response, boost::is_any_of(";"), boost::token_compress_on);
+  if (strVec.size() < 2)
+  {
+    ROS_ERROR_STREAM("KebaCommandGetStatus size wrong!");
+    response = "error";
+    return;
+  }
+
+  last_joint_state = strVec[0];
+  last_tcp_frame = convertToolFrameStr(strVec[1]);
 }
 
 KebaCommandLin::KebaCommandLin()

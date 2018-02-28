@@ -249,7 +249,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.8");
+    static std::string version("0.0.9");
     return version;
   }
 
@@ -348,6 +348,29 @@ class KebaCommandGetToolFrame : public KebaCommandHandler
 
 public:
   KebaCommandGetToolFrame();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+class KebaCommandGetStatus : public KebaCommandHandler
+{
+  /// Converts the Keba rotation ZYZ' into ZYX
+  class KebaCommandStatus : public RobotCommandStatus
+  {
+  public:
+    KebaCommandStatus(CommandType type = CommandType::Get);
+
+    /**
+     * \brief Change the Keba ZYZ' rotation into ZYX
+     * @param response Modified string
+     */
+    void processResponse(std::string &response) const override;
+
+    void updateData(std::string &response) override;
+  };
+
+public:
+  KebaCommandGetStatus();
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };

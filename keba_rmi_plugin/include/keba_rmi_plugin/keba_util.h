@@ -80,6 +80,8 @@ double radToDeg(double rad);
  */
 bool processKebaAux(const robot_movement_interface::Command &cmd_msg, RobotCommand &telnet_cmd);
 
+std::string convertToolFrameStr(const std::string &response);
+
 // bool processKebaPose(const robot_movement_interface::Command &cmd_msg, std::string &pose_value_str);
 
 }  // namespace keba_rmi_plugin

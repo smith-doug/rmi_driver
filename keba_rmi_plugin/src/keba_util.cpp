@@ -28,6 +28,7 @@
  */
 
 #include "keba_rmi_plugin/keba_util.h"
+#include <rmi_driver/rotation_utils.h>
 #include <boost/algorithm/string.hpp>
 #include <vector>
 
@@ -182,6 +183,44 @@ bool processKebaAux(const robot_movement_interface::Command &cmd_msg, RobotComma
 
       telnet_cmd.addParam(str_split[0], str_split[1]);
     }
+  }
+
+  return ret;
+}
+
+std::string convertToolFrameStr(const std::string &response)
+{
+  std::string ret = "";
+  try
+  {
+    auto vals = util::stringToDoubleVec(response);  // x y z rotZ rotY rotZ'
+    if (vals.size() != 6)
+    {
+      ret = "error";
+      return ret;
+    }
+
+    auto Z = vals[3];
+    auto Y = vals[4];
+    auto ZZ = vals[5];
+
+    // I'm bad at rotation math so I make a rotation matrix in ZYZ (easy to make) then use the built in getEulerYPR
+    // function (hard to make) which is the same as ZYX.
+    auto rot_zyz = util::RotationUtils::rotZYZ(Z, Y, ZZ);
+    tf2::Matrix3x3 roz_xyz;
+
+    tf2Scalar euler_Z, euler_Y, euler_X;
+    rot_zyz.getEulerYPR(euler_Z, euler_Y, euler_X);
+
+    vals[3] = euler_Z;
+    vals[4] = euler_Y;
+    vals[5] = euler_X;
+
+    ret = util::vecToString(vals, 4);
+  }
+  catch (const boost::bad_lexical_cast &)
+  {
+    ret = "error";
   }
 
   return ret;
