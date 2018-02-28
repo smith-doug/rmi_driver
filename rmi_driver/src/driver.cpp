@@ -85,7 +85,7 @@ void Driver::start()
     }
     catch (pluginlib::PluginlibException &ex)
     {
-      logger_.ERROR() << "The plugin failed to load for some reason. Error: %s", ex.what();
+      logger_.ERROR() << "The plugin failed to load for some reason. Error: " << ex.what();
     }
   }
 
@@ -147,7 +147,7 @@ void Driver::publishJointState()
       // Publish the individual state topics for this connection (tool_frame)
       conn.second->publishState();
     }
-    stateFull.header.stamp = ros::Time::now();
+    // stateFull.header.stamp = ros::Time::now();
     joint_state_publisher_.publish(stateFull);
     pub_rate.sleep();
   }

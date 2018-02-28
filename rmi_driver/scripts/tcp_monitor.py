@@ -30,11 +30,10 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         try:
-            trans_tool_world = tfBuffer.lookup_transform('world', 'tool_frame_pose', rospy.Time())
+            trans_tool_world = tfBuffer.lookup_transform(
+                'world', 'tool_frame_pose', rospy.Time.now() - rospy.Duration(0.1), rospy.Duration(0.5))
 
-#             trans = tfBuffer.lookup_transform('tcp_frame', 'tool_frame_pose', rospy.Time(
-#                 secs=trans_tool_world.header.stamp.secs, nsecs=trans_tool_world.header.stamp.nsecs))
-            trans = tfBuffer.lookup_transform('tcp_frame', 'tool_frame_pose', rospy.Time.now() - rospy.Duration(0.1))
+            trans = tfBuffer.lookup_transform('tcp_frame', 'tool_frame_pose', trans_tool_world.header.stamp)
 
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as ex:
             print ex
@@ -48,9 +47,10 @@ if __name__ == '__main__':
             max_dist = dist
 
         if dist > max_allowed_dist:
-            print dist
+            xyz = trans_tool_world.transform.translation
+            print str(dist) + ": " + str(xyz.x * 1000.0) + ", " + str(xyz.y * 1000.0) + ", " + str(xyz.z * 1000.0)
 
-        print dist
+        # print dist
 
         rate.sleep()
 
