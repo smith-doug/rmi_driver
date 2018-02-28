@@ -480,12 +480,20 @@ void Connector::getThread()
   auto get_version = findGetCommand("GET", "VERSION");
   auto get_tool_frame = findGetCommand("GET", "TOOL_FRAME");
 
+  auto get_status = findGetCommand("GET", "STATUS");
+
   if (!get_joint_position || !get_version || !get_tool_frame)
   {
     /// @todo make a nice link to a section of docs
     logger_.FATAL() << "One of the getThread handlers failed to be found.  Your plugin MUST implement these!";
 
     return;
+  }
+
+  RobotCommandStatus *get_status_ptr = 0;
+  if (get_status)
+  {
+    get_status_ptr = (RobotCommandStatus *)get_status.get();
   }
 
   std::string response;
@@ -524,13 +532,27 @@ void Connector::getThread()
     try
     {
       // Get the joint positions
-      response = sendCommand(*get_joint_position);
-      if (!get_joint_position->checkResponse(response))
+      if (get_status)
       {
-        logger_.ERROR() << "Failed to check joint position.  This is bad: " << response;
-        continue;
+        response = sendCommand(*get_status);
+        if (!get_status->checkResponse(response))
+        {
+          logger_.ERROR() << "Get status failed to process: " << response;
+          continue;
+        }
+        get_status_ptr->updateData(response);
+        pos_real = util::stringToDoubleVec(get_status_ptr->getLastJointState());
       }
-      pos_real = util::stringToDoubleVec(response);
+      else
+      {
+        response = sendCommand(*get_joint_position);
+        if (!get_joint_position->checkResponse(response))
+        {
+          logger_.ERROR() << "Failed to check joint position.  This is bad: " << response;
+          continue;
+        }
+        pos_real = util::stringToDoubleVec(response);
+      }
 
       last_joint_state_.header.stamp = ros::Time::now();
       last_joint_state_.name = joint_names_;
@@ -544,13 +566,20 @@ void Connector::getThread()
       }
 
       // Get the tool frame in euler zyx
-      response = sendCommand(*get_tool_frame);
-      if (!get_tool_frame->checkResponse(response))
+      if (get_status)
       {
-        logger_.ERROR() << "Failed to check tool frame.  This is bad: " << response;
-        continue;
+        pos_real = util::stringToDoubleVec(get_status_ptr->getLastTcpFrame());
       }
-      pos_real = util::stringToDoubleVec(response);
+      else
+      {
+        response = sendCommand(*get_tool_frame);
+        if (!get_tool_frame->checkResponse(response))
+        {
+          logger_.ERROR() << "Failed to check tool frame.  This is bad: " << response;
+          continue;
+        }
+        pos_real = util::stringToDoubleVec(response);
+      }
       if (pos_real.size() != 6)
       {
         logger_.ERROR() << " ERROR: Connector::getThread GET TOOL_FRAME size wrong!  Expected 6, got "
