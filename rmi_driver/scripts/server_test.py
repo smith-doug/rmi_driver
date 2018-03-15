@@ -76,7 +76,7 @@ class RmiServer(SocketServer.StreamRequestHandler):
                     send_data = 'aborted'
 
                 if data.startswith('get version'):
-                    send_data = '0.0.8'
+                    send_data = '0.0.9'
                 elif data.startswith('get joint position'):
 
                     self.server.robot_data.joint_pos = self.interpolate(self.server.robot_data.target_pos,
@@ -86,6 +86,15 @@ class RmiServer(SocketServer.StreamRequestHandler):
                         self.server.robot_data.inter_step += 1
 
                     send_data = self.server.robot_data.joint_pos
+
+                elif data.startswith('get status'):
+                    self.server.robot_data.joint_pos = self.interpolate(self.server.robot_data.target_pos,
+                                                                        self.server.robot_data.start_pos, self.server.robot_data.inter_step)
+
+                    if self.server.robot_data.inter_step <= self.step_target:
+                        self.server.robot_data.inter_step += 1
+
+                    send_data = self.server.robot_data.joint_pos + '; 0.0 0.1 0.2 0.3 0.4 0.5'
 
                 elif data.startswith('get tool frame ros'):
                     send_data = '0.0 0.1 0.2 0.3 0.4 0.5'
