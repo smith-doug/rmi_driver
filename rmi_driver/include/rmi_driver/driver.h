@@ -56,10 +56,19 @@ public:
    */
   Driver();
 
+  virtual ~Driver()
+  {
+    // stop();
+  }
+
   /**
    * \brief Create io_service threads, load plugins, launch Connectors
    */
   void start();
+
+  void stop();
+
+  void run();
 
   /**
    * \brief Add a Connection to the connection/jta maps and connect
@@ -104,8 +113,12 @@ protected:
   int conn_num_ = 0;  /// used for the maps
 
   boost::asio::io_service io_service_;  /// io_service that will be used for each Connector's asio stuff
-  boost::asio::io_service::work work_;  /// Keep the io_service from dying
-  std::thread io_service_thread_;       /// calls io_service_.run()
+
+  // boost::asio::io_service::work work_;  /// Keep the io_service from dying
+  std::unique_ptr<boost::asio::io_service::work> work_;
+  std::thread io_service_thread_;  /// calls io_service_.run()
+
+  // std::shared_ptr<std::thread> io_service_thread_;
 
   ros::Publisher joint_state_publisher_;  /// Publishes aggregated joint states
 

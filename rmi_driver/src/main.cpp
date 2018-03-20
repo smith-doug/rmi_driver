@@ -19,6 +19,9 @@ int main(int argc, char **argv)
   driver.start();
 
   ros::waitForShutdown();
+
+  driver.stop();
+
   // ros::spin();
 
   return 0;

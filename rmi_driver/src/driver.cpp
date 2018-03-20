@@ -34,7 +34,7 @@
 
 namespace rmi_driver
 {
-Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
+Driver::Driver() : work_(new boost::asio::io_service::work(io_service_)), logger_("DRIVER", "/")
 {
   ros::NodeHandle nh;
   config_.loadConfig(nh);
@@ -61,10 +61,21 @@ void Driver::loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_re
   }
 }
 
+void Driver::run()
+{
+  io_service_.run();
+  std::cout << "run exiting\n";
+}
+
 void Driver::start()
 {
-  io_service_thread_ = std::thread([&]() { io_service_.run(); });
+  io_service_thread_ = std::thread(&Driver::run, this);
   util::setThreadName(io_service_thread_, "io_svc_thr");
+  //  io_service_thread_ = std::thread([&]() {
+  //    io_service_.run();
+  //    std::cout << "io_service_thread_ ending";
+  //  });
+  //  util::setThreadName(io_service_thread_, "io_svc_thr");
   util::setThreadName("driver_thr");
 
   logger_.INFO() << "There are " << config_.connections_.size() << " connections";
@@ -94,10 +105,25 @@ void Driver::start()
   // command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
   // Publish joint states.  Will aggregate multiple robots.
-  pub_thread_ = std::thread(&Driver::publishJointState, this);
-  util::setThreadName(pub_thread_, "pub_jt_state");
+  // pub_thread_ = std::thread(&Driver::publishJointState, this);
+  // util::setThreadName(pub_thread_, "pub_jt_state");
 
   return;
+}
+
+void Driver::stop()
+{
+  // ROS_INFO_STREAM("Publisher dying");
+
+  // io_service_.stop();
+
+  std::cout << "Publisher dying\n";
+  work_.reset();
+  io_service_.stop();
+  if (io_service_thread_.joinable())
+  {
+    io_service_thread_.join();
+  }
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
@@ -131,7 +157,7 @@ void Driver::publishJointState()
   logger_.INFO() << "Driver pub starting";
 
   sensor_msgs::JointState stateFull;
-  while (ros::ok())
+  while (!ros::isShuttingDown())
   {
     stateFull = sensor_msgs::JointState();
     for (auto &&conn : conn_map_)
@@ -149,7 +175,8 @@ void Driver::publishJointState()
     }
     // stateFull.header.stamp = ros::Time::now();
     joint_state_publisher_.publish(stateFull);
-    pub_rate.sleep();
+    if (ros::ok())
+      pub_rate.sleep();
   }
 }
 
