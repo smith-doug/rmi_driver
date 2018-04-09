@@ -75,11 +75,20 @@ public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
             CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register, bool clear_commands_on_error);
 
+  virtual ~Connector()
+  {
+  }
+
   /**
    * \brief Starts the asynchronous connect methods
    * @return always true
    */
   bool connect();
+
+  /**
+   * \brief Close the sockets and stop the cmd/get threads
+   */
+  void stop();
 
   /**
    * \brief Starts the asynchronous connect methods

@@ -123,6 +123,13 @@ inline bool setThreadName(pthread_t thread_hdl, const char* name)
 {
   return ::pthread_setname_np(thread_hdl, name) == 0;
 }
+
+inline bool setThreadName(pthread_t thread_hdl, const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+  return ::pthread_setname_np(thread_hdl, name.c_str()) == 0;
+}
 #else
 inline bool setThreadName(pthread_t thread_hdl, const char* name)
 {
@@ -135,7 +142,7 @@ inline bool setThreadName(std::thread& th, const char* name)
   return setThreadName(th.native_handle(), name);
 }
 
-inline bool setThreadName(const std::thread& th, const std::string& name)
+inline bool setThreadName(std::thread& th, const std::string& name)
 {
   if (name.length() > 16)
     return false;

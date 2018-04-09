@@ -73,6 +73,23 @@ bool Connector::connect()
   return connect(host_, port_);
 }
 
+void Connector::stop()
+{
+  std::cout << "Connector::stop() begin\n";
+
+  this->socket_cmd_.close();
+  this->socket_get_.close();
+
+  if (get_thread_.joinable())
+    get_thread_.join();
+
+  if (cmd_thread_.joinable())
+    cmd_thread_.join();
+
+  cmd_register_.reset();
+  std::cout << "Connector::stop() done" << std::endl;
+}
+
 void Connector::cancelSocketCmd(int timeout)
 {
   // Give the socket a chance to finish.  If an abort is sent, active motion commands may be able to finish naturally
