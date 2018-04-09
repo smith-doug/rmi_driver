@@ -105,25 +105,34 @@ void Driver::start()
   // command_list_sub_ = nh_.subscribe("command_list", 1, &Driver::subCB_CommandList, this);
 
   // Publish joint states.  Will aggregate multiple robots.
-  // pub_thread_ = std::thread(&Driver::publishJointState, this);
-  // util::setThreadName(pub_thread_, "pub_jt_state");
+  pub_thread_ = std::thread(&Driver::publishJointState, this);
+  util::setThreadName(pub_thread_, "pub_jt_state");
 
   return;
 }
 
 void Driver::stop()
 {
-  // ROS_INFO_STREAM("Publisher dying");
+  std::cout << "Driver stopping\n";
+  for (auto &&conn : conn_map_)
+  {
+    std::cout << "Stopping connection #" << conn.first << "\n";
+    conn.second->stop();
+    std::cout << "conn stopped\n";
+  }
 
-  // io_service_.stop();
-
-  std::cout << "Publisher dying\n";
   work_.reset();
   io_service_.stop();
+
   if (io_service_thread_.joinable())
-  {
     io_service_thread_.join();
-  }
+
+  std::cout << "Joined io_service_thread_\n";
+
+  if (pub_thread_.joinable())
+    pub_thread_.join();
+
+  std::cout << "Joined pub_thread_\n";
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,

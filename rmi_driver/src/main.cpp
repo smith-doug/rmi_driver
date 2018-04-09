@@ -1,10 +1,12 @@
 #include <ros/ros.h>
 #include "rmi_driver/driver.h"
 #include "rmi_driver/joint_trajectory_action.h"
+#include "rmi_driver/util.h"
 
 using namespace rmi_driver;
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
+  rmi_driver::util::setThreadName("rmi_driver_main");
   ros::init(argc, argv, "rmi_driver");
 
   ros::NodeHandle nh;
@@ -20,9 +22,12 @@ int main(int argc, char **argv)
 
   ros::waitForShutdown();
 
+  std::cout << std::endl;
   driver.stop();
+  std::cout << "Driver stopped\n";
 
-  // ros::spin();
+  spinner.stop();
+  std::cout << "spinner stopped\n";
 
   return 0;
 }

@@ -77,9 +77,6 @@ public:
 
   virtual ~Connector()
   {
-    get_thread_.join();
-    cmd_thread_.join();
-    cmd_register_.reset();
   }
 
   /**
@@ -87,6 +84,11 @@ public:
    * @return always true
    */
   bool connect();
+
+  /**
+   * \brief Close the sockets and stop the cmd/get threads
+   */
+  void stop();
 
   /**
    * \brief Starts the asynchronous connect methods
