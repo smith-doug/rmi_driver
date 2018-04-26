@@ -330,7 +330,7 @@ std::string Connector::sendCommand(const RobotCommand &command)
       socket->close();
   }
   else
-  future_sendCommand.wait();
+    future_sendCommand.wait();
 
   try
   {
@@ -779,14 +779,17 @@ void Connector::publishState()
 
   // Publish the reported tcp as a PoseStamped.  This makes it easier to use in other tools like RmiCommander or
   // monitoring.
-  last_tool_frame_pose_.header.frame_id = "";  //@todo do something with this.  I've never gotten end effectors to
-                                               // actually work so I'm not sure how to monitor the active tcp
+
+  if (ns_ != "/")
+    last_tool_frame_pose_.header.frame_id = ns_ + "_tool_frame_pose";
+  else
+    last_tool_frame_pose_.header.frame_id = ns_ + "tool_frame_pose";
 
   last_tool_frame_pose_.pose.position.x = last_tool_frame_.x;
   last_tool_frame_pose_.pose.position.y = last_tool_frame_.y;
   last_tool_frame_pose_.pose.position.z = last_tool_frame_.z;
 
-  // Change the reported pose's orientation into a quaternion.
+  // Change the reported pose's orientation into a quaternion.  Easiest way is ypr->matrix->quaternion
   tf2::Matrix3x3 matrix;
   matrix.setEulerYPR(last_tool_frame_.alpha, last_tool_frame_.beta, last_tool_frame_.gamma);
 
@@ -803,11 +806,8 @@ void Connector::publishState()
   // Publish it as a transform for other ROS stuff that can handle tf
   geometry_msgs::TransformStamped tf;
   tf.header.stamp = last_tool_frame_pose_.header.stamp;
-  tf.header.frame_id = "world";
-  if (ns_ != "/")
-    tf.child_frame_id = ns_ + "_tool_frame_pose";
-  else
-    tf.child_frame_id = ns_ + "tool_frame_pose";
+  tf.header.frame_id = "world";  // Is there a better way to detect the current root fixed transform?
+  tf.child_frame_id = last_tool_frame_pose_.header.frame_id;
 
   tf.transform.translation.x = last_tool_frame_pose_.pose.position.x;
   tf.transform.translation.y = last_tool_frame_pose_.pose.position.y;

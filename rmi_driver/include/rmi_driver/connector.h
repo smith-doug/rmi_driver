@@ -285,8 +285,9 @@ protected:
   ros::Publisher command_result_pub_;
   /// Publishes the robot_movement_interface::EulerFrame for this namespace
   ros::Publisher tool_frame_pub_;
-
+  /// Publish the robot's reported TCP as a PoseStamped
   ros::Publisher tool_frame_pose_pub_;
+  /// Broadcast the robot's reported TCP as a transform from world
   tf2_ros::TransformBroadcaster tool_frame_pose_br_;
 
   /// NodeHandle for this namespace
