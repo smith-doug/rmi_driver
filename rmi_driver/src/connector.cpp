@@ -320,7 +320,18 @@ std::string Connector::sendCommand(const RobotCommand &command)
    */
   // static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
   // std::future<std::size_t> read_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
+
+  // Cmd could take a while to get a response, but Get must be quick.  When I pull the network cable, async_read_until
+  // doesn't throw anything, so a timeout on the future is the easiest way to tell something is wrong.
+  if (command.getType() == RobotCommand::CommandType::Get)
+  {
+    auto status = future_sendCommand.wait_for(std::chrono::milliseconds(500));
+    if (status != std::future_status::ready)
+      socket->close();
+  }
+  else
   future_sendCommand.wait();
+
   try
   {
     future_sendCommand.get();
@@ -630,6 +641,7 @@ void Connector::getThread()
       if (ex.code() != boost::asio::error::operation_aborted)
       {
         // Relaunch the get socket/thread
+        logger_.ERROR() << "Get socket error: " << ex.what();
         std::thread(&Connector::connectSocket, this, host_, port_ + 1, RobotCommand::CommandType::Get).detach();
         return;
       }
