@@ -77,6 +77,9 @@ void Connector::stop()
 {
   std::cout << "Connector::stop() begin\n";
 
+  this->socket_cmd_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+  this->socket_get_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+
   this->socket_cmd_.close();
   this->socket_get_.close();
 
