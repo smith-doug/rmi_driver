@@ -259,7 +259,7 @@ RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Comma
   if (!process_func_)
   {
     ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
-    return false;
+    return nullptr;
   }
 
   // proceess_func_ will return a shared_ptr<Command>
