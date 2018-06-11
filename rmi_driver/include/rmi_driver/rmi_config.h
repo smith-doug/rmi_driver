@@ -72,7 +72,7 @@
 #ifndef INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
 #define INCLUDE_RMI_DRIVER_RMI_CONFIG_H_
 
-#include <XmlRpcValue.h>
+#include <xmlrpcpp/XmlRpcValue.h>
 
 #include <ros/ros.h>
 #include <map>
