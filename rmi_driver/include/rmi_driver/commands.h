@@ -161,12 +161,24 @@ public:
   virtual std::string toString(bool append_newline = true) const;
 
   /**
-   * Check the response of a command.  By default it just checks if the response starts with "error".
+   * \brief Check the response of a command.  It will call processResponse()
+   *
+   * By default it just checks if the response starts with "error".
    *
    * @param response The string returned by the robot
    * @return True if the response is OK
    */
   virtual bool checkResponse(std::string& response) const;
+
+  /**
+   * \brief Modify the response as needed.
+   *
+   * This can be used to do things like convert degrees to radians, reorder rotations, etc.  Does nothing by defaults.
+   * @param response [in,out]
+   */
+  virtual void processResponse(std::string& response) const
+  {
+  }
 
   /**
    * Converts a float vector into a string of values separated by spaces.  Removes trailing zeroes
@@ -206,6 +218,41 @@ protected:
   int command_id_ = 0;
 
   CommandType type_;
+};
+
+class RobotCommandStatus : public RobotCommand
+{
+protected:
+  std::string last_joint_state;
+  std::string last_tcp_frame;
+
+public:
+  RobotCommandStatus(CommandType type = CommandType::Cmd) : RobotCommand(type)
+  {
+  }
+
+  RobotCommandStatus(CommandType type, const std::string& command, std::string params = "") : RobotCommand(type)
+  {
+  }
+
+  RobotCommandStatus(CommandType type, const std::string& command, const std::vector<float>& floatVec)
+    : RobotCommand(type)
+  {
+  }
+
+  virtual void updateData(std::string& response)
+  {
+  }
+
+  const std::string& getLastJointState()
+  {
+    return last_joint_state;
+  }
+
+  const std::string& getLastTcpFrame()
+  {
+    return last_tcp_frame;
+  }
 };
 
 /**

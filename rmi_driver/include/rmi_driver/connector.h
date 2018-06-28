@@ -37,7 +37,10 @@
 #include <robot_movement_interface/EulerFrame.h>
 #include <robot_movement_interface/Result.h>
 
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/JointState.h>
+
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <pluginlib/class_loader.h>
 #include <boost/asio.hpp>
@@ -72,11 +75,20 @@ public:
   Connector(std::string ns, boost::asio::io_service& io_service, std::string host, int port, StringVec joint_names,
             CmdRegLoaderPtr cmd_reg_loader, CommandRegisterPtr cmd_register, bool clear_commands_on_error);
 
+  virtual ~Connector()
+  {
+  }
+
   /**
    * \brief Starts the asynchronous connect methods
    * @return always true
    */
   bool connect();
+
+  /**
+   * \brief Close the sockets and stop the cmd/get threads
+   */
+  void stop();
 
   /**
    * \brief Starts the asynchronous connect methods
@@ -238,7 +250,7 @@ protected:
    * @param pose_type Currently JOINT_POSITION, TOOL_FRAME, VERSION
    * @return a RobotCommandPtr for specified command and pose type.
    */
-  RobotCommandPtr findGetCommandHandler(const std::string& command_type, const std::string& pose_type);
+  RobotCommandPtr findGetCommand(const std::string& command_type, const std::string& pose_type);
 
   std::string ns_;  ///< Namespace of this connection
 
@@ -273,6 +285,11 @@ protected:
   ros::Publisher command_result_pub_;
   /// Publishes the robot_movement_interface::EulerFrame for this namespace
   ros::Publisher tool_frame_pub_;
+  /// Publish the robot's reported TCP as a PoseStamped
+  ros::Publisher tool_frame_pose_pub_;
+  /// Broadcast the robot's reported TCP as a transform from world
+  tf2_ros::TransformBroadcaster tool_frame_pose_br_;
+
   /// NodeHandle for this namespace
   ros::NodeHandle nh_;
 
@@ -286,6 +303,9 @@ protected:
 
   /// The last known tool frame.  Published by publishState(), called from Driver.
   robot_movement_interface::EulerFrame last_tool_frame_;
+
+  /// The last known tool frame from the robot.
+  geometry_msgs::PoseStamped last_tool_frame_pose_;
 
   /// List of joint names for this robot.
   std::vector<std::string> joint_names_;

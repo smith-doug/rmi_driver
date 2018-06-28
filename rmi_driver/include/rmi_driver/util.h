@@ -39,6 +39,20 @@ namespace rmi_driver
 {
 namespace util
 {
+double radToDeg(double rad);
+
+double degToRad(double degrees);
+
+template <class T>
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_equal(T x, T y, int ulp = 4)
+{
+  // the machine epsilon has to be scaled to the magnitude of the values used
+  // and multiplied by the desired precision in ULPs (units in the last place)
+  return std::abs(x - y) <= std::numeric_limits<T>::epsilon() * std::abs(x + y) * ulp
+         // unless the result is subnormal
+         || std::abs(x - y) < std::numeric_limits<T>::min();
+}
+
 /**
  * \brief Convert a float into a string with no trailing zeroes
  *
@@ -49,7 +63,9 @@ namespace util
 std::string floatToStringNoTrailing(float fval, int precision = 4);
 
 /**
- * Convert a string of numbers separated by spaces into a vector of doubles.
+ * \brief Convert a string of numbers separated by spaces into a vector of doubles.
+ *
+ * \exception boost::bad_lexical_cast
  * @param s string of numbers.  "1 2 3.53 56.563"
  * @return Vector of doubles {1, 2, 3.53, 56.563}
  */
@@ -63,7 +79,7 @@ std::vector<double> stringToDoubleVec(const std::string& s);
  * @return formatted string
  */
 template <typename T>
-std::string vecToString(const std::vector<T>& vec)
+std::string vecToPrettyString(const std::vector<T>& vec)
 {
   std::ostringstream oss;
   oss << "{";
@@ -74,6 +90,24 @@ std::string vecToString(const std::vector<T>& vec)
   }
   oss << "}";
 
+  return oss.str();
+}
+
+template <typename T, typename = std::enable_if<std::is_floating_point<T>::value> >
+std::string vecToString(const std::vector<T>& vec, int precision)
+{
+  if (vec.empty())
+    return "";
+
+  std::ostringstream oss;
+
+  if (vec.size() > 1)
+  {
+    std::for_each(vec.begin(), vec.end() - 1,
+                  [&](const T& val) { oss << util::floatToStringNoTrailing(val, precision) << " "; });
+  }
+
+  oss << util::floatToStringNoTrailing(vec.back(), precision);
   return oss.str();
 }
 
@@ -89,6 +123,13 @@ inline bool setThreadName(pthread_t thread_hdl, const char* name)
 {
   return ::pthread_setname_np(thread_hdl, name) == 0;
 }
+
+inline bool setThreadName(pthread_t thread_hdl, const std::string& name)
+{
+  if (name.length() > 16)
+    return false;
+  return ::pthread_setname_np(thread_hdl, name.c_str()) == 0;
+}
 #else
 inline bool setThreadName(pthread_t thread_hdl, const char* name)
 {
@@ -101,7 +142,7 @@ inline bool setThreadName(std::thread& th, const char* name)
   return setThreadName(th.native_handle(), name);
 }
 
-inline bool setThreadName(const std::thread& th, const std::string& name)
+inline bool setThreadName(std::thread& th, const std::string& name)
 {
   if (name.length() > 16)
     return false;

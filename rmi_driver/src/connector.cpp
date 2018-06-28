@@ -33,6 +33,7 @@
 #include <chrono>
 #include <future>
 #include <memory>
+#include "rmi_driver/rotation_utils.h"
 #include "rmi_driver/util.h"
 
 namespace rmi_driver
@@ -62,12 +63,34 @@ Connector::Connector(std::string ns, boost::asio::io_service &io_service, std::s
 
   tool_frame_pub_ = nh_.advertise<robot_movement_interface::EulerFrame>("tool_frame", 30);
 
+  tool_frame_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("tool_frame_pose", 30);
+
   logger_.INFO() << "Created a new Connector";
 }
 
 bool Connector::connect()
 {
   return connect(host_, port_);
+}
+
+void Connector::stop()
+{
+  std::cout << "Connector::stop() begin\n";
+
+  this->socket_cmd_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+  this->socket_get_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both);
+
+  this->socket_cmd_.close();
+  this->socket_get_.close();
+
+  if (get_thread_.joinable())
+    get_thread_.join();
+
+  if (cmd_thread_.joinable())
+    cmd_thread_.join();
+
+  cmd_register_.reset();
+  std::cout << "Connector::stop() done" << std::endl;
 }
 
 void Connector::cancelSocketCmd(int timeout)
@@ -297,7 +320,18 @@ std::string Connector::sendCommand(const RobotCommand &command)
    */
   // static boost::asio::use_future_t<std::allocator<std::size_t>> use_future;
   // std::future<std::size_t> read_future = boost::asio::async_read_until(*socket, buff, '\n', use_future);
-  future_sendCommand.wait();
+
+  // Cmd could take a while to get a response, but Get must be quick.  When I pull the network cable, async_read_until
+  // doesn't throw anything, so a timeout on the future is the easiest way to tell something is wrong.
+  if (command.getType() == RobotCommand::CommandType::Get)
+  {
+    auto status = future_sendCommand.wait_for(std::chrono::milliseconds(500));
+    if (status != std::future_status::ready)
+      socket->close();
+  }
+  else
+    future_sendCommand.wait();
+
   try
   {
     future_sendCommand.get();
@@ -444,7 +478,7 @@ void Connector::publishRmiResult(const robot_movement_interface::Result &result)
   command_result_pub_.publish(result);
 }
 
-RobotCommandPtr Connector::findGetCommandHandler(const std::string &command_type, const std::string &pose_type)
+RobotCommandPtr Connector::findGetCommand(const std::string &command_type, const std::string &pose_type)
 {
   robot_movement_interface::Command rmi_cmd;
   rmi_cmd.command_type = command_type;
@@ -473,9 +507,11 @@ void Connector::getThread()
   ros::Rate rate(50);
 
   // Fetch the required RobotCommands from the plugin.
-  auto get_joint_position = findGetCommandHandler("GET", "JOINT_POSITION");
-  auto get_version = findGetCommandHandler("GET", "VERSION");
-  auto get_tool_frame = findGetCommandHandler("GET", "TOOL_FRAME");
+  auto get_joint_position = findGetCommand("GET", "JOINT_POSITION");
+  auto get_version = findGetCommand("GET", "VERSION");
+  auto get_tool_frame = findGetCommand("GET", "TOOL_FRAME");
+
+  auto get_status = findGetCommand("GET", "STATUS");
 
   if (!get_joint_position || !get_version || !get_tool_frame)
   {
@@ -483,6 +519,12 @@ void Connector::getThread()
     logger_.FATAL() << "One of the getThread handlers failed to be found.  Your plugin MUST implement these!";
 
     return;
+  }
+
+  RobotCommandStatus *get_status_ptr = 0;
+  if (get_status)
+  {
+    get_status_ptr = (RobotCommandStatus *)get_status.get();
   }
 
   std::string response;
@@ -521,8 +563,27 @@ void Connector::getThread()
     try
     {
       // Get the joint positions
-      response = sendCommand(*get_joint_position);
-      pos_real = util::stringToDoubleVec(response);
+      if (get_status)
+      {
+        response = sendCommand(*get_status);
+        if (!get_status->checkResponse(response))
+        {
+          logger_.ERROR() << "Get status failed to process: " << response;
+          continue;
+        }
+        get_status_ptr->updateData(response);
+        pos_real = util::stringToDoubleVec(get_status_ptr->getLastJointState());
+      }
+      else
+      {
+        response = sendCommand(*get_joint_position);
+        if (!get_joint_position->checkResponse(response))
+        {
+          logger_.ERROR() << "Failed to check joint position.  This is bad: " << response;
+          continue;
+        }
+        pos_real = util::stringToDoubleVec(response);
+      }
 
       last_joint_state_.header.stamp = ros::Time::now();
       last_joint_state_.name = joint_names_;
@@ -536,8 +597,20 @@ void Connector::getThread()
       }
 
       // Get the tool frame in euler zyx
-      response = sendCommand(*get_tool_frame);
-      pos_real = util::stringToDoubleVec(response);
+      if (get_status)
+      {
+        pos_real = util::stringToDoubleVec(get_status_ptr->getLastTcpFrame());
+      }
+      else
+      {
+        response = sendCommand(*get_tool_frame);
+        if (!get_tool_frame->checkResponse(response))
+        {
+          logger_.ERROR() << "Failed to check tool frame.  This is bad: " << response;
+          continue;
+        }
+        pos_real = util::stringToDoubleVec(response);
+      }
       if (pos_real.size() != 6)
       {
         logger_.ERROR() << " ERROR: Connector::getThread GET TOOL_FRAME size wrong!  Expected 6, got "
@@ -551,6 +624,9 @@ void Connector::getThread()
       last_tool_frame_.alpha = pos_real[3];
       last_tool_frame_.beta = pos_real[4];
       last_tool_frame_.gamma = pos_real[5];
+
+      // No need to calculate the Pose every time, but I should save the time
+      last_tool_frame_pose_.header.stamp = ros::Time::now();
     }
     catch (const boost::bad_lexical_cast &)
     {
@@ -565,6 +641,7 @@ void Connector::getThread()
       if (ex.code() != boost::asio::error::operation_aborted)
       {
         // Relaunch the get socket/thread
+        logger_.ERROR() << "Get socket error: " << ex.what();
         std::thread(&Connector::connectSocket, this, host_, port_ + 1, RobotCommand::CommandType::Get).detach();
         return;
       }
@@ -697,7 +774,46 @@ void Connector::cmdThread()
 
 void Connector::publishState()
 {
+  // Publish the required YPR pose as-is
   tool_frame_pub_.publish(last_tool_frame_);
+
+  // Publish the reported tcp as a PoseStamped.  This makes it easier to use in other tools like RmiCommander or
+  // monitoring.
+
+  if (ns_ != "/")
+    last_tool_frame_pose_.header.frame_id = ns_ + "_tool_frame_pose";
+  else
+    last_tool_frame_pose_.header.frame_id = ns_ + "tool_frame_pose";
+
+  last_tool_frame_pose_.pose.position.x = last_tool_frame_.x;
+  last_tool_frame_pose_.pose.position.y = last_tool_frame_.y;
+  last_tool_frame_pose_.pose.position.z = last_tool_frame_.z;
+
+  // Change the reported pose's orientation into a quaternion.  Easiest way is ypr->matrix->quaternion
+  tf2::Matrix3x3 matrix;
+  matrix.setEulerYPR(last_tool_frame_.alpha, last_tool_frame_.beta, last_tool_frame_.gamma);
+
+  tf2::Quaternion quat;
+  matrix.getRotation(quat);
+
+  last_tool_frame_pose_.pose.orientation.w = quat.w();
+  last_tool_frame_pose_.pose.orientation.x = quat.x();
+  last_tool_frame_pose_.pose.orientation.y = quat.y();
+  last_tool_frame_pose_.pose.orientation.z = quat.z();
+
+  tool_frame_pose_pub_.publish(last_tool_frame_pose_);
+
+  // Publish it as a transform for other ROS stuff that can handle tf
+  geometry_msgs::TransformStamped tf;
+  tf.header.stamp = last_tool_frame_pose_.header.stamp;
+  tf.header.frame_id = "world";  // Is there a better way to detect the current root fixed transform?
+  tf.child_frame_id = last_tool_frame_pose_.header.frame_id;
+
+  tf.transform.translation.x = last_tool_frame_pose_.pose.position.x;
+  tf.transform.translation.y = last_tool_frame_pose_.pose.position.y;
+  tf.transform.translation.z = last_tool_frame_pose_.pose.position.z;
+  tf.transform.rotation = last_tool_frame_pose_.pose.orientation;
+  tool_frame_pose_br_.sendTransform(tf);
 }
 
 }  // namespace rmi_driver

@@ -34,7 +34,7 @@
 
 namespace rmi_driver
 {
-Driver::Driver() : work_(io_service_), logger_("DRIVER", "/")
+Driver::Driver() : work_(new boost::asio::io_service::work(io_service_)), logger_("DRIVER", "/")
 {
   ros::NodeHandle nh;
   config_.loadConfig(nh);
@@ -61,10 +61,21 @@ void Driver::loadPlugin(const ConnectionConfig &con_cfg, CmdRegLoaderPtr &cmd_re
   }
 }
 
+void Driver::run()
+{
+  io_service_.run();
+  std::cout << "run exiting\n";
+}
+
 void Driver::start()
 {
-  io_service_thread_ = std::thread([&]() { io_service_.run(); });
+  io_service_thread_ = std::thread(&Driver::run, this);
   util::setThreadName(io_service_thread_, "io_svc_thr");
+  //  io_service_thread_ = std::thread([&]() {
+  //    io_service_.run();
+  //    std::cout << "io_service_thread_ ending";
+  //  });
+  //  util::setThreadName(io_service_thread_, "io_svc_thr");
   util::setThreadName("driver_thr");
 
   logger_.INFO() << "There are " << config_.connections_.size() << " connections";
@@ -85,7 +96,7 @@ void Driver::start()
     }
     catch (pluginlib::PluginlibException &ex)
     {
-      logger_.ERROR() << "The plugin failed to load for some reason. Error: %s", ex.what();
+      logger_.ERROR() << "The plugin failed to load for some reason. Error: " << ex.what();
     }
   }
 
@@ -98,6 +109,30 @@ void Driver::start()
   util::setThreadName(pub_thread_, "pub_jt_state");
 
   return;
+}
+
+void Driver::stop()
+{
+  std::cout << "Driver stopping\n";
+  for (auto &&conn : conn_map_)
+  {
+    std::cout << "Stopping connection #" << conn.first << "\n";
+    conn.second->stop();
+    std::cout << "conn stopped\n";
+  }
+
+  work_.reset();
+  io_service_.stop();
+
+  if (io_service_thread_.joinable())
+    io_service_thread_.join();
+
+  std::cout << "Joined io_service_thread_\n";
+
+  if (pub_thread_.joinable())
+    pub_thread_.join();
+
+  std::cout << "Joined pub_thread_\n";
 }
 
 void Driver::addConnection(std::string ns, std::string host, int port, std::vector<std::string> joint_names,
@@ -131,7 +166,7 @@ void Driver::publishJointState()
   logger_.INFO() << "Driver pub starting";
 
   sensor_msgs::JointState stateFull;
-  while (ros::ok())
+  while (!ros::isShuttingDown())
   {
     stateFull = sensor_msgs::JointState();
     for (auto &&conn : conn_map_)
@@ -147,9 +182,10 @@ void Driver::publishJointState()
       // Publish the individual state topics for this connection (tool_frame)
       conn.second->publishState();
     }
-    stateFull.header.stamp = ros::Time::now();
+    // stateFull.header.stamp = ros::Time::now();
     joint_state_publisher_.publish(stateFull);
-    pub_rate.sleep();
+    if (ros::ok())
+      pub_rate.sleep();
   }
 }
 

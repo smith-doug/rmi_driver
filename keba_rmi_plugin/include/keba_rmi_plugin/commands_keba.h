@@ -111,9 +111,11 @@ using namespace rmi_driver;
  * \par pose_type:
  * QUATERNION:  A cartesian position with position values and orientation both in
  * ROS units (meters, quaternion).  [x, y, z, rw, rx, ry, rz].\n
- * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation represented by a
+ * EULER_INTRINSIC_ZYX: A cartesian position with position values in ROS units (meters) and orientation
+ represented by a
  * Euler rotation in degrees. [x, y, z, rz, ry, rz']\n
- * JOINTS: Joints positions in ROS units.
+ * JOINTS: Joints positions in ROS units.\n
+ * @todo it's ZYZ, check it
  *
  * \section KebaRmiTypesDynamics Types of speeds/accelerations
  * \par velocity_type:
@@ -247,7 +249,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.8");
+    static std::string version("0.0.9");
     return version;
   }
 
@@ -302,13 +304,73 @@ protected:
  *
  * Command::toString will produce one of the following:\n
  * "get joint position;"\n
- * "get tool frame;"\n"
+ *
  * "get version;"
  */
 class KebaCommandGet : public KebaCommandHandler
 {
 public:
   KebaCommandGet();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+/**
+ * \brief Handles getting and converting the tcp frame
+ *
+ * This handler will get the current reported robot tcp position and orientation.  It will be converted from the Keba
+ * standard ZYZ to the ZYX format robot_movement_interface specifies.
+ *
+ * \par Required:
+ * command_type: GET\n
+ * pose_type: TOOL_FRAME\n
+ *
+ * Command::toString will produce:\n
+ * "get tool frame ros;"
+ *
+ * The controller will respond with "x_in_mm y_in_mm z_in_mm zrot_in_rads yrot_in_rads z'rot_in_rads".  It can convert
+ * between degrees/rads easily enough, but reordering the orientation with matrices is too difficult to do on a plc.
+ */
+class KebaCommandGetToolFrame : public KebaCommandHandler
+{
+  /// Converts the Keba rotation ZYZ' into ZYX
+  class KebaCommandToolFrame : public KebaCommand
+  {
+  public:
+    KebaCommandToolFrame(CommandType type = CommandType::Get);
+
+    /**
+     * \brief Change the Keba ZYZ' rotation into ZYX
+     * @param response Modified string
+     */
+    void processResponse(std::string &response) const override;
+  };
+
+public:
+  KebaCommandGetToolFrame();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+class KebaCommandGetStatus : public KebaCommandHandler
+{
+  /// Converts the Keba rotation ZYZ' into ZYX
+  class KebaCommandStatus : public RobotCommandStatus
+  {
+  public:
+    KebaCommandStatus(CommandType type = CommandType::Get);
+
+    /**
+     * \brief Change the Keba ZYZ' rotation into ZYX
+     * @param response Modified string
+     */
+    void processResponse(std::string &response) const override;
+
+    void updateData(std::string &response) override;
+  };
+
+public:
+  KebaCommandGetStatus();
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };

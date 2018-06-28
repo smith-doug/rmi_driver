@@ -30,11 +30,13 @@
 #include <gtest/gtest.h>
 #include <ros/ros.h>
 
+#include <iostream>
 #include <memory>
 
 #include <rmi_driver/commands.h>
 #include <rmi_driver/connector.h>
 #include <rmi_driver/driver.h>
+#include <rmi_driver/rotation_utils.h>
 
 using namespace rmi_driver;
 
@@ -282,7 +284,7 @@ TEST(TestSuite, test_connection)
 
   auto res = shared->sendCommand(*robot_cmd);
 
-  EXPECT_TRUE(res.length() > 1) << "Blah " << res;
+  EXPECT_TRUE(res.length() > 1) << res;
 
   {
     RobotCommand rob_cmd(RobotCommand::CommandType::Cmd, "ping", "");
@@ -290,6 +292,64 @@ TEST(TestSuite, test_connection)
 
     EXPECT_EQ("pong", res);
   }
+}
+
+bool testQuat(tf2::Quaternion& quat1, tf2::Quaternion& quat2, double range)
+{
+  using namespace util;
+
+  auto dot_val = quat1.dot(quat2);
+  std::cout << dot_val << "?" << 1.0 - range << " ";
+  bool is_close = RotationUtils::approxEqual(quat1, quat2, 0.001);
+  if (is_close)
+    std::cout << quat1 << " == " << quat2 << std::fixed << std::endl;
+  else
+    std::cout << quat1 << " != " << quat2 << std::fixed << std::endl;
+
+  return is_close;
+}
+
+tf2::Quaternion quatFromZYZDeg(double Z, double Y, double ZZ)
+{
+  using namespace util;
+  return RotationUtils::quatFromZYZ(degToRad(Z), degToRad(Y), degToRad(ZZ));
+}
+
+tf2::Quaternion setQuat(double x, double y, double z, double w)
+{
+  return tf2::Quaternion(x, y, z, w).normalize();
+}
+
+TEST(TestSuite, rotations)
+{
+  using namespace util;
+
+  tf2::Quaternion quat_to_comp;  // Manually set this to stuff
+  tf2::Quaternion quat;
+
+  quat_to_comp = setQuat(1, 0, 0, 0);
+  quat = quatFromZYZDeg(180.0, 180.0, 0.0);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.001));
+
+  quat_to_comp = setQuat(1, 1, 0, 0);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.001));
+
+  quat_to_comp = setQuat(0.985, 0.006, -0.112, -0.128);
+  quat = quatFromZYZDeg(131.419, 160.437, -49.355);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.001));
+
+  quat_to_comp = quatFromZYZDeg(145.419, 160.437, -49.355);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.0001));
+
+  quat_to_comp = setQuat(0.885, 0.106, -0.112, -0.128);
+  EXPECT_FALSE(testQuat(quat, quat_to_comp, 0.0001));
+
+  tf2::Matrix3x3 mat;
+  mat.setEulerYPR(0, 0, -3.141);
+  mat.getRotation(quat_to_comp);
+
+  quat = setQuat(1, 0, 0, 0);
+  EXPECT_TRUE(testQuat(quat, quat_to_comp, 0.0001));
 }
 
 TEST(TestSuite, DISABLED_test2)

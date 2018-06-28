@@ -46,22 +46,7 @@ const robot_movement_interface::Command& CommandHandler::getSampleCommand() cons
 
 std::string RobotCommand::paramsToString(const std::vector<float>& floatVec, int precision)
 {
-  if (floatVec.empty())
-    return "";
-
-  std::ostringstream oss;
-
-  std::for_each(floatVec.begin(), floatVec.end() - 1, [&](const float& fval) {
-    auto str_val = util::floatToStringNoTrailing(fval, precision);
-    oss << str_val << " ";
-
-  });
-
-  oss << util::floatToStringNoTrailing(floatVec.back(), precision);
-
-  auto out_str = oss.str();
-
-  return out_str;
+  return util::vecToString(floatVec, precision);
 }
 
 std::string RobotCommand::toString(bool append_newline) const
@@ -84,6 +69,7 @@ std::string RobotCommand::toString(bool append_newline) const
 
 bool RobotCommand::checkResponse(std::string& response) const
 {
+  processResponse(response);
   return !boost::istarts_with(response, "error");
 }
 
@@ -218,37 +204,37 @@ std::ostream& CommandHandler::dump(std::ostream& o) const
   if (sample_command_.pose_type.length() > 0)
     o << "pose_type:" << sample_command_.pose_type << std::endl;
   if (sample_command_.pose.size() > 0)
-    o << "pose (sizes):" << util::vecToString(sample_command_.pose) << std::endl;
+    o << "pose (sizes):" << util::vecToPrettyString(sample_command_.pose) << std::endl;
 
   // Velocity
   if (sample_command_.velocity_type.length() > 0)
     o << "velocity_type:" << sample_command_.velocity_type << std::endl;
   if (sample_command_.velocity.size() > 0)
-    o << "velocity (sizes):" << util::vecToString(sample_command_.velocity) << std::endl;
+    o << "velocity (sizes):" << util::vecToPrettyString(sample_command_.velocity) << std::endl;
 
   // Acceleration
   if (sample_command_.acceleration_type.length() > 0)
     o << "velocity_type:" << sample_command_.acceleration_type << std::endl;
   if (sample_command_.acceleration.size() > 0)
-    o << "velocity (sizes):" << util::vecToString(sample_command_.acceleration) << std::endl;
+    o << "velocity (sizes):" << util::vecToPrettyString(sample_command_.acceleration) << std::endl;
 
   // force threshold
   if (sample_command_.force_threshold_type.length() > 0)
     o << "force_threshold_type:" << sample_command_.force_threshold_type << std::endl;
   if (sample_command_.force_threshold.size() > 0)
-    o << "force_threshold (sizes):" << util::vecToString(sample_command_.force_threshold) << std::endl;
+    o << "force_threshold (sizes):" << util::vecToPrettyString(sample_command_.force_threshold) << std::endl;
 
   // effort
   if (sample_command_.effort_type.length() > 0)
     o << "effort_type:" << sample_command_.effort_type << std::endl;
   if (sample_command_.effort.size() > 0)
-    o << "effort (sizes):" << util::vecToString(sample_command_.effort) << std::endl;
+    o << "effort (sizes):" << util::vecToPrettyString(sample_command_.effort) << std::endl;
 
   // blending
   if (sample_command_.blending_type.length() > 0)
     o << "blending_type:" << sample_command_.blending_type << std::endl;
   if (sample_command_.blending.size() > 0)
-    o << "blending (sizes):" << util::vecToString(sample_command_.blending) << std::endl;
+    o << "blending (sizes):" << util::vecToPrettyString(sample_command_.blending) << std::endl;
 
   return o;
 }
@@ -273,7 +259,7 @@ RobotCommandPtr CommandHandler::processMsg(const robot_movement_interface::Comma
   if (!process_func_)
   {
     ROS_ERROR_STREAM("Base CommandHandler::processMsg was called but the process function was not set!");
-    return false;
+    return nullptr;
   }
 
   // proceess_func_ will return a shared_ptr<Command>

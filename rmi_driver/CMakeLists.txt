@@ -11,7 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	rospy
 	sensor_msgs
-	tf
+	tf2
+	tf2_ros
 	message_generation
 	control_msgs  
 	robot_movement_interface  
@@ -45,7 +46,8 @@ catkin_package(
         roscpp
         rospy
         sensor_msgs
-        tf        
+        tf2        
+        tf2_ros
 		    robot_movement_interface        
         pluginlib 
     DEPENDS Boost
@@ -68,6 +70,7 @@ set(SRC_FILES src/commands.cpp
               src/rmi_config.cpp
               src/joint_trajectory_action.cpp
               src/rmi_logger.cpp
+              src/rotation_utils.cpp
   )
 
 add_library(rmi_driver ${SRC_FILES})

@@ -34,6 +34,8 @@
 #include <vector>
 #include "keba_rmi_plugin/keba_util.h"
 
+#include <rmi_driver/rotation_utils.h>
+
 namespace keba_rmi_plugin
 {
 KebaCommandRegister::KebaCommandRegister() : commands_registered_(0), num_aux_joints_(0), num_main_joints_(0)
@@ -58,6 +60,8 @@ void KebaCommandRegister::registerCommandHandlers()
 
   // Add the required Connector::getThread handler
   this->addHandler<KebaCommandGet>();
+  this->addHandler<KebaCommandGetToolFrame>();
+  this->addHandler<KebaCommandGetStatus>();
 
   // Motion commands
   this->addHandler<KebaCommandPtp>();
@@ -94,7 +98,7 @@ KebaCommandGet::KebaCommandGet()
   robot_movement_interface::Command cmd;
   cmd = robot_movement_interface::Command();
   cmd.command_type = "GET";
-  cmd.pose_type = "JOINT_POSITION|TOOL_FRAME|VERSION";
+  cmd.pose_type = "JOINT_POSITION|VERSION";
 
   sample_command_ = cmd;
 }
@@ -116,6 +120,82 @@ RobotCommandPtr KebaCommandGet::processMsg(const robot_movement_interface::Comma
   return cmd_ptr;
 }
 
+KebaCommandGetToolFrame::KebaCommandGetToolFrame()
+{
+  handler_name_ = "KebaCommandGetToolFrame";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "GET";
+  cmd.pose_type = "TOOL_FRAME";
+
+  sample_command_ = cmd;
+}
+
+KebaCommandGetToolFrame::KebaCommandToolFrame::KebaCommandToolFrame(CommandType type) : KebaCommand(type)
+{
+}
+
+void KebaCommandGetToolFrame::KebaCommandToolFrame::processResponse(std::string &response) const
+{
+  response = convertToolFrameStr(response);
+}
+
+RobotCommandPtr KebaCommandGetToolFrame::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  std::string cmd_str = "get tool frame ros";
+  RobotCommandPtr cmd_ptr =
+      std::make_shared<KebaCommandGetToolFrame::KebaCommandToolFrame>(RobotCommand::RobotCommand::CommandType::Get);
+
+  cmd_ptr->setCommand(cmd_str, "");
+  return cmd_ptr;
+}
+
+KebaCommandGetStatus::KebaCommandGetStatus()
+{
+  handler_name_ = "KebaCommandGetStatus";
+
+  robot_movement_interface::Command cmd;
+  cmd = robot_movement_interface::Command();
+  cmd.command_type = "GET";
+  cmd.pose_type = "STATUS";
+
+  sample_command_ = cmd;
+}
+
+KebaCommandGetStatus::KebaCommandStatus::KebaCommandStatus(CommandType type) : RobotCommandStatus(type)
+{
+}
+
+RobotCommandPtr KebaCommandGetStatus::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  std::string cmd_str = "get status";
+  RobotCommandPtr cmd_ptr =
+      std::make_shared<KebaCommandGetStatus::KebaCommandStatus>(RobotCommand::RobotCommand::CommandType::Get);
+
+  cmd_ptr->setCommand(cmd_str, "");
+  return cmd_ptr;
+}
+
+void KebaCommandGetStatus::KebaCommandStatus::processResponse(std::string &response) const
+{
+}
+
+void KebaCommandGetStatus::KebaCommandStatus::updateData(std::string &response)
+{
+  std::vector<std::string> strVec;
+  boost::split(strVec, response, boost::is_any_of(";"), boost::token_compress_on);
+  if (strVec.size() < 2)
+  {
+    ROS_ERROR_STREAM("KebaCommandGetStatus size wrong!");
+    response = "error";
+    return;
+  }
+
+  last_joint_state = strVec[0];
+  last_tcp_frame = convertToolFrameStr(strVec[1]);
+}
+
 KebaCommandLin::KebaCommandLin()
 {
 }
@@ -127,6 +207,13 @@ void KebaCommandLin::initialize()
   robot_movement_interface::Command cmd;
   cmd.command_type = "LIN";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
+
+  // blending and dyn are both optional
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
+  cmd.blending = { 0, 1, 1, 1, 5 };
+
+  cmd.velocity_type = "|DYN";
+  cmd.velocity = { 0, 12 };
 
   sample_command_ = cmd;
   auto num_joints = getCommandRegister()->joint_names_.size();
@@ -194,19 +281,27 @@ RobotCommandPtr KebaCommandLin::processMsg(const robot_movement_interface::Comma
 
 KebaCommandPtp::KebaCommandPtp()
 {
+}
+
+void KebaCommandPtp::initialize()
+{
   handler_name_ = "KebaCommandPtp";
 
   robot_movement_interface::Command cmd;
   cmd.command_type = "PTP";
   cmd.pose_type = "QUATERNION|EULER_INTRINSIC_ZYX|JOINTS";
 
-  sample_command_ = cmd;
-}
+  // blending and dyn are both optional
+  cmd.blending_type = "|%|OVLREL|OVLSUPPOS|OVLABS";
+  cmd.blending = { 0, 1, 1, 1, 5 };
 
-void KebaCommandPtp::initialize()
-{
+  cmd.velocity_type = "|DYN|ROS";
+
   auto num_joints = getCommandRegister()->joint_names_.size();
-  sample_command_.pose = { 7, 6, (float)num_joints };
+  cmd.velocity = { 0, 12, (float)num_joints };
+  cmd.pose = { 7, 6, (float)num_joints };
+
+  sample_command_ = cmd;
 }
 
 RobotCommandPtr KebaCommandPtp::processMsg(const robot_movement_interface::Command &cmd_msg) const
