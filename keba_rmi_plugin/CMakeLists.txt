@@ -128,6 +128,7 @@ add_library(keba_rmi_plugin
 )
 
 target_link_libraries(keba_rmi_plugin ${catkin_LIBRARIES} )
+catkin_python_setup()
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
