@@ -249,7 +249,7 @@ public:
 
   const std::string &getVersion() override
   {
-    static std::string version("0.0.9");
+    static std::string version("0.0.10");
     return version;
   }
 
@@ -613,6 +613,14 @@ class KebaCommandSetFrame : public KebaCommandHandler
 {
 public:
   KebaCommandSetFrame();
+
+  RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
+};
+
+class KebaCommandIoOut : public KebaCommandHandler
+{
+public:
+  KebaCommandIoOut();
 
   RobotCommandPtr processMsg(const robot_movement_interface::Command &cmd_msg) const override;
 };
