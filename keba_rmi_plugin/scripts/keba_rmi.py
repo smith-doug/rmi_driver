@@ -356,6 +356,13 @@ class RobotPost(object):
         cmd.pose = frame.frame
         self.AddCommand(cmd)
 
+    def IoOut(self, value):
+        cmd = rmi_msg.Command()
+        cmd.command_type = 'IO_OUT'
+        cmd.pose_reference = 'DO'
+        cmd.pose = value
+        self.AddCommand(cmd)
+
 
 
 #===============================================================================

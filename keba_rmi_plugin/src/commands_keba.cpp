@@ -76,6 +76,8 @@ void KebaCommandRegister::registerCommandHandlers()
   this->addHandler<KebaCommandSync>();
   this->addHandler<KebaCommandWait>();
 
+  this->addHandler<KebaCommandIoOut>();
+
   // Sample command for lambda usage
   robot_movement_interface::Command cmd;
   cmd.command_type = "TEST";
@@ -501,6 +503,28 @@ RobotCommandPtr KebaCommandSetFrame::processMsg(const robot_movement_interface::
       return nullptr;
   }
 
+  return cmd_ptr;
+}
+
+KebaCommandIoOut::KebaCommandIoOut()
+{
+  handler_name_ = "KebaCommandIoOut";
+  robot_movement_interface::Command cmd;
+  cmd.command_type = "IO_OUT";
+  cmd.pose_reference = "DO";
+  cmd.pose = { 1 };
+  sample_command_ = cmd;
+}
+
+RobotCommandPtr KebaCommandIoOut::processMsg(const robot_movement_interface::Command &cmd_msg) const
+{
+  RobotCommandPtr cmd_ptr = std::make_shared<KebaCommand>(RobotCommand::RobotCommand::CommandType::Cmd);
+
+  if (boost::iequals(cmd_msg.pose_reference, "DO"))
+  {
+    auto val = std::lround(cmd_msg.pose[0]);
+    cmd_ptr->setCommand("set do", std::to_string(val));
+  }
   return cmd_ptr;
 }
 
