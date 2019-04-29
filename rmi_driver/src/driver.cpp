@@ -176,8 +176,8 @@ void Driver::publishJointState()
 
       stateFull.position.insert(stateFull.position.end(), lastState.position.begin(), lastState.position.end());
       stateFull.name.insert(stateFull.name.end(), lastState.name.begin(), lastState.name.end());
-      stateFull.velocity.insert(stateFull.velocity.begin(), 0, lastState.name.size());
-      stateFull.effort.insert(stateFull.effort.begin(), 0, lastState.name.size());
+      stateFull.velocity.insert(stateFull.velocity.end(), lastState.velocity.begin(), lastState.velocity.end());
+      stateFull.effort.insert(stateFull.effort.begin(), lastState.name.size(), 0);
 
       // Publish the individual state topics for this connection (tool_frame)
       conn.second->publishState();

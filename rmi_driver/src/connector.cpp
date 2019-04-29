@@ -144,7 +144,6 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
   boost::asio::async_connect(
       *sock, endpointIterator,
       [this, host, local_port, cmd_type](const boost::system::error_code &ec, tcp::resolver::iterator i) {
-
         std::string con_type = "NOT SET";
         if (cmd_type == RobotCommand::CommandType::Cmd)
           con_type = "Cmd";
@@ -183,7 +182,6 @@ bool Connector::connectSocket(std::string host, int port, RobotCommand::CommandT
 
           logger_.INFO() << " Async Socket(" << con_type << ") established to " << host << ":" << local_port;
         }
-
       });
 
   return true;
@@ -211,7 +209,6 @@ void Connector::cmdSocketFlusher()
 
     boost::asio::async_read_until(
         socket_cmd_, socket_cmd_flush_buff_, '\n', [&](const boost::system::error_code &e, std::size_t size) {
-
           if (e)  // If there is an error code, this was either cancelled or disconnected.
           {
             logger_.INFO() << "Connector::cmdSocketFlusher() is exiting with ec: " << e.message();
@@ -529,6 +526,7 @@ void Connector::getThread()
 
   std::string response;
   std::vector<double> pos_real;
+  std::vector<double> vel_real;
 
   // Check the version string
   try
@@ -573,6 +571,7 @@ void Connector::getThread()
         }
         get_status_ptr->updateData(response);
         pos_real = util::stringToDoubleVec(get_status_ptr->getLastJointState());
+        vel_real = util::stringToDoubleVec(get_status_ptr->getLastJointVel());
       }
       else
       {
@@ -583,11 +582,13 @@ void Connector::getThread()
           continue;
         }
         pos_real = util::stringToDoubleVec(response);
+        //###TODO Check vel here too
       }
 
       last_joint_state_.header.stamp = ros::Time::now();
       last_joint_state_.name = joint_names_;
       last_joint_state_.position = pos_real;
+      last_joint_state_.velocity = vel_real;
 
       if (last_joint_state_.name.size() != last_joint_state_.position.size())
       {

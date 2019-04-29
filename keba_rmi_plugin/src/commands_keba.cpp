@@ -184,16 +184,28 @@ void KebaCommandGetStatus::KebaCommandStatus::processResponse(std::string &respo
 void KebaCommandGetStatus::KebaCommandStatus::updateData(std::string &response)
 {
   std::vector<std::string> strVec;
+
+  if (!response.empty() && *(response.end() - 1) == ';')
+    response.erase(response.end() - 1, response.end());
+
   boost::split(strVec, response, boost::is_any_of(";"), boost::token_compress_on);
-  if (strVec.size() < 2)
+  if (strVec.size() != 3)
   {
     ROS_ERROR_STREAM("KebaCommandGetStatus size wrong!");
+    ROS_ERROR_STREAM("Size: " << strVec.size() << " Msg: " << response);
+    for (auto &&str : strVec)
+    {
+      ROS_ERROR_STREAM(str);
+    }
+    // ROS_ERROR_STREAM(response.c_str()[response.length() - 1]);
     response = "error";
+
     return;
   }
 
   last_joint_state = strVec[0];
-  last_tcp_frame = convertToolFrameStr(strVec[1]);
+  last_joint_vel = strVec[1];
+  last_tcp_frame = convertToolFrameStr(strVec[2]);
 }
 
 KebaCommandLin::KebaCommandLin()

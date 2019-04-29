@@ -224,6 +224,7 @@ class RobotCommandStatus : public RobotCommand
 {
 protected:
   std::string last_joint_state;
+  std::string last_joint_vel;
   std::string last_tcp_frame;
 
 public:
@@ -247,6 +248,11 @@ public:
   const std::string& getLastJointState()
   {
     return last_joint_state;
+  }
+
+  const std::string& getLastJointVel()
+  {
+    return last_joint_vel;
   }
 
   const std::string& getLastTcpFrame()
