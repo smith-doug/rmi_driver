@@ -93,6 +93,16 @@ target_link_libraries(rmi_driver_node
   ${Boost_LIBRARIES}
 )
 
+#add_dependencies(rmi_driver_node robot_movement_interface_generate_messages_cpp
+#        ${${PROJECT_NAME}_EXPORTED_TARGETS}
+#        )
+
+add_dependencies(${PROJECT_NAME} 
+		${${PROJECT_NAME}_EXPORTED_TARGETS} 
+		${catkin_EXPORTED_TARGETS} 
+)
+
+
 #add_library(rmi_driver_lib src/commands.cpp)
 #target_link_libraries(rmi_driver_lib ${catkin_LIBRARIES})
 
